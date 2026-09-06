@@ -3,7 +3,6 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
   gap: var(--sp-4);
   padding: var(--sp-5);
   padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
@@ -193,5 +192,20 @@
 
   .actions > * {
     flex: 1 1 auto;
+  }
+}
+
+/* No celular quem rola é a página inteira: o cabeçalho sai da tela junto com o
+   resto e devolve a altura para a lista. Da largura de tablet para cima ela
+   volta a ter altura fixa, porque ali é a lista que rola dentro de si — e com
+   altura livre o container de rolagem ficaria do tamanho de todos os itens,
+   deixando a virtualização sem efeito. */
+.page {
+  overflow-y: auto;
+}
+
+@media (min-width: 720px) {
+  .page {
+    overflow: hidden;
   }
 }

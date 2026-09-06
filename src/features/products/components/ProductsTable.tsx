@@ -1,6 +1,5 @@
-import { useRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { BarcodeIcon, EditIcon } from '@/shared/ui/icons'
+import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import type { Product } from '../types'
 import styles from './ProductsTable.module.css'
 
@@ -14,6 +13,8 @@ interface ProductsTableProps {
    * primeiro quadro.
    */
   estimatedRowHeight: number
+  /** Tela estreita: quem rola é a página, e a lista se ancora nela. */
+  narrow: boolean
 }
 
 /**
@@ -23,22 +24,16 @@ interface ProductsTableProps {
  * rolagem e no filtro. Com virtualização o custo passa a depender do tamanho
  * da janela, não do tamanho da base.
  */
-export function ProductsTable({ products, onEdit, estimatedRowHeight }: ProductsTableProps) {
-  const scrollerRef = useRef<HTMLDivElement>(null)
-
-  // O TanStack Virtual devolve funções que a checagem de hooks não consegue
-  // provar seguras para memoizar. É limitação da análise, não do uso: o
-  // virtualizador é feito para ser chamado exatamente assim.
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const virtualizer = useVirtualizer({
+export function ProductsTable({
+  products,
+  onEdit,
+  estimatedRowHeight,
+  narrow,
+}: ProductsTableProps) {
+  const { virtualizer, scrollerRef, canvasRef, scrollMargin } = useListVirtualizer({
     count: products.length,
-    getScrollElement: () => scrollerRef.current,
-    estimateSize: () => estimatedRowHeight,
-    overscan: 8,
-    // No celular a descrição do produto ocupa uma ou duas linhas conforme o
-    // nome. Com altura fixa, o nome de duas linhas passava por cima do SKU.
-    // Medindo cada linha depois de desenhada, ela cresce só o necessário.
-    measureElement: (element) => element.getBoundingClientRect().height,
+    estimateSize: estimatedRowHeight,
+    narrow,
   })
 
   return (
@@ -50,8 +45,12 @@ export function ProductsTable({ products, onEdit, estimatedRowHeight }: Products
         <span className="sr-only">Ações</span>
       </div>
 
-      <div className={styles.scroller} ref={scrollerRef} tabIndex={0}>
-        <div className={styles.canvas} style={{ height: virtualizer.getTotalSize() }}>
+      <div className={styles.scroller} ref={scrollerRef} tabIndex={narrow ? undefined : 0}>
+        <div
+          className={styles.canvas}
+          ref={canvasRef}
+          style={{ height: virtualizer.getTotalSize() }}
+        >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const product = products[virtualRow.index]
 
@@ -63,7 +62,9 @@ export function ProductsTable({ products, onEdit, estimatedRowHeight }: Products
                 // acabou de medir.
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                style={{ transform: `translateY(${virtualRow.start}px)` }}
+                // O deslocamento desconta a margem: ancorada na página, a
+                // posição que o virtualizador calcula já inclui o cabeçalho.
+                style={{ transform: `translateY(${virtualRow.start - scrollMargin}px)` }}
               >
                 <div className={styles.itemInner}>
                   <span className={styles.barcode}>

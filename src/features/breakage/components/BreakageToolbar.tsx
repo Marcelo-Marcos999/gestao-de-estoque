@@ -19,6 +19,8 @@ interface BreakageToolbarProps {
   matching: number
   isFiltered: boolean
   focused: boolean
+  /** Falso no celular, onde a página inteira já rola e não há o que esconder. */
+  focusAvailable: boolean
   /** Ações do cabeçalho, que migram para cá quando ele sai no modo foco. */
   actions: ReactNode
   onSearch: (search: string) => void
@@ -39,6 +41,7 @@ export function BreakageToolbar({
   matching,
   isFiltered,
   focused,
+  focusAvailable,
   actions,
   onSearch,
   onStockState,
@@ -88,7 +91,7 @@ export function BreakageToolbar({
 
         {actions && <div className={styles.actions}>{actions}</div>}
 
-        <FocusToggle focused={focused} onToggle={onToggleFocus} />
+        <FocusToggle focused={focused} available={focusAvailable} onToggle={onToggleFocus} />
       </div>
 
       {isFiltered && (

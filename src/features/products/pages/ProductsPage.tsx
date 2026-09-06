@@ -4,6 +4,7 @@ import { ExportButton } from '@/shared/ui/ExportButton'
 import { PlusIcon, UploadIcon } from '@/shared/ui/icons'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
+import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { useAuth } from '@/features/auth'
 import { ImportWizard } from '../components/ImportWizard'
 import { ProductFormDialog } from '../components/ProductFormDialog'
@@ -83,7 +84,7 @@ export function ProductsPage() {
   )
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} {...{ [PAGE_SCROLLER_ATTR]: '' }}>
       {!focus.focused && (
         <header className={styles.header}>
           <div className={styles.titles}>
@@ -105,6 +106,7 @@ export function ProductsPage() {
         matching={list.matching}
         narrow={isNarrow}
         focused={focus.focused}
+        focusAvailable={focus.available}
         actions={focus.focused ? acoes : null}
         onSearch={list.setSearch}
         onToggleWithoutBarcode={list.setOnlyWithoutBarcode}
@@ -134,6 +136,7 @@ export function ProductsPage() {
           // Sem permissão de escrita a linha não oferece edição.
           onEdit={podeEditar ? (product) => openForm(product) : undefined}
           estimatedRowHeight={rowHeight}
+          narrow={isNarrow}
         />
       )}
 

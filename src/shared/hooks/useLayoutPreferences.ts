@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { usePersistedState } from './usePersistedState'
+import { useMediaQuery } from './useMediaQuery'
 import { storageKey } from '../lib/storage'
 
 const SIDEBAR_KEY = storageKey('layout', 'barra-lateral')
@@ -31,9 +32,17 @@ export function useSidebarCollapsed() {
  * Esc desliga, porque é o que se espera de qualquer modo que esconde coisas:
  * sem essa saída, quem ligou sem querer precisa procurar o botão que sumiu do
  * lugar de onde ele olhava.
+ *
+ * **Não existe no celular.** Ali a página inteira rola, então o cabeçalho já
+ * sai da tela sozinho ao rolar — e esconder à força o que a rolagem já resolve
+ * só tiraria o título e as ações de quem tem menos tela para se localizar.
+ * A preferência continua guardada: quem ligou no computador a encontra ligada
+ * ao voltar para ele.
  */
 export function useFocusMode() {
-  const [focused, setFocused] = usePersistedState<boolean>(FOCUS_KEY, false, isBoolean)
+  const [preferido, setFocused] = usePersistedState<boolean>(FOCUS_KEY, false, isBoolean)
+  const available = useMediaQuery('(min-width: 720px)')
+  const focused = preferido && available
 
   useEffect(() => {
     if (!focused) return
@@ -49,5 +58,5 @@ export function useFocusMode() {
   }, [focused, setFocused])
 
   const toggle = useCallback(() => setFocused((atual) => !atual), [setFocused])
-  return { focused, toggle }
+  return { focused, available, toggle }
 }

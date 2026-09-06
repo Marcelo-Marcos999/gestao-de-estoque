@@ -3,6 +3,8 @@ import styles from './FocusToggle.module.css'
 
 interface FocusToggleProps {
   focused: boolean
+  /** Falso no celular, onde a página inteira já rola e não há o que esconder. */
+  available: boolean
   onToggle: () => void
 }
 
@@ -14,7 +16,9 @@ interface FocusToggleProps {
  * o que desaparece — um botão que some junto com o que ele escondeu não teria
  * como ser desfeito.
  */
-export function FocusToggle({ focused, onToggle }: FocusToggleProps) {
+export function FocusToggle({ focused, available, onToggle }: FocusToggleProps) {
+  if (!available) return null
+
   const rotulo = focused ? 'Mostrar cabeçalho (Esc)' : 'Expandir lista'
   const Icon = focused ? CollapseIcon : ExpandIcon
 

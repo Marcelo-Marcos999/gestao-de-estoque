@@ -1,6 +1,5 @@
-import { useRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { Badge } from '@/shared/ui/Badge'
+import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import { EditIcon, TrashIcon } from '@/shared/ui/icons'
 import { formatDate } from '@/shared/lib/date'
 import { deadline } from '../deadline'
@@ -41,15 +40,12 @@ export function LossRecordTable({
   onDelete,
   onOpenAttachment,
 }: LossRecordTableProps) {
-  const scrollerRef = useRef<HTMLDivElement>(null)
-
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const virtualizer = useVirtualizer({
+  // A tabela só existe da largura de tablet para cima, onde a lista rola
+  // dentro de si — daí `narrow` fixo em falso.
+  const { virtualizer, scrollerRef, canvasRef } = useListVirtualizer({
     count: records.length,
-    getScrollElement: () => scrollerRef.current,
-    estimateSize: () => 62,
-    overscan: 8,
-    measureElement: (element) => element.getBoundingClientRect().height,
+    estimateSize: 62,
+    narrow: false,
   })
 
   return (
@@ -66,7 +62,11 @@ export function LossRecordTable({
       </div>
 
       <div className={styles.scroller} ref={scrollerRef} tabIndex={0}>
-        <div className={styles.canvas} style={{ height: virtualizer.getTotalSize() }}>
+        <div
+          className={styles.canvas}
+          ref={canvasRef}
+          style={{ height: virtualizer.getTotalSize() }}
+        >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const record = records[virtualRow.index]
             const prazo = deadline(record)

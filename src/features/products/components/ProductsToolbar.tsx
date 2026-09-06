@@ -13,6 +13,8 @@ interface ProductsToolbarProps {
   matching: number
   narrow: boolean
   focused: boolean
+  /** Falso no celular, onde a página inteira já rola e não há o que esconder. */
+  focusAvailable: boolean
   /** Ações do cabeçalho, que migram para cá quando ele sai no modo foco. */
   actions: ReactNode
   onSearch: (value: string) => void
@@ -27,6 +29,7 @@ export function ProductsToolbar({
   matching,
   narrow,
   focused,
+  focusAvailable,
   actions,
   onSearch,
   onToggleWithoutBarcode,
@@ -65,7 +68,7 @@ export function ProductsToolbar({
 
       {actions && <div className={styles.actions}>{actions}</div>}
 
-      <FocusToggle focused={focused} onToggle={onToggleFocus} />
+      <FocusToggle focused={focused} available={focusAvailable} onToggle={onToggleFocus} />
 
       {isFiltered && (
         <div className={styles.active} role="status">

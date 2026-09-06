@@ -271,13 +271,23 @@ Nenhum é obrigatório, nem no motivo mais grave (ver acima).
 
 ### Ver mais registros de uma vez
 
-Duas alavancas, e nenhuma delas é a tela cheia do navegador — o F11 já faz
-isso, e o que atrapalha não é a moldura do navegador, é a nossa.
+No **celular quem rola é a página inteira**: o cabeçalho sai da tela junto com o
+resto e devolve a altura para a lista. As listas continuam virtualizadas, agora
+ancoradas nessa rolagem — sem isso o cadastro desenharia 26 mil linhas de uma
+vez. Uma lista rolando dentro de si numa tela que não rola era o pior dos dois
+mundos: o cabeçalho comia metade da altura e a lista ficava espremida no resto.
+
+No **computador** é o contrário: a lista rola dentro de si, com o cabeçalho das
+colunas parado no topo, que é o que se espera de uma tabela. E aí, sim, as duas
+alavancas abaixo fazem sentido — nenhuma delas é a tela cheia do navegador, que
+o F11 já faz e que esconde a moldura errada.
 
 A **barra lateral recolhe** à coluna dos ícones, devolvendo 192px de largura.
-E um **botão de foco**, no mesmo lugar em toda tela com lista, esconde o
-cabeçalho da página e os cartões de situação: a lista passa de 543 para 758px
-de altura, de cinco para doze lotes visíveis.
+E um **botão de foco** esconde o cabeçalho da página e os cartões de situação:
+a lista passa de 543 para 758px de altura, de cinco para doze lotes visíveis.
+O botão **não existe no celular** — lá a rolagem da página já resolve, e
+esconder à força o título e as ações tiraria referência de quem tem menos tela
+para se localizar.
 
 Duas regras que o modo foco não pode quebrar. As ações do cabeçalho **migram
 para a barra de busca** em vez de sumirem — registrar é o que se vem fazer na

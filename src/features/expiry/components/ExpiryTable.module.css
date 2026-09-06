@@ -202,3 +202,19 @@
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
+
+/* No celular a lista não rola dentro de si: quem rola é a página. Sem soltar
+   estas duas, sobrariam duas rolagens aninhadas — a de fora sem uso e a de
+   dentro numa janelinha de poucos centímetros. */
+@media (max-width: 719px) {
+  .wrap {
+    flex: none;
+    overflow: visible;
+  }
+
+  .scroller {
+    flex: none;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+}

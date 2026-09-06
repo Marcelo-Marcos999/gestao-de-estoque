@@ -1,6 +1,5 @@
-import { useRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { formatDate } from '@/shared/lib/date'
+import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import { SITUATIONS } from '../situation'
 import type { ExpiryRow } from '../types'
 import { SituationBadge } from './SituationBadge'
@@ -9,6 +8,8 @@ import styles from './ExpiryTable.module.css'
 interface ExpiryTableProps {
   rows: ExpiryRow[]
   estimatedRowHeight: number
+  /** Tela estreita: quem rola é a página, e a lista se ancora nela. */
+  narrow: boolean
 }
 
 /** "em 212 dias", "venceu há 149 dias" — o número cru não diz o que significa. */
@@ -27,16 +28,11 @@ function remainingLabel(days: number | null): { text: string; overdue: boolean }
  * e cada linha mede a própria altura porque no celular a descrição quebra em
  * um número variável de linhas.
  */
-export function ExpiryTable({ rows, estimatedRowHeight }: ExpiryTableProps) {
-  const scrollerRef = useRef<HTMLDivElement>(null)
-
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const virtualizer = useVirtualizer({
+export function ExpiryTable({ rows, estimatedRowHeight, narrow }: ExpiryTableProps) {
+  const { virtualizer, scrollerRef, canvasRef, scrollMargin } = useListVirtualizer({
     count: rows.length,
-    getScrollElement: () => scrollerRef.current,
-    estimateSize: () => estimatedRowHeight,
-    overscan: 8,
-    measureElement: (element) => element.getBoundingClientRect().height,
+    estimateSize: estimatedRowHeight,
+    narrow,
   })
 
   return (
@@ -50,8 +46,12 @@ export function ExpiryTable({ rows, estimatedRowHeight }: ExpiryTableProps) {
         <span>Situação</span>
       </div>
 
-      <div className={styles.scroller} ref={scrollerRef} tabIndex={0}>
-        <div className={styles.canvas} style={{ height: virtualizer.getTotalSize() }}>
+      <div className={styles.scroller} ref={scrollerRef} tabIndex={narrow ? undefined : 0}>
+        <div
+          className={styles.canvas}
+          ref={canvasRef}
+          style={{ height: virtualizer.getTotalSize() }}
+        >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const row = rows[virtualRow.index]
             const remaining = remainingLabel(row.daysToExpiry)
@@ -63,7 +63,9 @@ export function ExpiryTable({ rows, estimatedRowHeight }: ExpiryTableProps) {
                 className={styles.item}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                style={{ transform: `translateY(${virtualRow.start}px)` }}
+                // O deslocamento desconta a margem: ancorada na página, a
+                // posição que o virtualizador calcula já inclui o cabeçalho.
+                style={{ transform: `translateY(${virtualRow.start - scrollMargin}px)` }}
               >
                 <div
                   className={styles.itemInner}

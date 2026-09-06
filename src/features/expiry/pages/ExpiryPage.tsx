@@ -4,6 +4,7 @@ import { ExportButton } from '@/shared/ui/ExportButton'
 import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
+import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
 import { SearchIcon, UploadIcon } from '@/shared/ui/icons'
@@ -51,7 +52,7 @@ export function ExpiryPage() {
   )
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} {...{ [PAGE_SCROLLER_ATTR]: '' }}>
       {!focus.focused && (
         <header className={styles.header}>
           <div className={styles.titles}>
@@ -108,7 +109,11 @@ export function ExpiryPage() {
 
         {focus.focused && <div className={styles.actions}>{acoes}</div>}
 
-        <FocusToggle focused={focus.focused} onToggle={focus.toggle} />
+        <FocusToggle
+          focused={focus.focused}
+          available={focus.available}
+          onToggle={focus.toggle}
+        />
       </div>
 
       {list.isFiltered && (
@@ -175,7 +180,7 @@ export function ExpiryPage() {
       )}
 
       {list.status === 'ready' && list.rows.length > 0 && (
-        <ExpiryTable rows={list.rows} estimatedRowHeight={rowHeight} />
+        <ExpiryTable rows={list.rows} estimatedRowHeight={rowHeight} narrow={isNarrow} />
       )}
     </div>
   )

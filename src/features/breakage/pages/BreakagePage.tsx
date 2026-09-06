@@ -5,6 +5,7 @@ import { ExportButton } from '@/shared/ui/ExportButton'
 import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
+import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { BreakageToolbar } from '../components/BreakageToolbar'
 import { AttachmentViewer } from '../components/AttachmentViewer'
 import { LossRecordCard } from '../components/LossRecordCard'
@@ -72,7 +73,7 @@ export function BreakagePage() {
   )
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} {...{ [PAGE_SCROLLER_ATTR]: '' }}>
       {!focus.focused && (
         <header className={styles.header}>
           <div className={styles.titles}>
@@ -95,6 +96,7 @@ export function BreakagePage() {
         matching={list.records.length}
         isFiltered={list.isFiltered}
         focused={focus.focused}
+        focusAvailable={focus.available}
         actions={focus.focused ? acoes : null}
         onSearch={list.setSearch}
         onStockState={list.setStockState}
