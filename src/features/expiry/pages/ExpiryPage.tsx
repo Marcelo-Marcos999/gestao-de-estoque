@@ -1,6 +1,7 @@
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
+import { UndoBar } from '@/shared/ui/UndoBar'
 import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
@@ -11,7 +12,9 @@ import { SearchIcon, UploadIcon } from '@/shared/ui/icons'
 import { SITUATIONS } from '../situation'
 import { ExpiryTable } from '../components/ExpiryTable'
 import { SituationTiles } from '../components/SituationTiles'
+import { ExpiryDialog } from '../components/ExpiryDialog'
 import { exportExpiryRows } from '../export'
+import { useExpiryEditor } from '../hooks/useExpiryEditor'
 import { useExpiryList } from '../hooks/useExpiryList'
 import styles from './ExpiryPage.module.css'
 
@@ -26,6 +29,7 @@ export function ExpiryPage() {
   const list = useExpiryList()
   const isNarrow = useMediaQuery('(max-width: 719px)')
   const focus = useFocusMode()
+  const editor = useExpiryEditor(list.reload)
   const rowHeight = isNarrow ? 128 : 62
 
   /**
@@ -180,8 +184,29 @@ export function ExpiryPage() {
       )}
 
       {list.status === 'ready' && list.rows.length > 0 && (
-        <ExpiryTable rows={list.rows} estimatedRowHeight={rowHeight} narrow={isNarrow} />
+        <ExpiryTable
+          rows={list.rows}
+          estimatedRowHeight={rowHeight}
+          narrow={isNarrow}
+          onEdit={editor.open}
+        />
       )}
+
+      <ExpiryDialog
+        row={editor.editing}
+        saving={editor.saving}
+        onClose={editor.close}
+        onSave={(date) => void editor.save(date)}
+        onDelete={() => void editor.remove()}
+      />
+
+      <UndoBar
+        count={editor.undoable.length}
+        label="Lote"
+        plural="lotes"
+        onUndo={() => void editor.undo()}
+        onDismiss={editor.dismissUndo}
+      />
     </div>
   )
 }

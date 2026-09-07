@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
+import { UndoBar } from '@/shared/ui/UndoBar'
 import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
@@ -12,8 +13,9 @@ import { LossRecordCard } from '../components/LossRecordCard'
 import { LossRecordDialog } from '../components/LossRecordDialog'
 import { LossRecordTable } from '../components/LossRecordTable'
 import { SelectionBar } from '../components/SelectionBar'
-import { UndoBar } from '../components/UndoBar'
+
 import { exportLossRecords } from '../export'
+import { recordLabel } from '../label'
 import { useLossRecordList } from '../hooks/useLossRecordList'
 import { useTagLists } from '../hooks/useTagLists'
 import type { Attachment, LossRecord } from '../types'
@@ -65,9 +67,12 @@ export function BreakagePage() {
         onExport={() => exportLossRecords(list.records, reasons, origins)}
       />
 
-      <Button onClick={() => setDialog({ open: true })} aria-label="Registrar quebra">
+      <Button onClick={() => setDialog({ open: true })}>
         <PlusIcon width={18} height={18} />
-        <span className={styles.labelExtra}>Registrar quebra</span>
+        {/* Só "quebra" sai no celular: um "+" sozinho não diz o que faz. */}
+        <span>
+          Registrar<span className={styles.labelExtra}> quebra</span>
+        </span>
       </Button>
     </>
   )
@@ -187,7 +192,9 @@ export function BreakagePage() {
       <AttachmentViewer attachment={viewing} onClose={() => setViewing(null)} />
 
       <UndoBar
-        records={list.undoable}
+        count={list.undoable.length}
+        label={`Registro de ${list.undoable[0] ? recordLabel(list.undoable[0]) : ''}`}
+        plural="registros"
         onUndo={() => void list.undo()}
         onDismiss={list.dismissUndo}
       />

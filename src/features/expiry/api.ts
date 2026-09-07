@@ -8,6 +8,7 @@
  */
 import { getAllProducts } from '@/features/products'
 import type { Product } from '@/features/products'
+import type { IsoDate } from '@/shared/lib/date'
 import { classify, type Situation } from './situation'
 import type { ExpiryItem, ExpiryQuery, ExpiryRow } from './types'
 
@@ -155,4 +156,42 @@ export async function listExpiryItems(
   })
 
   return { items: filtered, total: filtered.length, counts, overall: rows.length }
+}
+
+/* ---- Escrita -------------------------------------------------------------- */
+
+/**
+ * Corrige a validade de um lote.
+ *
+ * É o único campo que se edita aqui. Saldo e saídas são do **produto** e vêm
+ * da importação dos relatórios: editá-los por dentro de um lote deixaria dois
+ * lotes do mesmo produto discordando sobre quanto existe na loja (ver
+ * docs/dominio.md).
+ */
+export async function updateExpiryItem(id: string, expiryDate: IsoDate | null): Promise<void> {
+  await delay(LATENCY_MS)
+
+  const items = await ensureStore()
+  store = items.map((item) => (item.id === id ? { ...item, expiryDate } : item))
+}
+
+/** Exclui um ou vários lotes de uma vez, devolvendo o que saiu. */
+export async function deleteExpiryItems(ids: string[]): Promise<ExpiryItem[]> {
+  await delay(LATENCY_MS)
+
+  const items = await ensureStore()
+  const alvos = new Set(ids)
+  const removed = items.filter((item) => alvos.has(item.id))
+  store = items.filter((item) => !alvos.has(item.id))
+  return removed
+}
+
+/** Devolve lotes excluídos ao seu lugar — o "desfazer" da tela. */
+export async function restoreExpiryItems(voltando: ExpiryItem[]): Promise<void> {
+  await delay(80)
+
+  const items = await ensureStore()
+  const existentes = new Set(items.map((item) => item.id))
+  const novos = voltando.filter((item) => !existentes.has(item.id))
+  if (novos.length) store = [...novos, ...items]
 }

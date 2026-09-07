@@ -12,7 +12,7 @@
 /* A grade é definida uma vez e reusada pelo cabeçalho e pelas linhas. */
 .row {
   display: grid;
-  grid-template-columns: 3px 1fr 150px 92px 108px 210px;
+  grid-template-columns: 3px 1fr 150px 92px 108px 210px 52px;
   align-items: center;
   gap: var(--sp-4);
   padding: 0 var(--sp-4) 0 0;
@@ -149,6 +149,25 @@
       'faixa situacao';
   }
 
+  /* A ação sobe para a linha da descrição, encostada à direita: no cartão não
+     há coluna própria, e uma linha só para ela custaria a altura de outro
+     registro na tela. */
+  .row {
+    grid-template-columns: 3px 1fr auto;
+  }
+
+  .product,
+  .mobileData,
+  .situation {
+    grid-column: 2 / -1;
+  }
+
+  .actions {
+    grid-area: desc;
+    grid-column: 3;
+    align-self: start;
+  }
+
   .stripe {
     grid-area: faixa;
   }
@@ -190,6 +209,57 @@
 @media (min-width: 720px) {
   .mobileData {
     display: none;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.action:hover {
+  background: var(--surface-sunken);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.action:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* No celular o alvo cresce para os 44px de toque. */
+@media (max-width: 719px) {
+  .action {
+    width: var(--touch-target);
+    height: var(--touch-target);
   }
 }
 

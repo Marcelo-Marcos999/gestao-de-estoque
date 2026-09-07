@@ -16,13 +16,23 @@ export interface Deadline {
  * A cor nunca vem sozinha: o texto diz "venceu há 4 dias" mesmo para quem não
  * enxerga a diferença entre vermelho e âmbar (ver CLAUDE.md).
  */
-export function deadline(record: LossRecord): Deadline {
+export function deadline(record: LossRecord, short = false): Deadline {
   if (!record.expiryDate) return { token: 'unknown', text: 'sem validade' }
 
   const restantes = daysUntil(record.expiryDate)
   if (restantes === null) return { token: 'unknown', text: 'sem validade' }
 
-  if (restantes < 0) return { token: 'expired', text: `venceu há ${Math.abs(restantes)} dias` }
+  // A forma curta existe para o cartão do celular, onde o chip divide a linha
+  // com o motivo: "vence em 18 dias" ao lado de "Avaria de transporte" não
+  // cabe em 360px, e a quebra empurrava cada etiqueta para uma linha própria.
+  // O ícone de calendário ao lado já diz que o número é de validade.
+  if (restantes < 0) {
+    return { token: 'expired', text: short ? `há ${Math.abs(restantes)}d` : `venceu há ${Math.abs(restantes)} dias` }
+  }
   if (restantes === 0) return { token: 'warning', text: 'vence hoje' }
-  return { token: restantes <= 30 ? 'warning' : 'ok', text: `vence em ${restantes} dias` }
+
+  return {
+    token: restantes <= 30 ? 'warning' : 'ok',
+    text: short ? `em ${restantes}d` : `vence em ${restantes} dias`,
+  }
 }

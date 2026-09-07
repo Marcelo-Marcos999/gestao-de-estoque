@@ -1,3 +1,4 @@
+import { EditIcon } from '@/shared/ui/icons'
 import { formatDate } from '@/shared/lib/date'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import { SITUATIONS } from '../situation'
@@ -10,6 +11,7 @@ interface ExpiryTableProps {
   estimatedRowHeight: number
   /** Tela estreita: quem rola é a página, e a lista se ancora nela. */
   narrow: boolean
+  onEdit: (row: ExpiryRow) => void
 }
 
 /** "em 212 dias", "venceu há 149 dias" — o número cru não diz o que significa. */
@@ -28,7 +30,7 @@ function remainingLabel(days: number | null): { text: string; overdue: boolean }
  * e cada linha mede a própria altura porque no celular a descrição quebra em
  * um número variável de linhas.
  */
-export function ExpiryTable({ rows, estimatedRowHeight, narrow }: ExpiryTableProps) {
+export function ExpiryTable({ rows, estimatedRowHeight, narrow, onEdit }: ExpiryTableProps) {
   const { virtualizer, scrollerRef, canvasRef, scrollMargin } = useListVirtualizer({
     count: rows.length,
     estimateSize: estimatedRowHeight,
@@ -44,6 +46,7 @@ export function ExpiryTable({ rows, estimatedRowHeight, narrow }: ExpiryTablePro
         <span>Estoque</span>
         <span>Sai em</span>
         <span>Situação</span>
+        <span className={styles.srOnly}>Ações</span>
       </div>
 
       <div className={styles.scroller} ref={scrollerRef} tabIndex={narrow ? undefined : 0}>
@@ -131,6 +134,20 @@ export function ExpiryTable({ rows, estimatedRowHeight, narrow }: ExpiryTablePro
 
                   <span className={styles.situation}>
                     <SituationBadge situation={row.situation} />
+                  </span>
+
+                  {/* No celular a linha vira cartão e este botão fica na área
+                      da situação, ao lado da faixa — o mesmo lugar em que o
+                      cadastro de produtos põe o seu. */}
+                  <span className={styles.actions}>
+                    <button
+                      type="button"
+                      className={styles.action}
+                      onClick={() => onEdit(row)}
+                      aria-label={`Editar lote de ${row.description}`}
+                    >
+                      <EditIcon width={16} height={16} />
+                    </button>
                   </span>
                 </div>
               </div>

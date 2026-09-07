@@ -112,8 +112,8 @@
 .deadline {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-1) var(--sp-2);
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
   border: 1px solid var(--tone);
   border-radius: var(--radius-full);
   background: var(--tone-soft);
@@ -130,23 +130,9 @@
   overflow-wrap: anywhere;
 }
 
-/* Chips e ações dividem a última linha onde há largura para isso. No celular
-   não há: com um motivo comprido, os chips desciam para uma segunda linha e o
-   cartão ficava mais alto do que era antes de "economizar". Lá embaixo, no
-   media query, as duas voltam a ser linhas separadas. */
-.foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--sp-2);
-  margin-left: auto;
-}
-
 .bottom {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
 }
 
 .author {
@@ -168,43 +154,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-.action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  min-height: var(--touch-target);
-  min-width: var(--touch-target);
-  padding: 0 var(--sp-3);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-  transition:
-    color var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out),
-    background var(--dur-fast) var(--ease-out);
-}
 
-.action:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
-  color: var(--text);
-}
 
-.action:focus-visible {
-  outline: none;
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px var(--brand-ring);
-}
 
-.delete:hover {
-  background: var(--expired-soft);
-  border-color: var(--expired);
-  color: var(--expired-text);
-}
 
 .srOnly {
   position: absolute;
@@ -245,18 +197,17 @@
    O resto aqui é aperto de respiro: cada 8px economizados por cartão é meio
    registro a mais na tela, e a tela é usada rolando o corredor. */
 @media (max-width: 599px) {
-  .actionLabel {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
 
   .card {
     gap: var(--sp-2);
     padding: var(--sp-3);
+  }
+
+  /* O alvo de toque do anexo desce de 44 para 36px dentro do cartão: ele
+     divide a linha com as etiquetas, e a caixa de seleção logo acima já
+     oferece um alvo grande para quem erra o dedo. */
+  .tags {
+    gap: var(--sp-1);
   }
 
   .head {
@@ -265,10 +216,6 @@
 
   /* O alvo de toque continua 44px: a área do botão passa a ser só o ícone,
      sem o respiro lateral do rótulo que não existe mais aqui. */
-  .action {
-    padding: 0;
-    width: var(--touch-target);
-  }
 
   .bottom {
     gap: var(--sp-2);

@@ -42,7 +42,8 @@ export function LossRecordCard({
   onEdit,
   onOpenAttachment,
 }: LossRecordCardProps) {
-  const prazo = deadline(record)
+  // O cartão só existe no celular, onde a largura é o recurso escasso.
+  const prazo = deadline(record, true)
   const motivo = labelOf(reasons, record.reasonId)
   const origem = labelOf(origins, record.originId)
   const zerado = record.quantity <= 0
@@ -134,14 +135,16 @@ export function LossRecordCard({
 
           {motivo && <Badge tone="marca">{motivo}</Badge>}
           {origem && <Badge tone="neutro">{origem}</Badge>}
-          {record.pendingProduct && <Badge tone="duplicado">Pendente de cadastro</Badge>}
-          {zerado && <Badge tone="invalido">Saldo zerado</Badge>}
-        </div>
+          {record.pendingProduct && <Badge tone="duplicado">Pendente</Badge>}
+          {zerado && <Badge tone="invalido">Zerado</Badge>}
 
-        <AttachmentChips
-          attachments={record.attachments}
-          onOpen={(attachmentId) => onOpenAttachment(record, attachmentId)}
-        />
+          {/* Os anexos fluem junto das etiquetas, e não numa coluna à direita:
+              ali eles ficavam pendurados sozinhos quando os chips quebravam. */}
+          <AttachmentChips
+            attachments={record.attachments}
+            onOpen={(attachmentId) => onOpenAttachment(record, attachmentId)}
+          />
+        </div>
       </div>
     </article>
   )

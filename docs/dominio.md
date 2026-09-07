@@ -234,6 +234,26 @@ abre em "no estoque". Um registro que zerou já não é trabalho pendente: deix�
 à vista faria a lista crescer com o que não exige decisão de ninguém. Continua a
 um toque de distância, porque é ali que o usuário confere o que pode excluir.
 
+### Editar o lote na tela de validades
+
+Cada lote pode ser corrigido: **só a validade**. Saldo e saídas aparecem no
+diálogo porque sustentam a previsão, mas em leitura — são do produto e vêm da
+importação dos relatórios, e editá-los por dentro de um lote deixaria dois
+lotes do mesmo produto discordando sobre quanto existe na loja.
+
+Limpar a data é uma edição válida: o lote cai em "sem estimativa" e sai da
+previsão. O diálogo diz isso antes de salvar, em vez de deixar o item sumir da
+faixa em que estava sem explicação.
+
+**Os dois perfis editam.** Não é cadastro de produto, que é a bancada do
+administrador: a validade é o dado operacional que o app existe para
+acompanhar, e quem encontra a caixa no corredor é quem sabe a data. O que
+continua sob o administrador é a base de produtos.
+
+Excluir o lote também é possível, com desfazer e sem confirmação antes — mesma
+regra da quebra. O produto continua no cadastro; o que sai é o acompanhamento
+daquela data.
+
 ### Ler o código de barras
 
 Toda busca de produto — validades, cadastro, quebra e o registro por dentro —
