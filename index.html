@@ -11,7 +11,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- O conteúdo abaixo é substituído pelo app assim que ele monta. Se ele
+         continuar na tela, o JavaScript não rodou — e uma tela em branco sem
+         explicação é o pior jeito de descobrir isso. -->
+    <div id="root">
+      <div class="boot">
+        <strong>Gestão de Validades</strong>
+        <p>Carregando…</p>
+        <p class="boot-hint">
+          Se esta mensagem não sair, o aplicativo não conseguiu iniciar neste navegador.
+          Recarregue a página; se continuar, o navegador pode estar bloqueando scripts.
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

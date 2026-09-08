@@ -16,11 +16,16 @@ const Router = import.meta.env.VITE_HASH_ROUTER === 'true' ? HashRouter : Browse
 /**
  * O prefixo do endereço, quando o app não está na raiz do domínio.
  *
- * O Vite entrega o mesmo valor de `base` do build; sem passá-lo ao roteador,
- * "/gestao-de-estoque/validades" não casaria com a rota "/validades" e toda
+ * O Vite entrega aqui o mesmo valor de `base` do build. No GitHub Pages ele é
+ * "/gestao-de-estoque/", e sem passá-lo ao roteador nenhuma rota casaria: toda
  * navegação cairia no redirecionamento de endereço desconhecido.
+ *
+ * Só vale um caminho absoluto. O build de arquivo único usa base "./", que é
+ * relativo e não é prefixo de endereço nenhum — passá-lo ao roteador deixava a
+ * demonstração em branco, sem erro no console, porque nenhuma rota batia.
  */
-const basename = import.meta.env.BASE_URL
+const base = import.meta.env.BASE_URL
+const basename = base.startsWith('/') ? base : undefined
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Elemento #root não encontrado no index.html')
