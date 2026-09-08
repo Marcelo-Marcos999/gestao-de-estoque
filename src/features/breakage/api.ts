@@ -9,6 +9,7 @@
  * docs/dominio.md).
  */
 import { getAllProducts } from '@/features/products'
+import { ensureExpiryItem } from '@/features/expiry'
 import type { LossRecord, LossRecordDraft, LossRecordQuery } from './types'
 
 const LATENCY_MS = 180
@@ -111,6 +112,12 @@ export async function createLossRecord(
   }
 
   store = [record, ...store]
+
+  // Apontar a perda de um lote é dizer que ele existe na loja: o
+  // acompanhamento de validade passa a conhecê-lo, em vez de o produto sumir
+  // da tela onde se vai conferir o saldo dele.
+  await ensureExpiryItem(record.productId, record.expiryDate)
+
   return record
 }
 
@@ -123,6 +130,9 @@ export async function addToRecord(id: string, quantity: number): Promise<void> {
 export async function updateLossRecord(id: string, draft: LossRecordDraft): Promise<void> {
   await delay(LATENCY_MS)
   store = store.map((r) => (r.id === id ? { ...r, ...draft } : r))
+
+  // A validade pode ter mudado na edição; o lote novo também precisa existir.
+  await ensureExpiryItem(draft.productId, draft.expiryDate)
 }
 
 /**

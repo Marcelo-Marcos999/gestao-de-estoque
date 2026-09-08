@@ -234,12 +234,32 @@ abre em "no estoque". Um registro que zerou já não é trabalho pendente: deix�
 à vista faria a lista crescer com o que não exige decisão de ninguém. Continua a
 um toque de distância, porque é ali que o usuário confere o que pode excluir.
 
+### Registrar quebra cria o lote
+
+Apontar a perda de um lote é dizer que aquele lote existe na loja. Por isso
+registrar uma quebra **com validade** cria o lote correspondente no
+acompanhamento, se ele ainda não existir — e editar a validade de um registro
+cria o lote novo também.
+
+Sem isso o produto apontado como vencido não aparecia na tela de validades, e
+era justamente lá que se ia conferir o saldo dele. As duas telas passam a
+concordar sobre o que está sendo acompanhado.
+
+Sem data não há lote: um lote é produto **mais** validade, e sem ela não há o
+que acompanhar.
+
 ### Editar o lote na tela de validades
 
-Cada lote pode ser corrigido: **só a validade**. Saldo e saídas aparecem no
-diálogo porque sustentam a previsão, mas em leitura — são do produto e vêm da
-importação dos relatórios, e editá-los por dentro de um lote deixaria dois
-lotes do mesmo produto discordando sobre quanto existe na loja.
+Cada lote pode ser corrigido. A **validade** é do lote. **Saldo e saídas** são
+do produto — o mesmo número que a tela de quebra usa para saber se o item ainda
+está no estoque — e mudam para todos os lotes daquele produto; o diálogo diz
+isso em vez de deixar a pessoa descobrir depois.
+
+Eles são editáveis à mão porque nem sempre o relatório bate com a prateleira, e
+porque enquanto não há importação é o único jeito de pôr um número real na
+tela. Zerar o saldo por ali é o caminho para conferir o que a quebra faz quando
+o item sai do estoque: a quantidade do registro zera junto e ele passa para a
+aba "zerados".
 
 Limpar a data é uma edição válida: o lote cai em "sem estimativa" e sai da
 previsão. O diálogo diz isso antes de salvar, em vez de deixar o item sumir da

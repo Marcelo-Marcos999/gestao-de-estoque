@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { IsoDate } from '@/shared/lib/date'
+import { updateProductStock } from '@/features/products'
 import { deleteExpiryItems, restoreExpiryItems, updateExpiryItem } from '../api'
+import type { ExpiryEdit } from '../components/ExpiryDialog'
 import type { ExpiryItem, ExpiryRow } from '../types'
 
 /**
@@ -32,12 +33,20 @@ export function useExpiryEditor(onChanged: () => void) {
 
   const close = useCallback(() => setEditing(null), [])
 
+  /**
+   * Grava os dois lados de uma vez: a validade, que é do lote, e saldo e
+   * saídas, que são do produto. São chamadas separadas porque são coisas
+   * diferentes — mas uma edição só para quem está usando.
+   */
   const save = useCallback(
-    async (expiryDate: IsoDate | null) => {
+    async (edit: ExpiryEdit) => {
       if (!editing) return
 
       setSaving(true)
-      await updateExpiryItem(editing.id, expiryDate)
+      await Promise.all([
+        updateExpiryItem(editing.id, edit.expiryDate),
+        updateProductStock(editing.productId, { stock: edit.stock, outflow: edit.outflow }),
+      ])
       setSaving(false)
       setEditing(null)
       onChanged()

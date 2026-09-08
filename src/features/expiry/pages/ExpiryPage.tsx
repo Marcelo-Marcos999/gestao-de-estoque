@@ -196,7 +196,7 @@ export function ExpiryPage() {
         row={editor.editing}
         saving={editor.saving}
         onClose={editor.close}
-        onSave={(date) => void editor.save(date)}
+        onSave={(edit) => void editor.save(edit)}
         onDelete={() => void editor.remove()}
       />
 

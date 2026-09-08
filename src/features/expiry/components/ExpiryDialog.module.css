@@ -16,7 +16,7 @@
   color: var(--text);
 }
 
-.date {
+.input {
   width: 100%;
   min-width: 0;
   min-height: var(--touch-target);
@@ -29,13 +29,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-.date:focus {
+.input:focus {
   outline: none;
   border-color: var(--brand);
   box-shadow: 0 0 0 3px var(--brand-ring);
 }
 
-.remaining {
+.hint {
   font-size: var(--fs-xs);
   color: var(--text-muted);
 }
@@ -44,7 +44,7 @@
   color: var(--expired-text);
 }
 
-.readonly {
+.group {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
@@ -54,7 +54,19 @@
   border-radius: var(--radius);
 }
 
-.readonlyTitle {
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+/* Item de grid não encolhe abaixo do próprio conteúdo por padrão, e o campo
+   numérico traz uma largura intrínseca do navegador. */
+.pair > * {
+  min-width: 0;
+}
+
+.groupTitle {
   font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -62,19 +74,19 @@
   color: var(--text-subtle);
 }
 
-.grid {
+.codes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--sp-3);
   font-size: var(--fs-sm);
 }
 
-.grid dt {
+.codes dt {
   color: var(--text-muted);
   font-size: var(--fs-xs);
 }
 
-.grid dd {
+.codes dd {
   font-weight: 600;
   overflow-wrap: anywhere;
 }

@@ -175,6 +175,40 @@ export async function updateExpiryItem(id: string, expiryDate: IsoDate | null): 
   store = items.map((item) => (item.id === id ? { ...item, expiryDate } : item))
 }
 
+/**
+ * Garante que exista um lote para este produto nesta validade.
+ *
+ * Quem chama é o registro de quebra: apontar uma perda de um lote é dizer que
+ * aquele lote existe na loja. Sem isto, o produto apontado como vencido não
+ * aparecia na tela de validades — e era justamente lá que se ia conferir o
+ * saldo dele (ver docs/dominio.md).
+ *
+ * Sem data não há lote: um lote é produto **mais** validade, e sem ela não há
+ * o que acompanhar.
+ */
+export async function ensureExpiryItem(
+  productId: string,
+  expiryDate: IsoDate | null,
+): Promise<void> {
+  if (!productId || !expiryDate) return
+
+  const items = await ensureStore()
+  const existe = items.some(
+    (item) => item.productId === productId && item.expiryDate === expiryDate,
+  )
+  if (existe) return
+
+  store = [
+    {
+      id: `v${Date.now()}-${items.length}`,
+      productId,
+      expiryDate,
+      createdAt: new Date().toISOString(),
+    },
+    ...items,
+  ]
+}
+
 /** Exclui um ou vários lotes de uma vez, devolvendo o que saiu. */
 export async function deleteExpiryItems(ids: string[]): Promise<ExpiryItem[]> {
   await delay(LATENCY_MS)

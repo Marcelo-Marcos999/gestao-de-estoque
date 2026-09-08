@@ -113,6 +113,37 @@ export async function updateProduct(id: string, draft: ProductDraft): Promise<Sa
   return { data: updated, error: null }
 }
 
+/**
+ * Corrige saldo e saídas de um produto.
+ *
+ * Separado de `updateProduct` porque são coisas de origens diferentes: SKU,
+ * descrição e código de barras são cadastro; saldo e saídas vêm da importação
+ * dos relatórios e podem ser ajustados à mão quando o relatório não bate com a
+ * prateleira — ou enquanto não há importação nenhuma.
+ *
+ * Valem para o **produto**, não para um lote: é o mesmo número que a tela de
+ * quebra usa para saber se o item ainda está no estoque (ver docs/dominio.md).
+ */
+export async function updateProductStock(
+  id: string,
+  values: { stock: number; outflow: number },
+): Promise<void> {
+  await delay(LATENCY_MS)
+
+  store = store.map((p) =>
+    p.id === id
+      ? {
+          ...p,
+          // Negativo não existe em prateleira; seria um número que a previsão
+          // aceitaria e transformaria num prazo sem sentido.
+          stock: Math.max(0, Math.round(values.stock)),
+          outflow: Math.max(0, Math.round(values.outflow)),
+          updatedAt: new Date().toISOString(),
+        }
+      : p,
+  )
+}
+
 export async function deleteProduct(id: string): Promise<void> {
   await delay(LATENCY_MS)
   store = store.filter((p) => p.id !== id)

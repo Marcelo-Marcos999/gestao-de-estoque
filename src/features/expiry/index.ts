@@ -2,3 +2,4 @@
 export { ExpiryPage } from './pages/ExpiryPage'
 export { SITUATIONS, SITUATION_ORDER, classify, daysToZero } from './situation'
 export type { Situation } from './situation'
+export { ensureExpiryItem } from './api'
