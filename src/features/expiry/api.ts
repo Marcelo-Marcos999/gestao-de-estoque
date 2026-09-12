@@ -185,18 +185,23 @@ export async function updateExpiryItem(id: string, expiryDate: IsoDate | null): 
  *
  * Sem data não há lote: um lote é produto **mais** validade, e sem ela não há
  * o que acompanhar.
+ *
+ * Devolve `true` quando criou de fato. Para a quebra isso é indiferente — ela
+ * só quer que o lote exista —, mas quem cria um lote à mão precisa saber que
+ * ele já existia, senão a tela ficaria igual depois de salvar e pareceria que
+ * nada aconteceu.
  */
 export async function ensureExpiryItem(
   productId: string,
   expiryDate: IsoDate | null,
-): Promise<void> {
-  if (!productId || !expiryDate) return
+): Promise<boolean> {
+  if (!productId || !expiryDate) return false
 
   const items = await ensureStore()
   const existe = items.some(
     (item) => item.productId === productId && item.expiryDate === expiryDate,
   )
-  if (existe) return
+  if (existe) return false
 
   store = [
     {
@@ -207,6 +212,8 @@ export async function ensureExpiryItem(
     },
     ...items,
   ]
+
+  return true
 }
 
 /** Exclui um ou vários lotes de uma vez, devolvendo o que saiu. */

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { listProducts, type Product } from '@/features/products'
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
+import { useState } from 'react'
+import { listProducts } from '../api'
+import { useProductSearch } from '../hooks/useProductSearch'
 import { AlertIcon, CheckIcon, SearchIcon } from '@/shared/ui/icons'
 import { ScanButton } from '@/shared/ui/ScanButton'
 import { TextField } from '@/shared/ui/TextField'
@@ -20,6 +20,16 @@ export interface ChosenProduct {
 
 interface ProductPickerProps {
   chosen: ChosenProduct | null
+  /**
+   * Deixa seguir com um produto fora do cadastro, marcado como pendente.
+   *
+   * Verdadeiro no registro de quebra, onde a perda aconteceu de qualquer jeito
+   * e bloquear garantiria que o registro não existisse. Falso no
+   * acompanhamento de validades: um lote é produto **mais** validade, e sem
+   * produto no cadastro não há o que acompanhar — o lote nasceria órfão e
+   * sequer apareceria na lista.
+   */
+  allowPending?: boolean
   onChoose: (product: ChosenProduct | null) => void
   onDescriptionChange: (description: string) => void
 }
@@ -35,34 +45,14 @@ interface ProductPickerProps {
  * mandar procurar o administrador antes de registrar garante que o registro
  * não vai existir.
  */
-export function ProductPicker({ chosen, onChoose, onDescriptionChange }: ProductPickerProps) {
+export function ProductPicker({
+  chosen,
+  allowPending = true,
+  onChoose,
+  onDescriptionChange,
+}: ProductPickerProps) {
   const [term, setTerm] = useState('')
-  const debounced = useDebouncedValue(term, 250)
-  const busca = debounced.trim()
-
-  // O resultado guarda junto a busca que o produziu, e o que a tela mostra é
-  // derivado dessa comparação. Assim o efeito só grava estado dentro da
-  // resposta assíncrona — gravar "limpou" no corpo dele custaria um render a
-  // mais e faria a lista piscar entre buscas.
-  const [result, setResult] = useState<{ key: string; items: Product[] } | null>(null)
-  const results = result?.key === busca ? result.items : null
-
-  useEffect(() => {
-    if (!busca) return
-
-    let cancelled = false
-    listProducts({ search: busca, onlyWithoutBarcode: false, onlyPending: false })
-      .then((page) => {
-        if (!cancelled) setResult({ key: busca, items: page.items.slice(0, 20) })
-      })
-      .catch(() => {
-        if (!cancelled) setResult({ key: busca, items: [] })
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [busca])
+  const { busca, results } = useProductSearch(term)
 
   if (chosen) {
     return (
@@ -203,7 +193,16 @@ export function ProductPicker({ chosen, onChoose, onDescriptionChange }: Product
         </div>
       )}
 
-      {results !== null && results.length === 0 && (
+      {results !== null && results.length === 0 && !allowPending && (
+        <div className={styles.results}>
+          <p className={styles.empty}>
+            Nenhum produto encontrado para “{busca}”. Cadastre o produto antes de
+            acompanhar a validade dele.
+          </p>
+        </div>
+      )}
+
+      {results !== null && results.length === 0 && allowPending && (
         <div className={styles.results}>
           <p className={styles.empty}>
             Nenhum produto encontrado para “{busca}”.

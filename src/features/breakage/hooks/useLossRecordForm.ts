@@ -4,7 +4,7 @@ import type { IsoDate } from '@/shared/lib/date'
 import { addToRecord, createLossRecord, findSameRecord, updateLossRecord } from '../api'
 import { putAttachmentFile } from '../attachments'
 import type { AttachmentKind, LossRecord, LossRecordDraft } from '../types'
-import type { ChosenProduct } from '../components/ProductPicker'
+import type { ChosenProduct } from '@/features/products'
 import { useTagLists } from './useTagLists'
 
 export interface FormErrors {

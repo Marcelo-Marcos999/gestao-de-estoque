@@ -401,6 +401,33 @@ corrigido era falha, não desenho — e foi resolvido:
   motivo em branco sem explicação. A tela diz quantos registros seguram cada
   uma, em vez de oferecer um botão desabilitado sem motivo.
 
+## Criar registro à mão, em toda tela que tem registro
+
+Cada tela com registros tem sua própria porta de entrada manual, ao lado da
+porta em massa quando ela existe. Importar é o caminho de todo dia; um item
+solto não vale uma planilha só para ele.
+
+| Tela | O que se cria à mão | Porta em massa |
+|---|---|---|
+| Cadastro de produtos | produto (só administrador) | importação da base |
+| Quebra | registro de perda | — |
+| **Validades** | **lote: produto + validade** | — |
+| **Estoque** | **linha: SKU + saldo, saídas, custo e venda** | importação dos relatórios |
+
+Duas regras que essas portas novas seguem:
+
+- **No lote não existe produto pendente.** Um lote é produto **mais** validade;
+  sem produto no cadastro ele nasceria órfão e sequer apareceria na lista que
+  deveria alimentar. O seletor manda cadastrar antes — diferente da quebra,
+  onde a perda aconteceu de qualquer jeito e bloquear garantiria que o registro
+  não existisse. Lote repetido também não duplica: avisa que aquele produto já
+  está em acompanhamento naquela data.
+- **Adicionar ao estoque é a importação de uma linha só.** Passa pelo mesmo
+  caminho da planilha, com a mesma regra de SKU desconhecido. Quando o SKU casa
+  com um produto que já existe, o formulário abre com os números atuais dele:
+  o botão passa a dizer "Atualizar produto", e salvar com os campos em branco
+  zeraria saldo, saídas, custo e venda de quem já tinha valores.
+
 ## O que veio do AppSheet e não se repete aqui
 
 O app anterior tinha tabelas que existiam para contornar limitações da
