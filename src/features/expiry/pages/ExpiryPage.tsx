@@ -8,9 +8,10 @@ import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
-import { SearchIcon, UploadIcon } from '@/shared/ui/icons'
+import { SearchIcon } from '@/shared/ui/icons'
 import { SITUATIONS } from '../situation'
 import { ExpiryTable } from '../components/ExpiryTable'
+import { PeriodField } from '../components/PeriodField'
 import { SituationTiles } from '../components/SituationTiles'
 import { ExpiryDialog } from '../components/ExpiryDialog'
 import { exportExpiryRows } from '../export'
@@ -35,24 +36,16 @@ export function ExpiryPage() {
   /**
    * As ações acompanham o cabeçalho quando ele existe e migram para a barra de
    * busca no modo foco.
+   *
+   * Importar saldo e saídas não é mais daqui: os dois números são do produto,
+   * e quem os importa é a tela de Estoque — este cabeçalho só acompanha
+   * validade, que é o assunto desta tela (ver docs/dominio.md).
    */
   const acoes = (
-    <>
-      <ExportButton
-        count={list.rows.length}
-        onExport={() => exportExpiryRows(list.rows, list.periodDays)}
-      />
-      {/* "saldo" e "saídas" são o que distingue os dois botões: escondê-los
-          no celular deixava dois "Importar" idênticos lado a lado. */}
-      <Button variant="secondary">
-        <UploadIcon width={18} height={18} />
-        <span>Importar saldo</span>
-      </Button>
-      <Button variant="secondary">
-        <UploadIcon width={18} height={18} />
-        <span>Importar saídas</span>
-      </Button>
-    </>
+    <ExportButton
+      count={list.rows.length}
+      onExport={() => exportExpiryRows(list.rows, list.periodDays)}
+    />
   )
 
   return (
@@ -104,12 +97,10 @@ export function ExpiryPage() {
           <ScanButton onDetect={list.setSearch} label="Buscar por código de barras" />
         </div>
 
-        {/* O número que sustenta a previsão fica visível: sem ele, "sai em 195
-            dias" é um número sem procedência. */}
-        <span className={styles.period}>
-          Período das saídas:
-          <span className={styles.periodValue}>{list.periodDays} dias</span>
-        </span>
+        {/* O número que sustenta a previsão fica visível e editável aqui: sem
+            ele, "sai em 195 dias" é um número sem procedência — e quem lê a
+            previsão é quem percebe que o intervalo está errado. */}
+        <PeriodField days={list.periodDays} onChange={list.setPeriodDays} />
 
         {focus.focused && <div className={styles.actions}>{acoes}</div>}
 

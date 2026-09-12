@@ -110,6 +110,7 @@ export function ProductsPage() {
         actions={focus.focused ? acoes : null}
         onSearch={list.setSearch}
         onToggleWithoutBarcode={list.setOnlyWithoutBarcode}
+        onTogglePending={list.setOnlyPending}
         onClear={list.clearFilters}
         onToggleFocus={focus.toggle}
       />

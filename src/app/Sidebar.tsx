@@ -6,6 +6,7 @@ import {
   BarcodeIcon,
   BoxIcon,
   CalendarIcon,
+  LayersIcon,
   MoonIcon,
   SettingsIcon,
   SidebarIcon,
@@ -26,6 +27,10 @@ import styles from './AppShell.module.css'
 const NAV = [
   { to: '/validades', label: 'Validades', icon: CalendarIcon, ready: true, adminOnly: false },
   { to: '/quebra', label: 'Quebra', icon: BarcodeIcon, ready: true, adminOnly: false },
+  // Estoque é lido e importado pelos dois perfis: saldo, saídas, custo e
+  // venda não são a bancada do administrador, diferente do cadastro abaixo
+  // (ver CLAUDE.md, "Perfis de acesso").
+  { to: '/estoque', label: 'Estoque', icon: LayersIcon, ready: true, adminOnly: false },
   {
     to: '/produtos',
     label: 'Cadastro de produtos',

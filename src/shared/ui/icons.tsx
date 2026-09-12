@@ -247,3 +247,12 @@ export const DownloadIcon = (p: IconProps) => (
     <path d="M4 20h16" />
   </Icon>
 )
+
+/** Camadas empilhadas: estoque, distinto da caixa única do cadastro. */
+export const LayersIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m12 3 8.5 4.5L12 12 3.5 7.5 12 3Z" />
+    <path d="m3.5 12 8.5 4.5 8.5-4.5" />
+    <path d="m3.5 16.5 8.5 4.5 8.5-4.5" />
+  </Icon>
+)

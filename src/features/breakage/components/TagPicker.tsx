@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { AlertIcon, PlusIcon } from '@/shared/ui/icons'
+import { AlertIcon, EditIcon, PlusIcon } from '@/shared/ui/icons'
 import { Button } from '@/shared/ui/Button'
 import { tagIdFrom } from '../tags'
+import type { TagUsage } from '../hooks/useTagLists'
 import type { Tag } from '../types'
+import { TagListDialog } from './TagListDialog'
 import styles from './TagPicker.module.css'
 
 interface TagPickerProps {
@@ -11,9 +13,13 @@ interface TagPickerProps {
   value: string
   optional?: boolean
   error?: string
+  /** Quantos registros usam cada etiqueta — o que pode ou não ser excluído. */
+  usage: TagUsage
   onChange: (id: string) => void
   /** Cria a etiqueta na lista da loja, não só neste registro. */
   onCreate: (tag: Tag) => void
+  onRename: (id: string, label: string) => void
+  onDelete: (id: string) => void
 }
 
 /**
@@ -30,11 +36,15 @@ export function TagPicker({
   value,
   optional,
   error,
+  usage,
   onChange,
   onCreate,
+  onRename,
+  onDelete,
 }: TagPickerProps) {
   const [creating, setCreating] = useState(false)
   const [novo, setNovo] = useState('')
+  const [managing, setManaging] = useState(false)
 
   function confirmar() {
     const texto = novo.trim()
@@ -63,6 +73,17 @@ export function TagPicker({
       <span className={styles.label}>
         {label}
         {optional && <span className={styles.optional}> (opcional)</span>}
+
+        {/* Corrigir a lista é a saída para o "danificada" digitado errado, que
+            de outro modo ficaria para sempre ao lado de "Danificado". */}
+        <button
+          type="button"
+          className={styles.manage}
+          onClick={() => setManaging(true)}
+        >
+          <EditIcon width={14} height={14} />
+          Editar lista
+        </button>
       </span>
 
       <div className={styles.options}>
@@ -119,6 +140,16 @@ export function TagPicker({
           {error}
         </p>
       )}
+
+      <TagListDialog
+        open={managing}
+        label={label}
+        tags={tags}
+        usage={usage}
+        onClose={() => setManaging(false)}
+        onRename={onRename}
+        onDelete={onDelete}
+      />
     </div>
   )
 }

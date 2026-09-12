@@ -1,14 +1,20 @@
 import { useState } from 'react'
 import type { DragEvent } from 'react'
-import { UploadIcon } from '@/shared/ui/icons'
-import styles from './FileStep.module.css'
+import { UploadIcon } from './icons'
+import styles from './ImportFileStep.module.css'
 
-interface FileStepProps {
+interface ImportFileStepProps {
   busy: boolean
   onSelect: (file: File) => void
 }
 
-export function FileStep({ busy, onSelect }: FileStepProps) {
+/**
+ * Primeira etapa de qualquer assistente de importação: arrastar ou escolher o
+ * arquivo. Não conhece produto, estoque nem nenhum outro domínio — por isso
+ * mora em `shared/`, para as duas importações do sistema usarem a mesma peça
+ * em vez de duas cópias idênticas (ver CLAUDE.md).
+ */
+export function ImportFileStep({ busy, onSelect }: ImportFileStepProps) {
   const [dragging, setDragging] = useState(false)
 
   function handleDrop(event: DragEvent<HTMLLabelElement>) {

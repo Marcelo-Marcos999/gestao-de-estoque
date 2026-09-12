@@ -9,14 +9,18 @@ export type ListStatus = 'loading' | 'error' | 'ready'
 
 const FILTERS_KEY = storageKey('filtros', 'produtos')
 
-const NO_FILTERS: ProductQuery = { search: '', onlyWithoutBarcode: false }
+const NO_FILTERS: ProductQuery = { search: '', onlyWithoutBarcode: false, onlyPending: false }
 
 /** Descarta um registro gravado fora de formato em vez de quebrar a tela. */
 function isProductQuery(value: unknown): value is ProductQuery {
   if (typeof value !== 'object' || value === null) return false
 
-  const { search, onlyWithoutBarcode } = value as Record<string, unknown>
-  return typeof search === 'string' && typeof onlyWithoutBarcode === 'boolean'
+  const { search, onlyWithoutBarcode, onlyPending } = value as Record<string, unknown>
+  return (
+    typeof search === 'string' &&
+    typeof onlyWithoutBarcode === 'boolean' &&
+    typeof onlyPending === 'boolean'
+  )
 }
 
 /**
@@ -41,7 +45,7 @@ export function useProductList() {
    * gravar "carregando" antes de cada busca — o que custaria um render a mais
    * e faria a lista piscar a cada tecla.
    */
-  const queryKey = `${debouncedSearch}|${filters.onlyWithoutBarcode}`
+  const queryKey = `${debouncedSearch}|${filters.onlyWithoutBarcode}|${filters.onlyPending}`
 
   const [result, setResult] = useState<{ key: string; items: Product[]; total: number } | null>(
     null,
@@ -53,7 +57,11 @@ export function useProductList() {
   useEffect(() => {
     let cancelled = false
 
-    listProducts({ search: debouncedSearch, onlyWithoutBarcode: filters.onlyWithoutBarcode })
+    listProducts({
+      search: debouncedSearch,
+      onlyWithoutBarcode: filters.onlyWithoutBarcode,
+      onlyPending: filters.onlyPending,
+    })
       .then((page) => {
         if (cancelled) return
         setFailedKey(null)
@@ -66,7 +74,7 @@ export function useProductList() {
     return () => {
       cancelled = true
     }
-  }, [queryKey, debouncedSearch, filters.onlyWithoutBarcode, reloadKey])
+  }, [queryKey, debouncedSearch, filters.onlyWithoutBarcode, filters.onlyPending, reloadKey])
 
   useEffect(() => {
     let cancelled = false
@@ -100,13 +108,19 @@ export function useProductList() {
     [setFilters],
   )
 
+  const setOnlyPending = useCallback(
+    (onlyPending: boolean) => setFilters((current) => ({ ...current, onlyPending })),
+    [setFilters],
+  )
+
   const clearFilters = useCallback(() => setFilters(NO_FILTERS), [setFilters])
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), [])
 
   // Usa o valor com atraso, não o que está sendo digitado: senão a contagem
   // trocaria de formato antes de a lista mudar.
-  const isFiltered = debouncedSearch.trim() !== '' || filters.onlyWithoutBarcode
+  const isFiltered =
+    debouncedSearch.trim() !== '' || filters.onlyWithoutBarcode || filters.onlyPending
 
   return {
     filters,
@@ -117,6 +131,7 @@ export function useProductList() {
     isFiltered,
     setSearch,
     setOnlyWithoutBarcode,
+    setOnlyPending,
     clearFilters,
     reload,
   }

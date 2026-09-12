@@ -127,12 +127,28 @@ Três fontes, para os mesmos dois números:
 
 | Dado | Como chega |
 |---|---|
-| **Estoque** (saldo) | importação do CSV de estoque total da loja, ou digitado |
-| **Saídas** | importação de um segundo CSV, de outro relatório, ou digitado |
+| **Estoque** (saldo) | importação da planilha na tela de Estoque, ou digitado |
+| **Saídas** | mesma importação, ou de um segundo arquivo, ou digitado |
+| **Valor de custo e de venda** | mesma importação, ou digitados |
 
-São relatórios distintos do ERP, importados separadamente. O usuário trata o
-arquivo antes se precisar. Os dois campos continuam editáveis à mão: o número
-importado é ponto de partida, não verdade intocável.
+A importação vive na **tela de Estoque**, aberta aos dois perfis: saldo, saídas
+e valores não são a bancada do administrador, que é o cadastro de produtos. Ela
+casa a planilha com o cadastro pelo **SKU**, e cada coluna é opcional — uma
+importação pode trazer só saldo e saídas, e o que não veio fica como estava em
+vez de zerar. O usuário trata o arquivo antes se precisar.
+
+Os quatro campos continuam editáveis à mão, ali e no diálogo de lote das
+Validades: o número importado é ponto de partida, não verdade intocável.
+
+### SKU que a importação não reconhece
+
+Não bloqueia. O produto entra no cadastro como **pendente**, com os números da
+planilha e sem descrição nem código de barras — mesma decisão do registro de
+quebra, e pelo mesmo motivo: recusar a linha perderia o dado, porque a
+importação costuma ser a única fonte desses números.
+
+Resolver a pendência é do administrador, no cadastro de produtos, que mostra o
+selo "pendente" e tem o filtro "só pendentes" para a fila não ficar invisível.
 
 Saldo zerado é o que diz que o item **saiu do estoque** — é assim que a tela de
 quebra sabe o que ainda está lá e o que não está.
@@ -256,8 +272,9 @@ está no estoque — e mudam para todos os lotes daquele produto; o diálogo diz
 isso em vez de deixar a pessoa descobrir depois.
 
 Eles são editáveis à mão porque nem sempre o relatório bate com a prateleira, e
-porque enquanto não há importação é o único jeito de pôr um número real na
-tela. Zerar o saldo por ali é o caminho para conferir o que a quebra faz quando
+porque quem encontra a caixa no corredor é quem vê a diferença — mandá-lo até a
+tela de Estoque para corrigir faria o número continuar errado. Zerar o saldo por
+ali é o caminho para conferir o que a quebra faz quando
 o item sai do estoque: a quantidade do registro zera junto e ele passa para a
 aba "zerados".
 
@@ -348,6 +365,42 @@ que a tela já sabe.
 O código de barras vai como texto: em número, o Excel come o zero à esquerda e
 mostra `7,89658E+12` numa coluna estreita.
 
+## O que é editável à mão
+
+Regra geral, válida em todas as telas: **todo registro pode ser corrigido à
+mão, exceto o que aquela tela apenas busca de outra base.**
+
+O que a tela busca de outra parte é só leitura ali, e se corrige na tela dona
+do dado:
+
+| Dado | Só leitura em | Edita-se em |
+|---|---|---|
+| SKU, descrição, código de barras | Estoque, Validades, Quebra | Cadastro de produtos |
+| Situação, "sai em X dias" | todas | em lugar nenhum — é calculado |
+
+Saldo e saídas são a exceção que confirma a regra: aparecem na tela de Estoque
+e no diálogo de lote das Validades, e são **editáveis nas duas**. Não é dado
+buscado de outra base — é o mesmo registro do produto, e gravar de qualquer uma
+das telas escreve na mesma fonte, sem risco de as duas discordarem. Mandar
+quem está com o celular na mão na frente da prateleira até outra tela para
+corrigir um saldo faria o número continuar errado.
+
+Do lado oposto, o que **não** vinha de base nenhuma e mesmo assim não podia ser
+corrigido era falha, não desenho — e foi resolvido:
+
+- O **período do relatório de saídas** é editado na própria tela de Validades,
+  onde o número aparece e onde está à vista a previsão que ele sustenta. Ele
+  desloca todas as situações de uma vez, então a edição é explícita: um toque
+  para abrir, confirmar para gravar.
+- As listas de **motivo e origem** são renomeadas e excluídas pelo "Editar
+  lista", dentro do registro de quebra. Renomear conserta os registros que já
+  usam a etiqueta, porque eles apontam para o `id` e não para o texto —
+  é assim que "danificada" digitado errado volta a ser "Danificado" sem virar
+  um segundo motivo. Excluir só vale enquanto ninguém usa a etiqueta: em uso,
+  a exclusão deixaria registros apontando para o nada, e a lista mostraria
+  motivo em branco sem explicação. A tela diz quantos registros seguram cada
+  uma, em vez de oferecer um botão desabilitado sem motivo.
+
 ## O que veio do AppSheet e não se repete aqui
 
 O app anterior tinha tabelas que existiam para contornar limitações da
@@ -385,8 +438,6 @@ Pontos que a especificação de cada tela precisa fechar:
 
 - Quais são os estados de um item na tela de quebra ("ainda no estoque",
   "retirado", …) e o que faz cada um mudar.
-- Se as listas de motivo e origem são **da loja** ou **de cada operador** (ver
-  risco abaixo).
 
 Fechados durante a construção da tela de quebra:
 
@@ -395,3 +446,8 @@ Fechados durante a construção da tela de quebra:
 - **Valores iniciais das listas**: motivos (Vencido, Danificado, Avaria de
   transporte, Divergência de quantidade, Furto ou perda) e origens (Centro de
   distribuição, Loja, Fornecedor), todos editáveis.
+- **Dono das listas de motivo e origem**: a lista é **da loja**, uma só, e
+  qualquer perfil a edita — criar, renomear e excluir (ver "O que é editável à
+  mão"). O que precisa ser único é a lista, não quem a mantém: é a lista por
+  operador que fragmentaria o relatório em "danificado", "danificada" e
+  "avaria".

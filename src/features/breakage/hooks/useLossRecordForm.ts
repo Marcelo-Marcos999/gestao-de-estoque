@@ -60,7 +60,7 @@ export function useLossRecordForm(
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
 
-  const { reasons, origins, addReason, addOrigin } = useTagLists()
+  const { reasons, origins, usage, addReason, addOrigin, renameTag, deleteTag } = useTagLists()
 
   /** Registro igual encontrado; quando presente, o aviso está aberto. */
   const [duplicate, setDuplicate] = useState<LossRecord | null>(null)
@@ -190,8 +190,11 @@ export function useLossRecordForm(
     removeAttachment,
     reasons,
     origins,
+    tagUsage: usage,
     addReason,
     addOrigin,
+    renameTag,
+    deleteTag,
     errors,
     saving,
     duplicate,

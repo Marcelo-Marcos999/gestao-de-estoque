@@ -104,6 +104,19 @@
   font-size: var(--fs-sm);
 }
 
+.pending {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-subtle);
+}
+
+.pending em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .editButton {
   display: flex;
   align-items: center;

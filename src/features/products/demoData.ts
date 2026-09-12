@@ -83,6 +83,11 @@ export function generateProducts(count: number): Product[] {
     const stock = Math.floor(random() * 12)
     const outflow = random() > 0.28 ? Math.floor(random() * 60) : 0
 
+    // Custo abaixo de venda numa faixa plausível de tinta e ferragem — a
+    // demonstração existe para julgar a tela, não para acertar o preço real.
+    const costPrice = Math.round((8 + random() * 180) * 100) / 100
+    const salePrice = Math.round(costPrice * (1.3 + random() * 0.6) * 100) / 100
+
     products.push({
       id: `p${sku}`,
       sku,
@@ -90,6 +95,9 @@ export function generateProducts(count: number): Product[] {
       barcode,
       stock,
       outflow,
+      costPrice,
+      salePrice,
+      pendingCadastro: false,
       createdAt: timestamp,
       updatedAt: timestamp,
     })

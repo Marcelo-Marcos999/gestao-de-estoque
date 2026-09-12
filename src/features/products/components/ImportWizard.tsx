@@ -2,12 +2,19 @@ import { useCallback } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
+import { ImportFileStep } from '@/shared/ui/ImportFileStep'
+import { ImportWizardSteps } from '@/shared/ui/ImportWizardSteps'
 import { useImportWizard } from '../import/useImportWizard'
 import { ApplyingStep, DoneStep } from './import/DoneStep'
-import { FileStep } from './import/FileStep'
 import { MappingStep } from './import/MappingStep'
 import { ReviewStep } from './import/ReviewStep'
-import { WizardSteps } from './import/WizardSteps'
+
+const STEP_LABELS = [
+  { id: 'arquivo', label: 'Arquivo' },
+  { id: 'mapeamento', label: 'Colunas' },
+  { id: 'revisao', label: 'Revisão' },
+  { id: 'resumo', label: 'Conclusão' },
+]
 
 interface ImportWizardProps {
   open: boolean
@@ -39,12 +46,16 @@ export function ImportWizard({ open, onClose, onImported }: ImportWizardProps) {
       subtitle={wizard.fileName || 'Traga a base de produtos do ERP para o sistema.'}
       footer={<Footer wizard={wizard} onCancel={close} />}
     >
-      <WizardSteps step={wizard.step} />
+      <ImportWizardSteps
+        steps={STEP_LABELS}
+        // 'aplicando' não é uma parada do trilho: é a última etapa em andamento.
+        currentId={wizard.step === 'aplicando' ? 'resumo' : wizard.step}
+      />
 
       {wizard.error && <Alert tone="danger">{wizard.error}</Alert>}
 
       {wizard.step === 'arquivo' && (
-        <FileStep busy={wizard.busy} onSelect={(file) => void wizard.selectFile(file)} />
+        <ImportFileStep busy={wizard.busy} onSelect={(file) => void wizard.selectFile(file)} />
       )}
 
       {wizard.step === 'mapeamento' && wizard.sheet && wizard.mapping && (

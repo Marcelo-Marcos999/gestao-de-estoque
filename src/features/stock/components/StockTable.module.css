@@ -1,0 +1,205 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 84px 84px 104px 104px 44px;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+}
+
+.head {
+  composes: row;
+  height: 40px;
+  flex-shrink: 0;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.scroller {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.canvas {
+  position: relative;
+  width: 100%;
+}
+
+.item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  border-bottom: 1px solid var(--border);
+}
+
+.itemInner {
+  composes: row;
+  min-height: 56px;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.item:hover .itemInner {
+  background: var(--surface-hover);
+}
+
+.product {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.description {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pendingLine {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.codes {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.number {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.mobileData {
+  display: none;
+}
+
+.editButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-subtle);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.editButton:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ---- Celular: a grade de 6 colunas não cabe; a linha vira um cartão ----- */
+@media (max-width: 719px) {
+  .head {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: 1fr auto;
+    gap: var(--sp-2) var(--sp-3);
+    padding: var(--sp-4);
+    align-items: start;
+  }
+
+  .itemInner {
+    min-height: 108px;
+    grid-template-areas:
+      'produto edit'
+      'dados   edit';
+  }
+
+  .product {
+    grid-area: produto;
+  }
+
+  .description {
+    white-space: normal;
+    overflow: visible;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .number {
+    display: none;
+  }
+
+  .mobileData {
+    grid-area: dados;
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+  }
+
+  .editButton {
+    grid-area: edit;
+    align-self: center;
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .wrap {
+    flex: none;
+    overflow: visible;
+  }
+
+  .scroller {
+    flex: none;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+}
+
+.mobileLabel {
+  color: var(--text-muted);
+}
+
+.mobileValue {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}

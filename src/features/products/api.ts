@@ -21,6 +21,7 @@ let store: Product[] = generateProducts(26680)
 
 function matches(product: Product, query: ProductQuery): boolean {
   if (query.onlyWithoutBarcode && product.barcode) return false
+  if (query.onlyPending && !product.pendingCadastro) return false
   if (!query.search) return true
 
   const term = query.search.trim().toLowerCase()
@@ -92,6 +93,9 @@ export async function createProduct(draft: ProductDraft): Promise<SaveResult> {
     ...draft,
     stock: 0,
     outflow: 0,
+    costPrice: 0,
+    salePrice: 0,
+    pendingCadastro: false,
     createdAt: now,
     updatedAt: now,
   }
@@ -113,31 +117,49 @@ export async function updateProduct(id: string, draft: ProductDraft): Promise<Sa
   return { data: updated, error: null }
 }
 
+/** Números do produto que a tela de Estoque importa ou corrige à mão. */
+export interface StockValues {
+  stock: number
+  outflow: number
+  costPrice: number
+  salePrice: number
+}
+
 /**
- * Corrige saldo e saídas de um produto.
+ * Corrige saldo, saídas e valores de um produto.
  *
  * Separado de `updateProduct` porque são coisas de origens diferentes: SKU,
- * descrição e código de barras são cadastro; saldo e saídas vêm da importação
- * dos relatórios e podem ser ajustados à mão quando o relatório não bate com a
- * prateleira — ou enquanto não há importação nenhuma.
+ * descrição e código de barras são cadastro; estes quatro números vêm da
+ * importação dos relatórios (tela de Estoque) e podem ser ajustados à mão
+ * quando o relatório não bate com a prateleira — ou enquanto não há
+ * importação nenhuma.
+ *
+ * Aceita qualquer subconjunto dos quatro campos: quem chama pode ter só saldo
+ * e saídas em mãos (ver docs/dominio.md, "três fontes"), e os que faltam
+ * continuam com o valor que já tinham em vez de zerar.
  *
  * Valem para o **produto**, não para um lote: é o mesmo número que a tela de
- * quebra usa para saber se o item ainda está no estoque (ver docs/dominio.md).
+ * quebra usa para saber se o item ainda está no estoque.
  */
 export async function updateProductStock(
   id: string,
-  values: { stock: number; outflow: number },
+  values: Partial<StockValues>,
 ): Promise<void> {
   await delay(LATENCY_MS)
+
+  // Negativo não existe em prateleira nem em preço; seria um número que a
+  // previsão ou a tela de estoque aceitariam e exibiriam sem sentido.
+  const semNegativo = (n: number) => Math.max(0, n)
 
   store = store.map((p) =>
     p.id === id
       ? {
           ...p,
-          // Negativo não existe em prateleira; seria um número que a previsão
-          // aceitaria e transformaria num prazo sem sentido.
-          stock: Math.max(0, Math.round(values.stock)),
-          outflow: Math.max(0, Math.round(values.outflow)),
+          stock: values.stock !== undefined ? Math.round(semNegativo(values.stock)) : p.stock,
+          outflow:
+            values.outflow !== undefined ? Math.round(semNegativo(values.outflow)) : p.outflow,
+          costPrice: values.costPrice !== undefined ? semNegativo(values.costPrice) : p.costPrice,
+          salePrice: values.salePrice !== undefined ? semNegativo(values.salePrice) : p.salePrice,
           updatedAt: new Date().toISOString(),
         }
       : p,
@@ -171,6 +193,9 @@ export async function bulkCreate(
         ...draft,
         stock: 0,
         outflow: 0,
+        costPrice: 0,
+        salePrice: 0,
+        pendingCadastro: false,
         createdAt: now,
         updatedAt: now,
       })
@@ -182,4 +207,86 @@ export async function bulkCreate(
 
   store = [...created, ...store]
   return created.length
+}
+
+/** Uma linha da planilha de estoque, já com o SKU casado ou não. */
+export interface StockImportRow {
+  sku: string
+  /** Ausente quando a coluna não foi mapeada nesta importação: mantém o valor atual. */
+  stock?: number
+  outflow?: number
+  costPrice?: number
+  salePrice?: number
+}
+
+export interface StockImportResult {
+  /** Produtos existentes que tiveram os números atualizados. */
+  updated: number
+  /** Produtos novos, criados como pendentes por não existirem no cadastro. */
+  pendingCreated: number
+}
+
+/**
+ * Aplica a planilha de estoque: atualiza quem já está no cadastro e cria como
+ * pendente quem não está.
+ *
+ * Não bloquear pelo SKU desconhecido é a mesma decisão da quebra: a
+ * importação normalmente é a única fonte desses números, e recusar a linha
+ * até o administrador cadastrar o produto perderia o dado (ver
+ * docs/dominio.md).
+ */
+export async function bulkUpsertStock(
+  rows: StockImportRow[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<StockImportResult> {
+  const BATCH = 500
+  const now = new Date().toISOString()
+  const bySku = new Map(store.map((p) => [p.sku, p]))
+
+  let updated = 0
+  const pending: Product[] = []
+
+  for (let i = 0; i < rows.length; i += BATCH) {
+    for (const row of rows.slice(i, i + BATCH)) {
+      const existing = bySku.get(row.sku)
+
+      if (existing) {
+        const patched: Product = {
+          ...existing,
+          stock: row.stock !== undefined ? Math.max(0, Math.round(row.stock)) : existing.stock,
+          outflow:
+            row.outflow !== undefined ? Math.max(0, Math.round(row.outflow)) : existing.outflow,
+          costPrice:
+            row.costPrice !== undefined ? Math.max(0, row.costPrice) : existing.costPrice,
+          salePrice:
+            row.salePrice !== undefined ? Math.max(0, row.salePrice) : existing.salePrice,
+          updatedAt: now,
+        }
+        bySku.set(row.sku, patched)
+        updated++
+      } else {
+        const created: Product = {
+          id: `p${row.sku}-${now}-${pending.length}`,
+          sku: row.sku,
+          description: '',
+          barcode: '',
+          stock: Math.max(0, Math.round(row.stock ?? 0)),
+          outflow: Math.max(0, Math.round(row.outflow ?? 0)),
+          costPrice: Math.max(0, row.costPrice ?? 0),
+          salePrice: Math.max(0, row.salePrice ?? 0),
+          pendingCadastro: true,
+          createdAt: now,
+          updatedAt: now,
+        }
+        bySku.set(row.sku, created)
+        pending.push(created)
+      }
+    }
+
+    onProgress?.(Math.min(i + BATCH, rows.length), rows.length)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  }
+
+  store = [...pending, ...store.map((p) => bySku.get(p.sku) ?? p)]
+  return { updated, pendingCreated: pending.length }
 }

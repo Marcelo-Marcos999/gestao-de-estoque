@@ -51,7 +51,7 @@ export function ProductPicker({ chosen, onChoose, onDescriptionChange }: Product
     if (!busca) return
 
     let cancelled = false
-    listProducts({ search: busca, onlyWithoutBarcode: false })
+    listProducts({ search: busca, onlyWithoutBarcode: false, onlyPending: false })
       .then((page) => {
         if (!cancelled) setResult({ key: busca, items: page.items.slice(0, 20) })
       })
@@ -135,7 +135,7 @@ export function ProductPicker({ chosen, onChoose, onDescriptionChange }: Product
   async function scanned(code: string) {
     setTerm(code)
 
-    const page = await listProducts({ search: code, onlyWithoutBarcode: false })
+    const page = await listProducts({ search: code, onlyWithoutBarcode: false, onlyPending: false })
     if (page.items.length !== 1) return
 
     const product = page.items[0]

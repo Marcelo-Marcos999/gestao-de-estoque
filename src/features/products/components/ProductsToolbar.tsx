@@ -19,6 +19,7 @@ interface ProductsToolbarProps {
   actions: ReactNode
   onSearch: (value: string) => void
   onToggleWithoutBarcode: (value: boolean) => void
+  onTogglePending: (value: boolean) => void
   onClear: () => void
   onToggleFocus: () => void
 }
@@ -33,6 +34,7 @@ export function ProductsToolbar({
   actions,
   onSearch,
   onToggleWithoutBarcode,
+  onTogglePending,
   onClear,
   onToggleFocus,
 }: ProductsToolbarProps) {
@@ -64,6 +66,18 @@ export function ProductsToolbar({
           onChange={(event) => onToggleWithoutBarcode(event.target.checked)}
         />
         Só sem código de barras
+      </label>
+
+      {/* Fila do que a importação de estoque criou sem descrição nem código de
+          barras — sem este filtro, quem completa o cadastro precisaria
+          lembrar de procurar por pendência (ver docs/dominio.md, "riscos"). */}
+      <label className={`${styles.filter} ${filters.onlyPending ? styles.filterOn : ''}`}>
+        <input
+          type="checkbox"
+          checked={filters.onlyPending}
+          onChange={(event) => onTogglePending(event.target.checked)}
+        />
+        Só pendentes
       </label>
 
       {actions && <div className={styles.actions}>{actions}</div>}

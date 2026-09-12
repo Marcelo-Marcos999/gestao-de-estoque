@@ -72,6 +72,32 @@ export async function countLossRecords(): Promise<{ total: number; inStock: numb
 }
 
 /**
+ * Quantos registros usam cada motivo e cada origem.
+ *
+ * Serve para a edição das listas: renomear uma etiqueta é sempre seguro,
+ * porque o registro aponta para o `id` e não para o texto — já excluir uma
+ * etiqueta em uso deixaria registros apontando para o nada, e a tela passaria
+ * a mostrar motivo em branco sem ninguém entender por quê.
+ *
+ * Conta sobre o store cru, e não sobre `withCurrentStock`: um registro que
+ * zerou continua existindo e continua usando a etiqueta.
+ */
+export async function countTagUsage(): Promise<{
+  reasons: Record<string, number>
+  origins: Record<string, number>
+}> {
+  const reasons: Record<string, number> = {}
+  const origins: Record<string, number> = {}
+
+  for (const record of store) {
+    if (record.reasonId) reasons[record.reasonId] = (reasons[record.reasonId] ?? 0) + 1
+    if (record.originId) origins[record.originId] = (origins[record.originId] ?? 0) + 1
+  }
+
+  return { reasons, origins }
+}
+
+/**
  * Procura um registro com a mesma identidade: produto, validade e motivo.
  *
  * A chave importa. Avisando só por produto, o aviso dispararia o tempo todo —

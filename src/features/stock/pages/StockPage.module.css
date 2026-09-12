@@ -1,0 +1,85 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.count {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+/* No celular as ações ocupam a largura toda, embaixo do título. */
+@media (max-width: 599px) {
+  /* Palavra que só cabe em tela larga; o ícone já diz do que se trata. Fica
+     escondida da vista, mas continua no nome acessível — com display:none o
+     leitor de tela anunciaria apenas "Importar". */
+  .labelExtra {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
+    /* Se ainda assim não couberem lado a lado — telas de 320px, fonte
+       aumentada pelo sistema — elas empilham em vez de serem cortadas. */
+    flex-wrap: wrap;
+  }
+
+  .actions > * {
+    flex: 1 1 auto;
+  }
+}
+
+/* No celular quem rola é a página inteira: o cabeçalho sai da tela junto com o
+   resto e devolve a altura para a lista. Da largura de tablet para cima ela
+   volta a ter altura fixa, porque ali é a lista que rola dentro de si — e com
+   altura livre o container de rolagem ficaria do tamanho de todos os itens,
+   deixando a virtualização sem efeito. */
+.page {
+  overflow-y: auto;
+}
+
+@media (min-width: 720px) {
+  .page {
+    overflow: hidden;
+  }
+}
