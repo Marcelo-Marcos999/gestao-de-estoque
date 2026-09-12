@@ -9,11 +9,9 @@
   overflow: hidden;
 }
 
-/* A grade é definida uma vez e reusada pelo cabeçalho e pelas linhas, para
-   as colunas não saírem do eixo. */
 .row {
   display: grid;
-  grid-template-columns: 150px 90px 1fr 44px;
+  grid-template-columns: 1fr 84px 84px 104px 104px 44px;
   align-items: center;
   gap: var(--sp-4);
   padding: 0 var(--sp-4);
@@ -54,67 +52,52 @@
 
 .itemInner {
   composes: row;
-  /* Altura mínima, não fixa: a linha cresce quando o nome do produto quebra. */
-  min-height: 52px;
+  min-height: 56px;
   transition: background-color var(--dur-fast) var(--ease-out);
-}
-
-/* Rótulo do campo, visível só onde não existe cabeçalho de coluna. */
-.fieldLabel {
-  display: none;
 }
 
 .item:hover .itemInner {
   background: var(--surface-hover);
 }
 
-.barcode {
+.product {
   display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-}
-
-.barcodeIcon {
-  flex-shrink: 0;
-  color: var(--text-subtle);
-}
-
-.semBarras {
-  font-family: var(--font-ui);
-  color: var(--text-subtle);
-  font-style: italic;
-}
-
-.sku {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .description {
-  min-width: 0;
+  font-size: var(--fs-sm);
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--fs-sm);
 }
 
-.pending {
+.pendingLine {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
-  color: var(--text-subtle);
 }
 
-.pending em {
+.codes {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-subtle);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.number {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.mobileData {
+  display: none;
 }
 
 .editButton {
@@ -137,7 +120,16 @@
   color: var(--brand);
 }
 
-/* ---- Celular: a grade de 4 colunas não cabe; a linha vira um cartão ----- */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ---- Celular: a grade de 6 colunas não cabe; a linha vira um cartão ----- */
 @media (max-width: 719px) {
   .head {
     display: none;
@@ -151,17 +143,17 @@
   }
 
   .itemInner {
-    min-height: 96px;
+    min-height: 108px;
     grid-template-areas:
-      'desc  edit'
-      'sku   edit'
-      'barra edit';
+      'produto edit'
+      'dados   edit';
+  }
+
+  .product {
+    grid-area: produto;
   }
 
   .description {
-    grid-area: desc;
-    /* O nome do produto é o dado que o usuário procura no corredor da loja:
-       ele quebra em quantas linhas precisar, em corpo maior que o da tabela. */
     white-space: normal;
     overflow: visible;
     font-size: var(--fs-md);
@@ -169,28 +161,18 @@
     line-height: 1.35;
   }
 
-  .sku {
-    grid-area: sku;
+  .number {
+    display: none;
+  }
+
+  .mobileData {
+    grid-area: dados;
     display: flex;
     align-items: baseline;
-    gap: var(--sp-2);
+    gap: var(--sp-3);
+    flex-wrap: wrap;
     font-size: var(--fs-sm);
     color: var(--text-muted);
-  }
-
-  .fieldLabel {
-    display: inline;
-    font-family: var(--font-ui);
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-subtle);
-  }
-
-  .barcode {
-    grid-area: barra;
-    font-size: var(--fs-sm);
   }
 
   .editButton {
@@ -199,12 +181,7 @@
     width: var(--touch-target);
     height: var(--touch-target);
   }
-}
 
-/* No celular a lista não rola dentro de si: quem rola é a página. Sem soltar
-   estas duas, sobrariam duas rolagens aninhadas — a de fora sem uso e a de
-   dentro numa janelinha de poucos centímetros. */
-@media (max-width: 719px) {
   .wrap {
     flex: none;
     overflow: visible;
@@ -215,4 +192,14 @@
     overflow: visible;
     overscroll-behavior: auto;
   }
+}
+
+.mobileLabel {
+  color: var(--text-muted);
+}
+
+.mobileValue {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }

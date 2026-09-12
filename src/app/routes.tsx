@@ -3,6 +3,7 @@ import { ForgotPasswordPage, LoginPage, ResetPasswordPage } from '@/features/aut
 import { BreakagePage } from '@/features/breakage'
 import { ExpiryPage } from '@/features/expiry'
 import { ProductsPage } from '@/features/products'
+import { StockPage } from '@/features/stock'
 import { AppShell } from './AppShell'
 import { RequireAuth } from './RequireAuth'
 
@@ -33,6 +34,7 @@ export function AppRoutes() {
         <Route element={<AppShell />}>
           <Route path="/validades" element={<ExpiryPage />} />
           <Route path="/quebra" element={<BreakagePage />} />
+          <Route path="/estoque" element={<StockPage />} />
           <Route path="/produtos" element={<ProductsPage />} />
         </Route>
       </Route>

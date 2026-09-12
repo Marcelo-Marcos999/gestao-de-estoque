@@ -14,6 +14,17 @@ export interface Product {
   stock: number
   /** Quantidade vendida dentro do período configurado. Do segundo relatório. */
   outflow: number
+  /** Valor de custo unitário. Vem da tela de Estoque, como saldo e saídas. */
+  costPrice: number
+  /** Valor de venda unitário. Vem da tela de Estoque, como saldo e saídas. */
+  salePrice: number
+  /**
+   * True para um produto criado pela importação de estoque a partir de um SKU
+   * que a base ainda não conhecia (ver docs/dominio.md). Description e barcode
+   * nascem vazios; resolver a pendência — completar os dois — é trabalho do
+   * administrador aqui no cadastro.
+   */
+  pendingCadastro: boolean
   createdAt: string
   updatedAt: string
 }
@@ -25,4 +36,6 @@ export interface ProductQuery {
   search: string
   /** Restringe a produtos sem código de barras — útil para completar o cadastro. */
   onlyWithoutBarcode: boolean
+  /** Restringe a produtos pendentes de cadastro, criados pela tela de Estoque. */
+  onlyPending: boolean
 }

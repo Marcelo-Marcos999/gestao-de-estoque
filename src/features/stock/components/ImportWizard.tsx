@@ -23,8 +23,9 @@ interface ImportWizardProps {
 }
 
 /**
- * Costura as etapas da importação. Toda a lógica vive em `useImportWizard`;
- * aqui só decidimos qual etapa aparece e quais botões o rodapé oferece.
+ * Costura as etapas da importação de estoque. Toda a lógica vive em
+ * `useImportWizard`; aqui só decidimos qual etapa aparece e quais botões o
+ * rodapé oferece — mesmo desenho do assistente do cadastro de produtos.
  */
 export function ImportWizard({ open, onClose, onImported }: ImportWizardProps) {
   const wizard = useImportWizard(onImported)
@@ -42,13 +43,12 @@ export function ImportWizard({ open, onClose, onImported }: ImportWizardProps) {
       open={open}
       onClose={close}
       wide
-      title="Importar planilha"
-      subtitle={wizard.fileName || 'Traga a base de produtos do ERP para o sistema.'}
+      title="Importar estoque"
+      subtitle={wizard.fileName || 'Traga saldo, saídas, custo e venda dos relatórios do ERP.'}
       footer={<Footer wizard={wizard} onCancel={close} />}
     >
       <ImportWizardSteps
         steps={STEP_LABELS}
-        // 'aplicando' não é uma parada do trilho: é a última etapa em andamento.
         currentId={wizard.step === 'aplicando' ? 'resumo' : wizard.step}
       />
 
@@ -73,7 +73,7 @@ export function ImportWizard({ open, onClose, onImported }: ImportWizardProps) {
       {wizard.step === 'aplicando' && <ApplyingStep progress={wizard.progress} />}
 
       {wizard.step === 'resumo' && (
-        <DoneStep imported={wizard.imported} skipped={wizard.plan?.counts.existente ?? 0} />
+        <DoneStep updated={wizard.applied.updated} pendingCreated={wizard.applied.pendingCreated} />
       )}
     </Dialog>
   )
@@ -107,20 +107,19 @@ function Footer({ wizard, onCancel }: { wizard: Wizard; onCancel: () => void }) 
         </>
       )
 
-    case 'revisao':
+    case 'revisao': {
+      const aplicaveis = (wizard.plan?.counts.atualiza ?? 0) + (wizard.plan?.counts.pendente ?? 0)
       return (
         <>
           <Button variant="secondary" onClick={() => wizard.setStep('mapeamento')}>
             Voltar
           </Button>
-          <Button
-            onClick={() => void wizard.apply()}
-            disabled={!wizard.plan || wizard.plan.counts.novo === 0}
-          >
-            Importar {wizard.plan?.counts.novo.toLocaleString('pt-BR')} produtos
+          <Button onClick={() => void wizard.apply()} disabled={aplicaveis === 0}>
+            Importar {aplicaveis.toLocaleString('pt-BR')} linhas
           </Button>
         </>
       )
+    }
 
     // Durante a gravação não há nada a decidir: interromper deixaria a base
     // pela metade sem o usuário saber onde parou.

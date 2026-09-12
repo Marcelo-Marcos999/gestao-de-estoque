@@ -1,3 +1,4 @@
+import { Badge } from '@/shared/ui/Badge'
 import { BarcodeIcon, EditIcon } from '@/shared/ui/icons'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import type { Product } from '../types'
@@ -85,7 +86,14 @@ export function ProductsTable({
                     {product.sku}
                   </span>
                   <span className={styles.description} title={product.description}>
-                    {product.description}
+                    {product.pendingCadastro ? (
+                      <span className={styles.pending}>
+                        <Badge tone="pendente">pendente</Badge>
+                        <em>veio da importação de estoque, sem descrição ainda</em>
+                      </span>
+                    ) : (
+                      product.description
+                    )}
                   </span>
 
                   {onEdit && (

@@ -47,3 +47,23 @@
   border-color: var(--brand);
   color: var(--brand);
 }
+
+/* Linha da importação de estoque que vai gravar números num produto já
+   cadastrado — mesmo tom de "novo", porque para quem importa é igualmente um
+   resultado esperado e sem problema. */
+.atualiza {
+  background: var(--ok-soft);
+  border-color: var(--ok);
+  color: var(--ok-text);
+}
+
+/* Produto sem cadastro completo — criado pela importação de estoque ou
+   escolhido "mesmo assim" na quebra. Não é um estado de validade (ver
+   CLAUDE.md), por isso não usa os tokens de --expired/--warning/--ok como
+   significado de negócio; usa --warning só pelo tom de atenção que já
+   comunica em outros lugares da tela (ex.: ProductPicker). */
+.pendente {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+  color: var(--warning-text);
+}

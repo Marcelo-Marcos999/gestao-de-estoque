@@ -8,7 +8,7 @@ import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
-import { SearchIcon, UploadIcon } from '@/shared/ui/icons'
+import { SearchIcon } from '@/shared/ui/icons'
 import { SITUATIONS } from '../situation'
 import { ExpiryTable } from '../components/ExpiryTable'
 import { SituationTiles } from '../components/SituationTiles'
@@ -35,24 +35,16 @@ export function ExpiryPage() {
   /**
    * As ações acompanham o cabeçalho quando ele existe e migram para a barra de
    * busca no modo foco.
+   *
+   * Importar saldo e saídas não é mais daqui: os dois números são do produto,
+   * e quem os importa é a tela de Estoque — este cabeçalho só acompanha
+   * validade, que é o assunto desta tela (ver docs/dominio.md).
    */
   const acoes = (
-    <>
-      <ExportButton
-        count={list.rows.length}
-        onExport={() => exportExpiryRows(list.rows, list.periodDays)}
-      />
-      {/* "saldo" e "saídas" são o que distingue os dois botões: escondê-los
-          no celular deixava dois "Importar" idênticos lado a lado. */}
-      <Button variant="secondary">
-        <UploadIcon width={18} height={18} />
-        <span>Importar saldo</span>
-      </Button>
-      <Button variant="secondary">
-        <UploadIcon width={18} height={18} />
-        <span>Importar saídas</span>
-      </Button>
-    </>
+    <ExportButton
+      count={list.rows.length}
+      onExport={() => exportExpiryRows(list.rows, list.periodDays)}
+    />
   )
 
   return (

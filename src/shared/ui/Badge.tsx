@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react'
 import styles from './Badge.module.css'
 
-export type BadgeTone = 'novo' | 'existente' | 'duplicado' | 'invalido' | 'neutro' | 'marca'
+export type BadgeTone =
+  | 'novo'
+  | 'existente'
+  | 'duplicado'
+  | 'invalido'
+  | 'neutro'
+  | 'marca'
+  | 'atualiza'
+  | 'pendente'
 
 /**
  * Etiqueta curta de estado, usada na revisão da importação.
