@@ -137,8 +137,11 @@ function LossRecordForm({ record, onClose, onSaved }: Omit<LossRecordDialogProps
             tags={form.reasons}
             value={form.reasonId}
             error={form.errors.reason}
+            usage={form.tagUsage.reasons}
             onChange={form.setReasonId}
             onCreate={form.addReason}
+            onRename={(id, label) => form.renameTag('reason', id, label)}
+            onDelete={(id) => form.deleteTag('reason', id)}
           />
 
           <TagPicker
@@ -146,8 +149,11 @@ function LossRecordForm({ record, onClose, onSaved }: Omit<LossRecordDialogProps
             tags={form.origins}
             value={form.originId}
             optional
+            usage={form.tagUsage.origins}
             onChange={form.setOriginId}
             onCreate={form.addOrigin}
+            onRename={(id, label) => form.renameTag('origin', id, label)}
+            onDelete={(id) => form.deleteTag('origin', id)}
           />
 
           <AttachmentSlots

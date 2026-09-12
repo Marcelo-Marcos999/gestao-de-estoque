@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { usePersistedState } from '@/shared/hooks/usePersistedState'
 import { storageKey } from '@/shared/lib/storage'
-import { readPeriodDays } from '@/features/settings'
+import { usePeriodDays } from '@/features/settings'
 import { listExpiryItems, type ExpiryPage } from '../api'
 import type { Situation } from '../situation'
 import type { ExpiryQuery, ExpiryRow } from '../types'
@@ -51,7 +51,7 @@ export function useExpiryList() {
 
   // Sem espera, cada tecla dispararia uma varredura da base inteira.
   const debouncedSearch = useDebouncedValue(filters.search, 250)
-  const periodDays = readPeriodDays()
+  const [periodDays, setPeriodDays] = usePeriodDays()
 
   const queryKey = `${debouncedSearch}|${filters.situations.join(',')}|${periodDays}`
 
@@ -101,6 +101,7 @@ export function useExpiryList() {
   return {
     filters,
     periodDays,
+    setPeriodDays,
     rows: (result?.page.items ?? []) as ExpiryRow[],
     matching: result?.page.total ?? 0,
     overall: result?.page.overall ?? 0,

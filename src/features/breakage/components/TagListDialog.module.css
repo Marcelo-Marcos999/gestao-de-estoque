@@ -1,0 +1,74 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  list-style: none;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch-target);
+  padding: 0 var(--sp-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+/* Diz por que o botão de excluir não está ali, em vez de deixar um botão
+   desabilitado que ninguém entende. */
+.inUse {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
+.delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-subtle);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.delete:hover {
+  background: var(--expired-soft);
+  color: var(--expired-text);
+}
+
+.delete:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}

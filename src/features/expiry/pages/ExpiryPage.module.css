@@ -85,27 +85,6 @@
   box-shadow: 0 0 0 3px var(--brand-ring);
 }
 
-/* O período sustenta toda a previsão: fica à vista, não escondido. */
-.period {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  min-height: var(--touch-target);
-  padding: 0 var(--sp-3);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  white-space: nowrap;
-}
-
-.periodValue {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--text);
-}
-
 .active {
   display: flex;
   align-items: center;

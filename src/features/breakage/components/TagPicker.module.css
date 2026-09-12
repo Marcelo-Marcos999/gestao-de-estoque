@@ -5,9 +5,44 @@
 }
 
 .label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text);
+}
+
+/* Ação secundária do rótulo: empurrada para a ponta oposta, para não competir
+   com o nome do campo nem com as etiquetas abaixo. */
+.manage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-left: auto;
+  min-height: var(--touch-target);
+  padding: 0 var(--sp-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-subtle);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.manage:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.manage:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-ring);
 }
 
 .optional {

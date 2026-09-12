@@ -2,4 +2,5 @@
 export { AppearanceProvider, useAppearance } from './AppearanceContext'
 export { ACCENTS, THEME_MODES } from './theme'
 export type { AccentName, ThemeMode } from './theme'
-export { readPeriodDays, writePeriodDays, DEFAULT_PERIOD_DAYS } from './period'
+export { DEFAULT_PERIOD_DAYS } from './period'
+export { usePeriodDays } from './usePeriodDays'

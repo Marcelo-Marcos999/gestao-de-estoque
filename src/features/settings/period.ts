@@ -5,23 +5,18 @@
  * quantos dias o estoque leva para zerar. Errar esse número desloca todas as
  * situações de uma vez, então ele é do usuário — quem exporta o relatório é
  * quem sabe o intervalo.
+ *
+ * Quem lê e grava é o hook `usePeriodDays`; aqui ficam só a chave, o padrão e
+ * a validação, que ele e qualquer futura tela de configurações compartilham.
  */
-import { readJson, storageKey, writeJson } from '@/shared/lib/storage'
+import { storageKey } from '@/shared/lib/storage'
 
-const PERIOD_KEY = storageKey('periodo')
+export const PERIOD_KEY = storageKey('periodo')
 
 /** Um ano comercial, que é o intervalo mais comum desses relatórios. */
 export const DEFAULT_PERIOD_DAYS = 390
 
-export function readPeriodDays(): number {
-  const stored = readJson<unknown>(PERIOD_KEY, null)
-  // Um valor fora de faixa quebraria a divisão da previsão em silêncio.
-  if (typeof stored !== 'number' || !Number.isFinite(stored) || stored < 1) {
-    return DEFAULT_PERIOD_DAYS
-  }
-  return Math.floor(stored)
-}
-
-export function writePeriodDays(days: number): void {
-  writeJson(PERIOD_KEY, Math.max(1, Math.floor(days)))
+/** Um valor fora de faixa quebraria a divisão da previsão em silêncio. */
+export function isPeriodDays(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1
 }

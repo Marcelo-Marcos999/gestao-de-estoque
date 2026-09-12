@@ -17,8 +17,12 @@ Em construção. Front-end primeiro, regras de negócio depois.
 | Cadastro de produtos, com busca em 26 mil registros | pronto |
 | Importação de planilha (.xlsx e .csv) | pronta |
 | Temas escuro e claro, com acento trocável | pronto |
-| Painel de validades e alertas | a fazer |
-| Leitura de código de barras pela câmera | a fazer |
+| Painel de validades, com as quatro situações | pronto |
+| Registro de quebra, com motivos, origens e anexos | pronto |
+| Tela de estoque: saldo, saídas, custo e venda | pronta |
+| Leitura de código de barras pela câmera | pronta |
+| Exportação para .xlsx com os filtros da tela | pronta |
+| Tela de configurações | a fazer |
 | Envio de alerta por e-mail | a fazer |
 
 > **Sem back-end ainda.** Cada feature isola o acesso a dados no seu `api.ts`, hoje
@@ -57,9 +61,14 @@ de outra — só do `index.ts` dela ou de `shared/`.
 
 ```
 src/
-  app/          rotas, guarda de sessão
+  app/          rotas, guarda de sessão, layout geral
   features/
     auth/       login, recuperação de senha, sessão
+    products/   cadastro de produtos (do administrador)
+    stock/      saldo, saídas, custo e venda (dos dois perfis)
+    expiry/     acompanhamento de validades
+    breakage/   registro de quebra
+    settings/   tema e período do relatório de saídas
   shared/
     ui/         design system (Button, TextField, Alert, Logo)
     lib/        helpers puros, sem React

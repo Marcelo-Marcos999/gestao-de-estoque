@@ -11,6 +11,7 @@ import { ScanButton } from '@/shared/ui/ScanButton'
 import { SearchIcon } from '@/shared/ui/icons'
 import { SITUATIONS } from '../situation'
 import { ExpiryTable } from '../components/ExpiryTable'
+import { PeriodField } from '../components/PeriodField'
 import { SituationTiles } from '../components/SituationTiles'
 import { ExpiryDialog } from '../components/ExpiryDialog'
 import { exportExpiryRows } from '../export'
@@ -96,12 +97,10 @@ export function ExpiryPage() {
           <ScanButton onDetect={list.setSearch} label="Buscar por código de barras" />
         </div>
 
-        {/* O número que sustenta a previsão fica visível: sem ele, "sai em 195
-            dias" é um número sem procedência. */}
-        <span className={styles.period}>
-          Período das saídas:
-          <span className={styles.periodValue}>{list.periodDays} dias</span>
-        </span>
+        {/* O número que sustenta a previsão fica visível e editável aqui: sem
+            ele, "sai em 195 dias" é um número sem procedência — e quem lê a
+            previsão é quem percebe que o intervalo está errado. */}
+        <PeriodField days={list.periodDays} onChange={list.setPeriodDays} />
 
         {focus.focused && <div className={styles.actions}>{acoes}</div>}
 
