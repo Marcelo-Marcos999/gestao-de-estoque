@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
-import { UploadIcon } from '@/shared/ui/icons'
+import { PlusIcon, UploadIcon } from '@/shared/ui/icons'
 import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { ImportWizard } from '../components/ImportWizard'
+import { NewStockDialog } from '../components/NewStockDialog'
 import { StockEmptyState, StockErrorState } from '../components/StockEmptyState'
 import { StockRowDialog } from '../components/StockRowDialog'
 import { StockTable } from '../components/StockTable'
@@ -33,6 +34,7 @@ export function StockPage() {
   const rowHeight = isNarrow ? 108 : 56
 
   const [importOpen, setImportOpen] = useState(false)
+  const [novoAberto, setNovoAberto] = useState(false)
 
   const acoes = (
     <>
@@ -42,6 +44,16 @@ export function StockPage() {
         <UploadIcon width={18} height={18} />
         <span>
           Importar<span className={styles.labelExtra}> planilha</span>
+        </span>
+      </Button>
+
+      {/* A planilha é o caminho de todo dia, mas um produto solto não vale um
+          arquivo só para ele — e sem esta porta a única saída seria montar uma
+          planilha de uma linha. */}
+      <Button onClick={() => setNovoAberto(true)}>
+        <PlusIcon width={18} height={18} />
+        <span>
+          Adicionar<span className={styles.labelExtra}> produto</span>
         </span>
       </Button>
     </>
@@ -87,6 +99,7 @@ export function StockPage() {
           filtered={list.isFiltered}
           onClear={list.clearFilters}
           onImport={() => setImportOpen(true)}
+          onAdd={() => setNovoAberto(true)}
         />
       )}
 
@@ -110,6 +123,12 @@ export function StockPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={list.reload}
+      />
+
+      <NewStockDialog
+        open={novoAberto}
+        onClose={() => setNovoAberto(false)}
+        onSaved={list.reload}
       />
     </div>
   )

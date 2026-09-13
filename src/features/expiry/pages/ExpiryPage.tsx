@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
@@ -8,9 +9,10 @@ import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
-import { SearchIcon } from '@/shared/ui/icons'
+import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
 import { SITUATIONS } from '../situation'
 import { ExpiryTable } from '../components/ExpiryTable'
+import { NewExpiryDialog } from '../components/NewExpiryDialog'
 import { PeriodField } from '../components/PeriodField'
 import { SituationTiles } from '../components/SituationTiles'
 import { ExpiryDialog } from '../components/ExpiryDialog'
@@ -28,6 +30,7 @@ import styles from './ExpiryPage.module.css'
  */
 export function ExpiryPage() {
   const list = useExpiryList()
+  const [novoAberto, setNovoAberto] = useState(false)
   const isNarrow = useMediaQuery('(max-width: 719px)')
   const focus = useFocusMode()
   const editor = useExpiryEditor(list.reload)
@@ -42,10 +45,21 @@ export function ExpiryPage() {
    * validade, que é o assunto desta tela (ver docs/dominio.md).
    */
   const acoes = (
-    <ExportButton
-      count={list.rows.length}
-      onExport={() => exportExpiryRows(list.rows, list.periodDays)}
-    />
+    <>
+      <ExportButton
+        count={list.rows.length}
+        onExport={() => exportExpiryRows(list.rows, list.periodDays)}
+      />
+
+      {/* Acompanhar um lote é o que se vem fazer nesta tela: some no modo foco
+          junto do cabeçalho, mas volta na barra de busca, como nas outras. */}
+      <Button onClick={() => setNovoAberto(true)}>
+        <PlusIcon width={18} height={18} />
+        <span>
+          Novo<span className={styles.labelExtra}> lote</span>
+        </span>
+      </Button>
+    </>
   )
 
   return (
@@ -164,11 +178,16 @@ export function ExpiryPage() {
           <p className={styles.stateText}>
             {list.isFiltered
               ? 'Nenhum lote corresponde à busca. Tente outro termo ou limpe os filtros.'
-              : 'Assim que houver produtos com validade cadastrada, eles aparecem aqui.'}
+              : 'Comece acompanhando a validade de um produto do cadastro. Registrar uma quebra com validade também cria o lote.'}
           </p>
-          {list.isFiltered && (
+          {list.isFiltered ? (
             <Button variant="secondary" onClick={list.clearFilters}>
               Limpar filtros
+            </Button>
+          ) : (
+            <Button onClick={() => setNovoAberto(true)}>
+              <PlusIcon width={18} height={18} />
+              Novo lote
             </Button>
           )}
         </div>
@@ -189,6 +208,12 @@ export function ExpiryPage() {
         onClose={editor.close}
         onSave={(edit) => void editor.save(edit)}
         onDelete={() => void editor.remove()}
+      />
+
+      <NewExpiryDialog
+        open={novoAberto}
+        onClose={() => setNovoAberto(false)}
+        onCreated={list.reload}
       />
 
       <UndoBar

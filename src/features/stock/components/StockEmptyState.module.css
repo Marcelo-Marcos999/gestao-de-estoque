@@ -33,3 +33,10 @@
   color: var(--text-muted);
   font-size: var(--fs-sm);
 }
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}

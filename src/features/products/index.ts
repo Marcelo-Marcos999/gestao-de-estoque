@@ -12,3 +12,6 @@ export {
   type StockValues,
 } from './api'
 export { ProductsSkeleton } from './components/ProductsSkeleton'
+export { useProductSearch } from './hooks/useProductSearch'
+export { ProductPicker } from './components/ProductPicker'
+export type { ChosenProduct } from './components/ProductPicker'

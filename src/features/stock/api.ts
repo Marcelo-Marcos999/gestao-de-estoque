@@ -6,7 +6,14 @@
  * descrição, código de barras). Esta tela só olha esses quatro números de um
  * ângulo diferente e sabe importá-los em massa.
  */
-import { getAllProducts, updateProductStock, type Product, type StockValues } from '@/features/products'
+import {
+  bulkUpsertStock,
+  getAllProducts,
+  updateProductStock,
+  type Product,
+  type StockImportRow,
+  type StockValues,
+} from '@/features/products'
 import type { StockQuery, StockRow } from './types'
 
 const LATENCY_MS = 180
@@ -58,4 +65,17 @@ export async function listStockRows(query: StockQuery): Promise<StockPage> {
 /** Corrige os quatro números de um produto, um de cada vez. */
 export async function updateStockRow(productId: string, values: StockValues): Promise<void> {
   await updateProductStock(productId, values)
+}
+
+/**
+ * Adiciona uma linha à mão.
+ *
+ * Passa pelo mesmo `bulkUpsertStock` da importação, com uma linha só: SKU
+ * conhecido atualiza os números, SKU desconhecido cria o produto como pendente
+ * de cadastro. Dois caminhos separados poderiam divergir sobre o que fazer com
+ * um SKU que ninguém conhece — e divergir aqui significaria a planilha e o
+ * formulário deixarem a base em estados diferentes.
+ */
+export async function addStockRow(row: StockImportRow): Promise<void> {
+  await bulkUpsertStock([row])
 }
