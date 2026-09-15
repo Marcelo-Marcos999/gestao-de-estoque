@@ -128,28 +128,6 @@
   text-align: center;
 }
 
-.stateIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  background: var(--surface-sunken);
-  border-radius: var(--radius-full);
-  color: var(--text-subtle);
-}
-
-.stateTitle {
-  font-size: var(--fs-md);
-  font-weight: 600;
-}
-
-.stateText {
-  max-width: 46ch;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
 @media (max-width: 599px) {
   .labelExtra {
     position: absolute;

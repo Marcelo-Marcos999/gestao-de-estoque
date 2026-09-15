@@ -248,6 +248,13 @@ export const DownloadIcon = (p: IconProps) => (
   </Icon>
 )
 
+/** Raio: ação automática — gerar algo de um clique, sem passar por outra tela. */
+export const BoltIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M13 3 5 13.5h5.5L11 21l8-11h-5.5L13 3Z" />
+  </Icon>
+)
+
 /** Camadas empilhadas: estoque, distinto da caixa única do cadastro. */
 export const LayersIcon = (p: IconProps) => (
   <Icon {...p}>

@@ -214,6 +214,8 @@
 
 .actions {
   display: flex;
+  align-items: center;
+  gap: var(--sp-1);
   justify-content: flex-end;
 }
 

@@ -401,6 +401,29 @@ corrigido era falha, não desenho — e foi resolvido:
   motivo em branco sem explicação. A tela diz quantos registros seguram cada
   uma, em vez de oferecer um botão desabilitado sem motivo.
 
+## Gerar quebra de um lote vencido
+
+Na tela de Validades, todo lote **vencido** ganha um botão de raio que abre o
+registro de quebra já preenchido: produto, validade e motivo "Vencido"
+prontos, restando confirmar.
+
+A quantidade sugerida é o **saldo do produto** — o único número que o sistema
+tem. Pode estar errada: o mesmo produto pode ter mais de um lote com
+validades diferentes, e o saldo é do produto, não do lote (ver "De onde vêm
+saldo e saídas"). Por isso o formulário abre para revisão, e não grava
+direto — a pessoa corrige a quantidade se aquele lote não for todo o saldo.
+
+O motivo sugerido casa **pelo nome** ("Vencido"), não por um id fixo: a lista
+de motivos é editável, e "Vencido" pode ter sido renomeado ou excluído. Sem
+casamento, o formulário abre sem motivo escolhido, nunca com um id que não
+aponta para etiqueta nenhuma.
+
+Salvar a quebra **exclui o lote da lista de vencidos**, pelo mesmo caminho e
+o mesmo desfazer do botão de excluir — não é um estado novo, é a mesma
+exclusão de sempre. Se a quantidade sugerida estava errada e sobrou saldo do
+lote, desfazer traz o lote de volta em vez de forçar um lançamento manual
+para recuperar o acompanhamento perdido.
+
 ## Criar registro à mão, em toda tela que tem registro
 
 Cada tela com registros tem sua própria porta de entrada manual, ao lado da

@@ -54,21 +54,36 @@ export function useExpiryEditor(onChanged: () => void) {
     [editing, onChanged],
   )
 
+  /**
+   * Exclui lotes por id, com o mesmo desfazer do botão de excluir — usado
+   * tanto por ele quanto por quem exclui de fora do diálogo de edição, como a
+   * geração de quebra a partir de um lote vencido (ver docs/dominio.md).
+   */
+  const removeItems = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return
+
+      setSaving(true)
+      const removed = await deleteExpiryItems(ids)
+      setSaving(false)
+
+      if (removed.length === 0) return
+      setUndoable(removed)
+      onChanged()
+
+      if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
+      undoTimer.current = window.setTimeout(() => setUndoable([]), 8000)
+    },
+    [onChanged],
+  )
+
   const remove = useCallback(async () => {
     if (!editing) return
 
-    setSaving(true)
-    const removed = await deleteExpiryItems([editing.id])
-    setSaving(false)
+    const id = editing.id
     setEditing(null)
-
-    if (removed.length === 0) return
-    setUndoable(removed)
-    onChanged()
-
-    if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
-    undoTimer.current = window.setTimeout(() => setUndoable([]), 8000)
-  }, [editing, onChanged])
+    await removeItems([id])
+  }, [editing, removeItems])
 
   const undo = useCallback(async () => {
     if (undoable.length === 0) return
@@ -85,5 +100,16 @@ export function useExpiryEditor(onChanged: () => void) {
     setUndoable([])
   }, [])
 
-  return { editing, saving, undoable, open: setEditing, close, save, remove, undo, dismissUndo }
+  return {
+    editing,
+    saving,
+    undoable,
+    open: setEditing,
+    close,
+    save,
+    remove,
+    removeItems,
+    undo,
+    dismissUndo,
+  }
 }

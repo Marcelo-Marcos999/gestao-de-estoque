@@ -1,4 +1,4 @@
-import { EditIcon } from '@/shared/ui/icons'
+import { BoltIcon, EditIcon } from '@/shared/ui/icons'
 import { formatDate } from '@/shared/lib/date'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import { SITUATIONS } from '../situation'
@@ -12,6 +12,8 @@ interface ExpiryTableProps {
   /** Tela estreita: quem rola é a página, e a lista se ancora nela. */
   narrow: boolean
   onEdit: (row: ExpiryRow) => void
+  /** Só existe em lotes vencidos: gera a quebra da quantidade que sobrou. */
+  onGenerateBreakage: (row: ExpiryRow) => void
 }
 
 /** "em 212 dias", "venceu há 149 dias" — o número cru não diz o que significa. */
@@ -30,7 +32,13 @@ function remainingLabel(days: number | null): { text: string; overdue: boolean }
  * e cada linha mede a própria altura porque no celular a descrição quebra em
  * um número variável de linhas.
  */
-export function ExpiryTable({ rows, estimatedRowHeight, narrow, onEdit }: ExpiryTableProps) {
+export function ExpiryTable({
+  rows,
+  estimatedRowHeight,
+  narrow,
+  onEdit,
+  onGenerateBreakage,
+}: ExpiryTableProps) {
   const { virtualizer, scrollerRef, canvasRef, scrollMargin } = useListVirtualizer({
     count: rows.length,
     estimateSize: estimatedRowHeight,
@@ -136,10 +144,25 @@ export function ExpiryTable({ rows, estimatedRowHeight, narrow, onEdit }: Expiry
                     <SituationBadge situation={row.situation} />
                   </span>
 
-                  {/* No celular a linha vira cartão e este botão fica na área
-                      da situação, ao lado da faixa — o mesmo lugar em que o
-                      cadastro de produtos põe o seu. */}
+                  {/* No celular a linha vira cartão e estes botões ficam na
+                      área da situação, ao lado da faixa — o mesmo lugar em
+                      que o cadastro de produtos põe o seu. */}
                   <span className={styles.actions}>
+                    {/* Só em lotes vencidos: gerar quebra de uma situação que
+                        já vai bem, ou sem estimativa, não faz sentido — nada
+                        venceu ainda. */}
+                    {row.situation === 'venceu' && (
+                      <button
+                        type="button"
+                        className={styles.action}
+                        onClick={() => onGenerateBreakage(row)}
+                        aria-label={`Gerar quebra de ${row.description}`}
+                        title="Gerar quebra"
+                      >
+                        <BoltIcon width={16} height={16} />
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       className={styles.action}

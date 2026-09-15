@@ -2,4 +2,4 @@
 export { BreakagePage } from './pages/BreakagePage'
 export { LossRecordDialog } from './components/LossRecordDialog'
 export { countLossRecords } from './api'
-export type { LossRecord } from './types'
+export type { LossRecord, LossRecordInitialDraft } from './types'

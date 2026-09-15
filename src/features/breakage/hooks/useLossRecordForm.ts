@@ -3,7 +3,12 @@ import { getProduct } from '@/features/products'
 import type { IsoDate } from '@/shared/lib/date'
 import { addToRecord, createLossRecord, findSameRecord, updateLossRecord } from '../api'
 import { putAttachmentFile } from '../attachments'
-import type { AttachmentKind, LossRecord, LossRecordDraft } from '../types'
+import type {
+  AttachmentKind,
+  LossRecord,
+  LossRecordDraft,
+  LossRecordInitialDraft,
+} from '../types'
 import type { ChosenProduct } from '@/features/products'
 import { useTagLists } from './useTagLists'
 
@@ -41,16 +46,39 @@ function initialProduct(record: LossRecord | undefined): ChosenProduct | null {
  *
  * O `editing` chega uma vez e vira estado inicial; o diálogo é remontado por
  * chave a cada abertura, então não há efeito sincronizando prop com estado.
+ *
+ * `initial` é o mesmo tipo de ponto de partida, mas para um registro que
+ * ainda não existe — quem já sabe o produto e a validade (como a tela de
+ * Validades, gerando a quebra de um lote vencido) chega com o formulário
+ * pronto para revisão, em vez de repetir a busca. Só vale quando `editing`
+ * está ausente: corrigir um registro que já existe usa os valores dele.
  */
 export function useLossRecordForm(
   createdBy: string,
   onSaved: () => void,
   editing?: LossRecord,
+  initial?: LossRecordInitialDraft,
 ) {
-  const [product, setProduct] = useState<ChosenProduct | null>(() => initialProduct(editing))
-  const [expiryDate, setExpiryDate] = useState<IsoDate | null>(editing?.expiryDate ?? null)
-  const [quantity, setQuantity] = useState(editing?.quantity ?? 1)
-  const [reasonId, setReasonId] = useState(editing?.reasonId ?? '')
+  const [product, setProduct] = useState<ChosenProduct | null>(
+    () => initialProduct(editing) ?? initial?.product ?? null,
+  )
+  const [expiryDate, setExpiryDate] = useState<IsoDate | null>(
+    editing?.expiryDate ?? initial?.expiryDate ?? null,
+  )
+  const [quantity, setQuantity] = useState(editing?.quantity ?? initial?.quantity ?? 1)
+
+  const { reasons, origins, usage, addReason, addOrigin, renameTag, deleteTag } = useTagLists()
+
+  // O motivo sugerido casa pelo nome, não por um id fixo: a lista é editável,
+  // e "Vencido" pode ter sido renomeado ou excluído (ver docs/dominio.md).
+  // Sem casamento, o campo abre vazio — nunca com um id que não existe mais.
+  const [reasonId, setReasonId] = useState(() => {
+    if (editing) return editing.reasonId
+    if (!initial?.reasonLabel) return ''
+    const alvo = initial.reasonLabel.toLowerCase()
+    return reasons.find((r) => r.label.toLowerCase() === alvo)?.id ?? ''
+  })
+
   const [originId, setOriginId] = useState(editing?.originId ?? '')
   const [note, setNote] = useState(editing?.note ?? '')
   const [attachments, setAttachments] = useState<LossRecordDraft['attachments']>(
@@ -59,8 +87,6 @@ export function useLossRecordForm(
 
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
-
-  const { reasons, origins, usage, addReason, addOrigin, renameTag, deleteTag } = useTagLists()
 
   /** Registro igual encontrado; quando presente, o aviso está aberto. */
   const [duplicate, setDuplicate] = useState<LossRecord | null>(null)
