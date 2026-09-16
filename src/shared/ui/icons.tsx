@@ -255,6 +255,39 @@ export const BoltIcon = (p: IconProps) => (
   </Icon>
 )
 
+/** Duas setas opostas, uma clara: coluna ordenável, ainda sem ordem escolhida. */
+export const SortIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M8 15.5V4.5" />
+    <path d="m4.5 8 3.5-3.5L11.5 8" />
+    <path d="M16 8.5v11" />
+    <path d="m12.5 16 3.5 3.5 3.5-3.5" />
+  </Icon>
+)
+
+/** Seta única para cima: coluna ordenada crescente. */
+export const SortAscIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 19V5" />
+    <path d="m6 11 6-6 6 6" />
+  </Icon>
+)
+
+/** Seta única para baixo: coluna ordenada decrescente. */
+export const SortDescIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 5v14" />
+    <path d="m6 13 6 6 6-6" />
+  </Icon>
+)
+
+/** Funil: filtro por valor de uma coluna. */
+export const FilterIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3.5 4.5h17L14 12.5v6l-4 2v-8L3.5 4.5Z" />
+  </Icon>
+)
+
 /** Camadas empilhadas: estoque, distinto da caixa única do cadastro. */
 export const LayersIcon = (p: IconProps) => (
   <Icon {...p}>

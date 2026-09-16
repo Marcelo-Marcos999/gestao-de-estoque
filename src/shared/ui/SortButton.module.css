@@ -1,0 +1,42 @@
+/**
+ * O cabeçalho da tabela (`.head`) já define tamanho, peso, caixa alta e cor do
+ * texto; um <button> não herda nada disso por padrão, então este componente
+ * herda explicitamente em vez de repetir os valores aqui — a cor e o corpo da
+ * fonte continuam sendo decisão de quem desenha a tabela, não deste botão.
+ */
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) 0;
+  margin: calc(var(--sp-1) * -1) 0;
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button:hover {
+  color: var(--text);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--brand-ring);
+  border-radius: var(--radius-sm);
+}
+
+.active {
+  color: var(--brand);
+}
+
+/* Neutra e discreta: existe para dizer "esta coluna ordena", não para chamar
+   atenção antes de a pessoa escolher ordenar por ela. */
+.inactive {
+  opacity: 0.45;
+}

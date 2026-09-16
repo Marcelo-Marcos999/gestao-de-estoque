@@ -76,6 +76,10 @@ export interface LossRecordQuery {
   search: string
   /** 'no-estoque' esconde os que zeraram; 'zerados' mostra só eles. */
   stockState: 'todos' | 'no-estoque' | 'zerados'
+  /** Vazio mostra todos os motivos. Vários marcados somam (ou), não filtram em série (e). */
+  reasonIds: string[]
+  /** Vazio mostra todas as origens. */
+  originIds: string[]
 }
 
 /**

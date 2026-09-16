@@ -1,8 +1,12 @@
 import { Badge } from '@/shared/ui/Badge'
 import { BarcodeIcon, EditIcon } from '@/shared/ui/icons'
+import { SortButton } from '@/shared/ui/SortButton'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
+import type { SortDir } from '@/shared/hooks/useSort'
 import type { Product } from '../types'
 import styles from './ProductsTable.module.css'
+
+export type ProductSortKey = 'barcode' | 'sku' | 'description'
 
 interface ProductsTableProps {
   products: Product[]
@@ -16,6 +20,9 @@ interface ProductsTableProps {
   estimatedRowHeight: number
   /** Tela estreita: quem rola é a página, e a lista se ancora nela. */
   narrow: boolean
+  sortKey: ProductSortKey | null
+  sortDir: SortDir | null
+  onSort: (key: ProductSortKey) => void
 }
 
 /**
@@ -30,6 +37,9 @@ export function ProductsTable({
   onEdit,
   estimatedRowHeight,
   narrow,
+  sortKey,
+  sortDir,
+  onSort,
 }: ProductsTableProps) {
   const { virtualizer, scrollerRef, canvasRef, scrollMargin } = useListVirtualizer({
     count: products.length,
@@ -40,9 +50,21 @@ export function ProductsTable({
   return (
     <div className={styles.wrap}>
       <div className={styles.head} role="presentation">
-        <span>Código de barras</span>
-        <span>SKU</span>
-        <span>Descrição</span>
+        <SortButton
+          label="Código de barras"
+          sortKey="barcode"
+          activeKey={sortKey}
+          activeDir={sortDir}
+          onSort={onSort}
+        />
+        <SortButton label="SKU" sortKey="sku" activeKey={sortKey} activeDir={sortDir} onSort={onSort} />
+        <SortButton
+          label="Descrição"
+          sortKey="description"
+          activeKey={sortKey}
+          activeDir={sortDir}
+          onSort={onSort}
+        />
         <span className="sr-only">Ações</span>
       </div>
 

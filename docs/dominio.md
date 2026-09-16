@@ -464,6 +464,35 @@ Duas regras que essas portas novas seguem:
   o botão passa a dizer "Atualizar produto", e salvar com os campos em branco
   zeraria saldo, saídas, custo e venda de quem já tinha valores.
 
+## Ordenar coluna e filtrar por categoria, em toda tela que tem registro
+
+Toda tabela com registros (Cadastro de produtos, Validades, Quebra, Estoque)
+ordena por qualquer coluna: clicar no cabeçalho alterna crescente → decrescente
+→ ordem original, sempre numa coluna por vez — ordenar por duas ao mesmo tempo
+exigiria explicar a prioridade entre elas, e ninguém pediu isso.
+
+A ordenação não substitui filtro nenhum que já existisse: ela reorganiza o que
+já está na tela, o filtro decide o que entra. As duas convivem sem conflito
+porque agem em etapas diferentes — primeiro filtra, depois ordena o resultado.
+
+Filtro novo por categoria só entra onde a tela ainda não tinha um jeito de
+restringir aquela coluna:
+
+| Tela | Coluna categórica | Já coberta por | Filtro novo |
+|---|---|---|---|
+| Cadastro de produtos | — | busca cobre texto; pendente já é alternável | não |
+| Validades | Situação | os quatro cartões (`SituationTiles`) já filtram | não |
+| Estoque | Pendente | já é um alternador | não |
+| **Quebra** | **Motivo, Origem** | nada — só existiam como coluna de leitura | **sim** |
+
+Motivo e Origem em Quebra ganharam o mesmo menu (`FilterMenu`): uma lista de
+caixas de marcação, várias marcadas somam (ou lógico) em vez de filtrar em
+série — marcar "Vencido" e "Danificado" mostra as duas, não a interseção
+impossível de um registro ter os dois motivos ao mesmo tempo. Motivo e Origem
+são etiquetas editáveis (ver "O que é editável à mão"), então o filtro guarda
+o **id** da etiqueta, não o texto — renomear "Vencido" não quebra um filtro já
+salvo.
+
 ## O que veio do AppSheet e não se repete aqui
 
 O app anterior tinha tabelas que existiam para contornar limitações da

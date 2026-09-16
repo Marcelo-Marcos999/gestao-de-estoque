@@ -53,6 +53,9 @@ export async function listLossRecords(query: LossRecordQuery): Promise<LossRecor
       if (query.stockState === 'no-estoque' && record.quantity <= 0) return false
       if (query.stockState === 'zerados' && record.quantity > 0) return false
 
+      if (query.reasonIds.length > 0 && !query.reasonIds.includes(record.reasonId)) return false
+      if (query.originIds.length > 0 && !query.originIds.includes(record.originId)) return false
+
       if (!term) return true
       return (
         record.sku.toLowerCase().includes(term) ||

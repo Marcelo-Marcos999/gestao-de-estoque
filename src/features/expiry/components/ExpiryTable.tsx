@@ -1,10 +1,14 @@
 import { BoltIcon, EditIcon } from '@/shared/ui/icons'
+import { SortButton } from '@/shared/ui/SortButton'
 import { formatDate } from '@/shared/lib/date'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
+import type { SortDir } from '@/shared/hooks/useSort'
 import { SITUATIONS } from '../situation'
 import type { ExpiryRow } from '../types'
 import { SituationBadge } from './SituationBadge'
 import styles from './ExpiryTable.module.css'
+
+export type ExpirySortKey = 'description' | 'expiryDate' | 'stock' | 'daysToZero' | 'situation'
 
 interface ExpiryTableProps {
   rows: ExpiryRow[]
@@ -14,6 +18,9 @@ interface ExpiryTableProps {
   onEdit: (row: ExpiryRow) => void
   /** Só existe em lotes vencidos: gera a quebra da quantidade que sobrou. */
   onGenerateBreakage: (row: ExpiryRow) => void
+  sortKey: ExpirySortKey | null
+  sortDir: SortDir | null
+  onSort: (key: ExpirySortKey) => void
 }
 
 /** "em 212 dias", "venceu há 149 dias" — o número cru não diz o que significa. */
@@ -38,6 +45,9 @@ export function ExpiryTable({
   narrow,
   onEdit,
   onGenerateBreakage,
+  sortKey,
+  sortDir,
+  onSort,
 }: ExpiryTableProps) {
   const { virtualizer, scrollerRef, canvasRef, scrollMargin } = useListVirtualizer({
     count: rows.length,
@@ -49,11 +59,41 @@ export function ExpiryTable({
     <div className={styles.wrap}>
       <div className={styles.head} role="presentation">
         <span></span>
-        <span>Produto</span>
-        <span>Validade</span>
-        <span>Estoque</span>
-        <span>Sai em</span>
-        <span>Situação</span>
+        <SortButton
+          label="Produto"
+          sortKey="description"
+          activeKey={sortKey}
+          activeDir={sortDir}
+          onSort={onSort}
+        />
+        <SortButton
+          label="Validade"
+          sortKey="expiryDate"
+          activeKey={sortKey}
+          activeDir={sortDir}
+          onSort={onSort}
+        />
+        <SortButton
+          label="Estoque"
+          sortKey="stock"
+          activeKey={sortKey}
+          activeDir={sortDir}
+          onSort={onSort}
+        />
+        <SortButton
+          label="Sai em"
+          sortKey="daysToZero"
+          activeKey={sortKey}
+          activeDir={sortDir}
+          onSort={onSort}
+        />
+        <SortButton
+          label="Situação"
+          sortKey="situation"
+          activeKey={sortKey}
+          activeDir={sortDir}
+          onSort={onSort}
+        />
         <span className={styles.srOnly}>Ações</span>
       </div>
 

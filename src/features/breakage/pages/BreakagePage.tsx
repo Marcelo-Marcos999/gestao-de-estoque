@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
@@ -7,19 +7,35 @@ import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
+import { useSort } from '@/shared/hooks/useSort'
 import { BreakageToolbar } from '../components/BreakageToolbar'
 import { AttachmentViewer } from '../components/AttachmentViewer'
 import { LossRecordCard } from '../components/LossRecordCard'
 import { LossRecordDialog } from '../components/LossRecordDialog'
-import { LossRecordTable } from '../components/LossRecordTable'
+import { LossRecordTable, type LossRecordSortKey } from '../components/LossRecordTable'
 import { SelectionBar } from '../components/SelectionBar'
 
 import { exportLossRecords } from '../export'
 import { recordLabel } from '../label'
 import { useLossRecordList } from '../hooks/useLossRecordList'
 import { useTagLists } from '../hooks/useTagLists'
-import type { Attachment, LossRecord } from '../types'
+import { labelOf } from '../tags'
+import type { Attachment, LossRecord, Tag } from '../types'
 import styles from './BreakagePage.module.css'
+
+/** O que cada coluna ordenável compara. Motivo ordena pelo texto exibido, não pelo id. */
+function recordValueOf(record: LossRecord, key: LossRecordSortKey, reasons: Tag[]): string | number {
+  switch (key) {
+    case 'description':
+      return record.description
+    case 'expiryDate':
+      return record.expiryDate ?? ''
+    case 'quantity':
+      return record.quantity
+    case 'reason':
+      return labelOf(reasons, record.reasonId)
+  }
+}
 
 /** Diálogo fechado, criando um registro novo, ou alterando um existente. */
 type DialogState = { open: false } | { open: true; record?: LossRecord }
@@ -50,6 +66,12 @@ export function BreakagePage() {
   // A tela só lê as listas — quem cria etiqueta é o formulário, e ele lê o
   // storage de novo ao abrir.
   const { reasons, origins } = useTagLists()
+
+  const sortValueOf = useCallback(
+    (record: LossRecord, key: LossRecordSortKey) => recordValueOf(record, key, reasons),
+    [reasons],
+  )
+  const sort = useSort<LossRecord, LossRecordSortKey>(list.records, sortValueOf)
 
   const vazio = list.status === 'ready' && list.records.length === 0
 
@@ -98,6 +120,8 @@ export function BreakagePage() {
 
       <BreakageToolbar
         filters={list.filters}
+        reasons={reasons}
+        origins={origins}
         matching={list.records.length}
         isFiltered={list.isFiltered}
         focused={focus.focused}
@@ -105,6 +129,10 @@ export function BreakagePage() {
         actions={focus.focused ? acoes : null}
         onSearch={list.setSearch}
         onStockState={list.setStockState}
+        onToggleReason={list.toggleReasonFilter}
+        onToggleOrigin={list.toggleOriginFilter}
+        onClearReason={list.clearReasonFilter}
+        onClearOrigin={list.clearOriginFilter}
         onClear={list.clearFilters}
         onToggleFocus={focus.toggle}
       />
@@ -163,7 +191,7 @@ export function BreakagePage() {
         list.records.length > 0 &&
         (isNarrow ? (
           <div className={styles.list}>
-            {list.records.map((record) => (
+            {sort.sortedRows.map((record) => (
               <LossRecordCard
                 key={record.id}
                 record={record}
@@ -178,7 +206,7 @@ export function BreakagePage() {
           </div>
         ) : (
           <LossRecordTable
-            records={list.records}
+            records={sort.sortedRows}
             reasons={reasons}
             origins={origins}
             selection={list.selection}
@@ -186,6 +214,9 @@ export function BreakagePage() {
             onEdit={(alvo) => setDialog({ open: true, record: alvo })}
             onDelete={(alvo) => void list.remove([alvo.id])}
             onOpenAttachment={openAttachment}
+            sortKey={sort.sortKey}
+            sortDir={sort.sortDir}
+            onSort={sort.cycleSort}
           />
         ))}
 

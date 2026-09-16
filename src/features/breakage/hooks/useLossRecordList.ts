@@ -9,17 +9,29 @@ export type ListStatus = 'loading' | 'error' | 'ready'
 
 const FILTERS_KEY = storageKey('filtros', 'quebra')
 
-const NO_FILTERS: LossRecordQuery = { search: '', stockState: 'no-estoque' }
+const NO_FILTERS: LossRecordQuery = {
+  search: '',
+  stockState: 'no-estoque',
+  reasonIds: [],
+  originIds: [],
+}
 
 const STOCK_STATES: LossRecordQuery['stockState'][] = ['todos', 'no-estoque', 'zerados']
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === 'string')
+}
 
 /** Descarta registro fora de formato em vez de deixar a tela num estado impossível. */
 function isLossRecordQuery(value: unknown): value is LossRecordQuery {
   if (typeof value !== 'object' || value === null) return false
 
-  const { search, stockState } = value as Record<string, unknown>
+  const { search, stockState, reasonIds, originIds } = value as Record<string, unknown>
   return (
-    typeof search === 'string' && STOCK_STATES.includes(stockState as LossRecordQuery['stockState'])
+    typeof search === 'string' &&
+    STOCK_STATES.includes(stockState as LossRecordQuery['stockState']) &&
+    isStringArray(reasonIds) &&
+    isStringArray(originIds)
   )
 }
 
@@ -52,12 +64,17 @@ export function useLossRecordList() {
   // Sem espera, cada tecla dispararia uma varredura da lista inteira.
   const debouncedSearch = useDebouncedValue(filters.search, 250)
 
-  const queryKey = `${debouncedSearch}|${filters.stockState}|${reloadKey}`
+  const queryKey = `${debouncedSearch}|${filters.stockState}|${filters.reasonIds.join(',')}|${filters.originIds.join(',')}|${reloadKey}`
 
   useEffect(() => {
     let cancelled = false
 
-    listLossRecords({ search: debouncedSearch, stockState: filters.stockState })
+    listLossRecords({
+      search: debouncedSearch,
+      stockState: filters.stockState,
+      reasonIds: filters.reasonIds,
+      originIds: filters.originIds,
+    })
       .then((items) => {
         if (cancelled) return
         setFailedKey(null)
@@ -70,7 +87,7 @@ export function useLossRecordList() {
     return () => {
       cancelled = true
     }
-  }, [queryKey, debouncedSearch, filters.stockState])
+  }, [queryKey, debouncedSearch, filters.stockState, filters.reasonIds, filters.originIds])
 
   // O desfazer some sozinho; sem esta limpeza, um temporizador sobreviveria à
   // saída da tela e tentaria escrever estado de um componente já desmontado.
@@ -106,6 +123,39 @@ export function useLossRecordList() {
   const setStockState = useCallback(
     (stockState: LossRecordQuery['stockState']) =>
       changeFilters((current) => ({ ...current, stockState })),
+    [changeFilters],
+  )
+
+  /** Liga e desliga um motivo no filtro — vários marcados somam, não filtram em série. */
+  const toggleReasonFilter = useCallback(
+    (id: string) =>
+      changeFilters((current) => ({
+        ...current,
+        reasonIds: current.reasonIds.includes(id)
+          ? current.reasonIds.filter((r) => r !== id)
+          : [...current.reasonIds, id],
+      })),
+    [changeFilters],
+  )
+
+  const toggleOriginFilter = useCallback(
+    (id: string) =>
+      changeFilters((current) => ({
+        ...current,
+        originIds: current.originIds.includes(id)
+          ? current.originIds.filter((o) => o !== id)
+          : [...current.originIds, id],
+      })),
+    [changeFilters],
+  )
+
+  const clearReasonFilter = useCallback(
+    () => changeFilters((current) => ({ ...current, reasonIds: [] })),
+    [changeFilters],
+  )
+
+  const clearOriginFilter = useCallback(
+    () => changeFilters((current) => ({ ...current, originIds: [] })),
     [changeFilters],
   )
 
@@ -169,7 +219,11 @@ export function useLossRecordList() {
   const status: ListStatus =
     failedKey === queryKey ? 'error' : result === null ? 'loading' : 'ready'
 
-  const isFiltered = debouncedSearch.trim() !== '' || filters.stockState !== NO_FILTERS.stockState
+  const isFiltered =
+    debouncedSearch.trim() !== '' ||
+    filters.stockState !== NO_FILTERS.stockState ||
+    filters.reasonIds.length > 0 ||
+    filters.originIds.length > 0
 
   return {
     filters,
@@ -180,6 +234,10 @@ export function useLossRecordList() {
     undoable,
     setSearch,
     setStockState,
+    toggleReasonFilter,
+    toggleOriginFilter,
+    clearReasonFilter,
+    clearOriginFilter,
     clearFilters,
     toggleSelected,
     selectAll,

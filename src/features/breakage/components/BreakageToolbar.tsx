@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/shared/ui/Button'
+import { FilterMenu } from '@/shared/ui/FilterMenu'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
 import { SearchIcon } from '@/shared/ui/icons'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
-import type { LossRecordQuery } from '../types'
+import type { LossRecordQuery, Tag } from '../types'
 import styles from './BreakageToolbar.module.css'
 
 const ABAS: { value: LossRecordQuery['stockState']; label: string }[] = [
@@ -15,6 +16,8 @@ const ABAS: { value: LossRecordQuery['stockState']; label: string }[] = [
 
 interface BreakageToolbarProps {
   filters: LossRecordQuery
+  reasons: Tag[]
+  origins: Tag[]
   /** Quantos registros o filtro atual está mostrando. */
   matching: number
   isFiltered: boolean
@@ -25,6 +28,10 @@ interface BreakageToolbarProps {
   actions: ReactNode
   onSearch: (search: string) => void
   onStockState: (state: LossRecordQuery['stockState']) => void
+  onToggleReason: (id: string) => void
+  onToggleOrigin: (id: string) => void
+  onClearReason: () => void
+  onClearOrigin: () => void
   onClear: () => void
   onToggleFocus: () => void
 }
@@ -38,6 +45,8 @@ interface BreakageToolbarProps {
  */
 export function BreakageToolbar({
   filters,
+  reasons,
+  origins,
   matching,
   isFiltered,
   focused,
@@ -45,6 +54,10 @@ export function BreakageToolbar({
   actions,
   onSearch,
   onStockState,
+  onToggleReason,
+  onToggleOrigin,
+  onClearReason,
+  onClearOrigin,
   onClear,
   onToggleFocus,
 }: BreakageToolbarProps) {
@@ -89,6 +102,25 @@ export function BreakageToolbar({
           ))}
         </div>
 
+        {/* Motivo e origem não tinham filtro nenhum até aqui — diferente da
+            situação do saldo, acima, e da busca, que já cobrem outras
+            colunas. */}
+        <FilterMenu
+          label="Motivo"
+          options={reasons.map((r) => ({ id: r.id, label: r.label }))}
+          selected={filters.reasonIds}
+          onToggle={onToggleReason}
+          onClear={onClearReason}
+        />
+
+        <FilterMenu
+          label="Origem"
+          options={origins.map((o) => ({ id: o.id, label: o.label }))}
+          selected={filters.originIds}
+          onToggle={onToggleOrigin}
+          onClear={onClearOrigin}
+        />
+
         {actions && <div className={styles.actions}>{actions}</div>}
 
         <FocusToggle focused={focused} available={focusAvailable} onToggle={onToggleFocus} />
@@ -102,6 +134,24 @@ export function BreakageToolbar({
             {matching === 1 ? 'registro' : 'registros'}
             {filters.stockState !== 'todos' && (
               <> {filters.stockState === 'zerados' ? 'com saldo zerado' : 'no estoque'}</>
+            )}
+            {filters.reasonIds.length > 0 && (
+              <>
+                {' '}
+                no motivo{' '}
+                {filters.reasonIds
+                  .map((id) => reasons.find((r) => r.id === id)?.label ?? id)
+                  .join(', ')}
+              </>
+            )}
+            {filters.originIds.length > 0 && (
+              <>
+                {' '}
+                na origem{' '}
+                {filters.originIds
+                  .map((id) => origins.find((o) => o.id === id)?.label ?? id)
+                  .join(', ')}
+              </>
             )}
             {filters.search.trim() && (
               <>

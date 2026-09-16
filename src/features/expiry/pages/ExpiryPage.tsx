@@ -11,9 +11,10 @@ import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
 import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
+import { useSort } from '@/shared/hooks/useSort'
 import { SITUATIONS } from '../situation'
 import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
-import { ExpiryTable } from '../components/ExpiryTable'
+import { ExpiryTable, type ExpirySortKey } from '../components/ExpiryTable'
 import { NewExpiryDialog } from '../components/NewExpiryDialog'
 import { PeriodField } from '../components/PeriodField'
 import { SituationTiles } from '../components/SituationTiles'
@@ -22,6 +23,8 @@ import { exportExpiryRows } from '../export'
 import { useExpiryEditor } from '../hooks/useExpiryEditor'
 import { useExpiryList } from '../hooks/useExpiryList'
 import { useGenerateBreakage } from '../hooks/useGenerateBreakage'
+import { expiryValueOf } from '../sort'
+import type { ExpiryRow } from '../types'
 import styles from './ExpiryPage.module.css'
 
 /**
@@ -38,6 +41,7 @@ export function ExpiryPage() {
   const focus = useFocusMode()
   const editor = useExpiryEditor(list.reload)
   const breakage = useGenerateBreakage(editor.removeItems)
+  const sort = useSort<ExpiryRow, ExpirySortKey>(list.rows, expiryValueOf)
   const rowHeight = isNarrow ? 128 : 62
 
   /**
@@ -181,11 +185,14 @@ export function ExpiryPage() {
 
       {list.status === 'ready' && list.rows.length > 0 && (
         <ExpiryTable
-          rows={list.rows}
+          rows={sort.sortedRows}
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
           onEdit={editor.open}
           onGenerateBreakage={breakage.open}
+          sortKey={sort.sortKey}
+          sortDir={sort.sortDir}
+          onSort={sort.cycleSort}
         />
       )}
 

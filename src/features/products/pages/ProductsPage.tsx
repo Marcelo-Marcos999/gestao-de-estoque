@@ -5,17 +5,30 @@ import { PlusIcon, UploadIcon } from '@/shared/ui/icons'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
+import { useSort } from '@/shared/hooks/useSort'
 import { useAuth } from '@/features/auth'
 import { ImportWizard } from '../components/ImportWizard'
 import { ProductFormDialog } from '../components/ProductFormDialog'
 import { ProductsEmptyState, ProductsErrorState } from '../components/ProductsEmptyState'
 import { ProductsSkeleton } from '../components/ProductsSkeleton'
-import { ProductsTable } from '../components/ProductsTable'
+import { ProductsTable, type ProductSortKey } from '../components/ProductsTable'
 import { ProductsToolbar } from '../components/ProductsToolbar'
 import { exportProducts } from '../export'
 import { useProductList } from '../hooks/useProductList'
 import type { Product } from '../types'
 import styles from './ProductsPage.module.css'
+
+/** O que cada coluna ordenável compara. */
+function productValueOf(product: Product, key: ProductSortKey): string | number {
+  switch (key) {
+    case 'barcode':
+      return product.barcode
+    case 'sku':
+      return product.sku
+    case 'description':
+      return product.description
+  }
+}
 
 /**
  * Tela do cadastro de produtos.
@@ -29,6 +42,7 @@ export function ProductsPage() {
   const list = useProductList()
   const isNarrow = useMediaQuery('(max-width: 719px)')
   const focus = useFocusMode()
+  const sort = useSort<Product, ProductSortKey>(list.products, productValueOf)
 
   // O cadastro é a base que todo registro de quebra consulta, então todos
   // leem. Só o administrador alimenta (ver CLAUDE.md, "Perfis de acesso").
@@ -133,11 +147,14 @@ export function ProductsPage() {
 
       {list.status === 'ready' && list.products.length > 0 && (
         <ProductsTable
-          products={list.products}
+          products={sort.sortedRows}
           // Sem permissão de escrita a linha não oferece edição.
           onEdit={podeEditar ? (product) => openForm(product) : undefined}
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
+          sortKey={sort.sortKey}
+          sortDir={sort.sortDir}
+          onSort={sort.cycleSort}
         />
       )}
 
