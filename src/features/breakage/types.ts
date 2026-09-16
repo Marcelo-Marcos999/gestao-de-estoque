@@ -1,3 +1,4 @@
+import type { ChosenProduct } from '@/features/products'
 import type { IsoDate } from '@/shared/lib/date'
 
 /**
@@ -75,4 +76,23 @@ export interface LossRecordQuery {
   search: string
   /** 'no-estoque' esconde os que zeraram; 'zerados' mostra só eles. */
   stockState: 'todos' | 'no-estoque' | 'zerados'
+}
+
+/**
+ * Ponto de partida de um registro novo quando quem abre o formulário já sabe
+ * o produto e a validade — como a tela de Validades, ao gerar a quebra de um
+ * lote vencido. Diferente de `editing`: aqui não existe registro gravado
+ * ainda, só um rascunho pronto para revisão antes de salvar.
+ */
+export interface LossRecordInitialDraft {
+  product: ChosenProduct
+  expiryDate: IsoDate | null
+  quantity: number
+  /**
+   * Nome do motivo a pré-selecionar, quando ele ainda existir na lista — ela
+   * é editável, então "Vencido" pode ter sido renomeado ou excluído (ver
+   * docs/dominio.md). Sem casamento, o formulário abre sem motivo escolhido,
+   * em vez de gravar um id que não aponta para etiqueta nenhuma.
+   */
+  reasonLabel?: string
 }

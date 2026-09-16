@@ -3,6 +3,7 @@ import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
 import { UndoBar } from '@/shared/ui/UndoBar'
+import { LossRecordDialog } from '@/features/breakage'
 import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
@@ -11,6 +12,7 @@ import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
 import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
 import { SITUATIONS } from '../situation'
+import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
 import { ExpiryTable } from '../components/ExpiryTable'
 import { NewExpiryDialog } from '../components/NewExpiryDialog'
 import { PeriodField } from '../components/PeriodField'
@@ -19,6 +21,7 @@ import { ExpiryDialog } from '../components/ExpiryDialog'
 import { exportExpiryRows } from '../export'
 import { useExpiryEditor } from '../hooks/useExpiryEditor'
 import { useExpiryList } from '../hooks/useExpiryList'
+import { useGenerateBreakage } from '../hooks/useGenerateBreakage'
 import styles from './ExpiryPage.module.css'
 
 /**
@@ -34,6 +37,7 @@ export function ExpiryPage() {
   const isNarrow = useMediaQuery('(max-width: 719px)')
   const focus = useFocusMode()
   const editor = useExpiryEditor(list.reload)
+  const breakage = useGenerateBreakage(editor.removeItems)
   const rowHeight = isNarrow ? 128 : 62
 
   /**
@@ -168,29 +172,11 @@ export function ExpiryPage() {
       )}
 
       {list.status === 'ready' && list.rows.length === 0 && (
-        <div className={styles.state}>
-          <span className={styles.stateIcon}>
-            <SearchIcon width={26} height={26} />
-          </span>
-          <p className={styles.stateTitle}>
-            {list.isFiltered ? 'Nenhum lote encontrado' : 'Nenhum lote em acompanhamento'}
-          </p>
-          <p className={styles.stateText}>
-            {list.isFiltered
-              ? 'Nenhum lote corresponde à busca. Tente outro termo ou limpe os filtros.'
-              : 'Comece acompanhando a validade de um produto do cadastro. Registrar uma quebra com validade também cria o lote.'}
-          </p>
-          {list.isFiltered ? (
-            <Button variant="secondary" onClick={list.clearFilters}>
-              Limpar filtros
-            </Button>
-          ) : (
-            <Button onClick={() => setNovoAberto(true)}>
-              <PlusIcon width={18} height={18} />
-              Novo lote
-            </Button>
-          )}
-        </div>
+        <ExpiryEmptyState
+          filtered={list.isFiltered}
+          onClear={list.clearFilters}
+          onNew={() => setNovoAberto(true)}
+        />
       )}
 
       {list.status === 'ready' && list.rows.length > 0 && (
@@ -199,6 +185,7 @@ export function ExpiryPage() {
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
           onEdit={editor.open}
+          onGenerateBreakage={breakage.open}
         />
       )}
 
@@ -214,6 +201,16 @@ export function ExpiryPage() {
         open={novoAberto}
         onClose={() => setNovoAberto(false)}
         onCreated={list.reload}
+      />
+
+      {/* Gerar quebra de um lote vencido: o formulário abre preenchido, com o
+          mesmo caminho e as mesmas checagens do registro manual (duplicidade,
+          anexos opcionais). O resto da lógica vive em `useGenerateBreakage`. */}
+      <LossRecordDialog
+        open={breakage.isOpen}
+        initial={breakage.draft}
+        onClose={breakage.close}
+        onSaved={breakage.saved}
       />
 
       <UndoBar

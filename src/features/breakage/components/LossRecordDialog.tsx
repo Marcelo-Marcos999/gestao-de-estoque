@@ -7,7 +7,7 @@ import { daysUntil, parseDate } from '@/shared/lib/date'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth'
 import { useLossRecordForm } from '../hooks/useLossRecordForm'
-import type { Attachment, LossRecord } from '../types'
+import type { Attachment, LossRecord, LossRecordInitialDraft } from '../types'
 import { AttachmentSlots } from './AttachmentSlots'
 import { AttachmentViewer } from './AttachmentViewer'
 import { DuplicateWarning } from './DuplicateWarning'
@@ -20,6 +20,12 @@ interface LossRecordDialogProps {
   open: boolean
   /** Registro a alterar. Ausente, o formulário cria um novo. */
   record?: LossRecord
+  /**
+   * Ponto de partida quando quem abre já sabe o produto e a validade — como a
+   * tela de Validades, gerando a quebra de um lote vencido. Ignorado se
+   * `record` também vier: editar usa os valores do próprio registro.
+   */
+  initial?: LossRecordInitialDraft
   onClose: () => void
   onSaved: () => void
 }
@@ -31,17 +37,35 @@ interface LossRecordDialogProps {
  * campos é a ordem do trabalho no corredor: primeiro o produto na mão, depois
  * quanto e por quê, e só então o que comprova.
  */
-export function LossRecordDialog({ open, record, onClose, onSaved }: LossRecordDialogProps) {
+export function LossRecordDialog({
+  open,
+  record,
+  initial,
+  onClose,
+  onSaved,
+}: LossRecordDialogProps) {
   // Montar só quando aberto zera os campos a cada abertura, e a chave garante
-  // que abrir outro registro para editar não reaproveite o estado do anterior
-  // — o que um efeito sincronizando prop com estado faria pior.
+  // que abrir outro registro (editar um diferente, ou gerar quebra de outro
+  // lote) não reaproveite o estado do anterior — o que um efeito
+  // sincronizando prop com estado faria pior.
   if (!open) return null
   return (
-    <LossRecordForm key={record?.id ?? 'novo'} record={record} onClose={onClose} onSaved={onSaved} />
+    <LossRecordForm
+      key={record?.id ?? (initial ? `${initial.product.productId}-${initial.expiryDate}` : 'novo')}
+      record={record}
+      initial={initial}
+      onClose={onClose}
+      onSaved={onSaved}
+    />
   )
 }
 
-function LossRecordForm({ record, onClose, onSaved }: Omit<LossRecordDialogProps, 'open'>) {
+function LossRecordForm({
+  record,
+  initial,
+  onClose,
+  onSaved,
+}: Omit<LossRecordDialogProps, 'open'>) {
   const { user } = useAuth()
   const form = useLossRecordForm(
     user?.name ?? 'Sistema',
@@ -50,6 +74,7 @@ function LossRecordForm({ record, onClose, onSaved }: Omit<LossRecordDialogProps
       onClose()
     },
     record,
+    initial,
   )
 
   const restantes = daysUntil(form.expiryDate)
