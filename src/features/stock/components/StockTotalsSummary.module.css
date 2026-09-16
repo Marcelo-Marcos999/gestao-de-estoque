@@ -1,0 +1,47 @@
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--sp-3);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.value {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  /* "R$" e o número vêm com espaço fixo, que não quebra linha sozinho — sem
+     isto, um total de milhões estoura a largura do cartão em tela estreita. */
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 719px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-2);
+  }
+
+  .tile {
+    padding: var(--sp-3);
+  }
+
+  .value {
+    font-size: var(--fs-lg);
+  }
+}

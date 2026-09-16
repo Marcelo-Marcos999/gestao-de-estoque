@@ -140,6 +140,19 @@ vez de zerar. O usuário trata o arquivo antes se precisar.
 Os quatro campos continuam editáveis à mão, ali e no diálogo de lote das
 Validades: o número importado é ponto de partida, não verdade intocável.
 
+### Quanto vale o estoque
+
+Cada produto mostra **total de custo** e **total de venda** — saldo × valor de
+custo e saldo × valor de venda. É conta pura, nunca guardada: guardar o
+resultado deixaria a tela mentindo assim que alguém corrigisse o saldo ou o
+valor unitário sem lembrar de recalcular, o mesmo raciocínio da situação de
+validade (calculada, nunca digitada).
+
+A tela de Estoque também soma os dois totais de tudo que está na lista **com
+os filtros aplicados** — um resumo no topo, não a base inteira — para responder
+"quanto vale meu estoque hoje" sem precisar somar linha por linha. A exportação
+leva as duas colunas junto.
+
 ### SKU que a importação não reconhece
 
 Não bloqueia. O produto entra no cadastro como **pendente**, com os números da

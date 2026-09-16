@@ -7,6 +7,7 @@
 import { downloadFile, XLSX_MIME } from '@/shared/lib/download'
 import { writeXlsx, type ExportValue } from '@/shared/lib/spreadsheet/writeXlsx'
 import { today } from '@/shared/lib/date'
+import { rowCostTotal, rowSaleTotal } from './totals'
 import type { StockRow } from './types'
 
 const HEADER = [
@@ -17,6 +18,8 @@ const HEADER = [
   'Saídas no período',
   'Valor de custo',
   'Valor de venda',
+  'Total de custo',
+  'Total de venda',
   'Pendente de cadastro',
 ]
 
@@ -30,6 +33,8 @@ function toRow(row: StockRow): ExportValue[] {
     row.outflow,
     row.costPrice,
     row.salePrice,
+    rowCostTotal(row),
+    rowSaleTotal(row),
     row.pendingCadastro ? 'sim' : 'não',
   ]
 }

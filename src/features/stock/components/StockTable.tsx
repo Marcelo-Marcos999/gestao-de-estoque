@@ -1,6 +1,7 @@
 import { Badge } from '@/shared/ui/Badge'
 import { EditIcon } from '@/shared/ui/icons'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
+import { rowCostTotal, rowSaleTotal } from '../totals'
 import type { StockRow } from '../types'
 import styles from './StockTable.module.css'
 
@@ -35,6 +36,8 @@ export function StockTable({ rows, estimatedRowHeight, narrow, onEdit }: StockTa
         <span>Saídas</span>
         <span>Custo</span>
         <span>Venda</span>
+        <span>Total custo</span>
+        <span>Total venda</span>
         <span className={styles.srOnly}>Ações</span>
       </div>
 
@@ -79,6 +82,8 @@ export function StockTable({ rows, estimatedRowHeight, narrow, onEdit }: StockTa
                   <span className={styles.number}>{row.outflow}</span>
                   <span className={styles.number}>{money(row.costPrice)}</span>
                   <span className={styles.number}>{money(row.salePrice)}</span>
+                  <span className={styles.number}>{money(rowCostTotal(row))}</span>
+                  <span className={styles.number}>{money(rowSaleTotal(row))}</span>
 
                   {/* No celular os mesmos dados voltam com rótulo, porque ali
                       não existe cabeçalho de coluna para dizer o que é o quê. */}
@@ -98,6 +103,14 @@ export function StockTable({ rows, estimatedRowHeight, narrow, onEdit }: StockTa
                     <span>
                       <span className={styles.mobileLabel}>Venda </span>
                       <span className={styles.mobileValue}>{money(row.salePrice)}</span>
+                    </span>
+                    <span>
+                      <span className={styles.mobileLabel}>Total custo </span>
+                      <span className={styles.mobileValue}>{money(rowCostTotal(row))}</span>
+                    </span>
+                    <span>
+                      <span className={styles.mobileLabel}>Total venda </span>
+                      <span className={styles.mobileValue}>{money(rowSaleTotal(row))}</span>
                     </span>
                   </span>
 

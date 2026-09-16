@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
 import { PlusIcon, UploadIcon } from '@/shared/ui/icons'
@@ -12,9 +12,11 @@ import { StockEmptyState, StockErrorState } from '../components/StockEmptyState'
 import { StockRowDialog } from '../components/StockRowDialog'
 import { StockTable } from '../components/StockTable'
 import { StockToolbar } from '../components/StockToolbar'
+import { StockTotalsSummary } from '../components/StockTotalsSummary'
 import { exportStockRows } from '../export'
 import { useStockEditor } from '../hooks/useStockEditor'
 import { useStockList } from '../hooks/useStockList'
+import { sumStockTotals } from '../totals'
 import styles from './StockPage.module.css'
 
 /**
@@ -32,6 +34,10 @@ export function StockPage() {
   const editor = useStockEditor(list.reload)
 
   const rowHeight = isNarrow ? 108 : 56
+
+  // Soma sobre o que está na tela, com os filtros aplicados: é o mesmo total
+  // que a lista abaixo já mostra, só resumido — não a base inteira.
+  const totals = useMemo(() => sumStockTotals(list.rows), [list.rows])
 
   const [importOpen, setImportOpen] = useState(false)
   const [novoAberto, setNovoAberto] = useState(false)
@@ -74,6 +80,12 @@ export function StockPage() {
 
           <div className={styles.actions}>{acoes}</div>
         </header>
+      )}
+
+      {/* Sai no modo foco, junto do cabeçalho: é o mesmo total que a tabela
+          abaixo já mostra por produto, só resumido. */}
+      {!focus.focused && list.status === 'ready' && list.rows.length > 0 && (
+        <StockTotalsSummary cost={totals.cost} sale={totals.sale} />
       )}
 
       <StockToolbar
