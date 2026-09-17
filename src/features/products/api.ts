@@ -171,9 +171,28 @@ export async function updateProductStock(
   )
 }
 
-export async function deleteProduct(id: string): Promise<void> {
+/**
+ * Exclui um ou vários produtos de uma vez, devolvendo o que saiu.
+ *
+ * Sempre em lote, mesmo para um só, como na quebra: um caminho de exclusão só
+ * significa um lugar para o desfazer errar.
+ */
+export async function deleteProducts(ids: string[]): Promise<Product[]> {
   await delay(LATENCY_MS)
-  store = store.filter((p) => p.id !== id)
+
+  const alvos = new Set(ids)
+  const removed = store.filter((p) => alvos.has(p.id))
+  store = store.filter((p) => !alvos.has(p.id))
+  return removed
+}
+
+/** Devolve produtos excluídos ao seu lugar — o "desfazer" da tela. */
+export async function restoreProducts(products: Product[]): Promise<void> {
+  await delay(80)
+
+  const existentes = new Set(store.map((p) => p.id))
+  const voltando = products.filter((p) => !existentes.has(p.id))
+  if (voltando.length) store = [...voltando, ...store]
 }
 
 /**

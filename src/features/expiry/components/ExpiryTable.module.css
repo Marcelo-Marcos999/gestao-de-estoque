@@ -12,7 +12,7 @@
 /* A grade é definida uma vez e reusada pelo cabeçalho e pelas linhas. */
 .row {
   display: grid;
-  grid-template-columns: 3px 1fr 150px 92px 108px 210px 52px;
+  grid-template-columns: 3px 44px 1fr 150px 92px 108px 210px 90px;
   align-items: center;
   gap: var(--sp-4);
   padding: 0 var(--sp-4) 0 0;
@@ -61,10 +61,29 @@
   background: var(--surface-hover);
 }
 
+.selected {
+  background: var(--brand-soft);
+}
+
 /* A faixa: mesma ideia do logo, traduzindo dias restantes em cor. */
 .stripe {
   align-self: stretch;
   background: var(--situation);
+}
+
+.select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+  cursor: pointer;
 }
 
 .product {
@@ -135,7 +154,7 @@
   }
 
   .row {
-    grid-template-columns: 3px 1fr;
+    grid-template-columns: 3px 44px 1fr auto;
     gap: var(--sp-2) var(--sp-3);
     padding: var(--sp-4) var(--sp-4) var(--sp-4) 0;
     align-items: start;
@@ -144,28 +163,24 @@
   .itemInner {
     min-height: 116px;
     grid-template-areas:
-      'faixa desc'
-      'faixa dados'
-      'faixa situacao';
-  }
-
-  /* A ação sobe para a linha da descrição, encostada à direita: no cartão não
-     há coluna própria, e uma linha só para ela custaria a altura de outro
-     registro na tela. */
-  .row {
-    grid-template-columns: 3px 1fr auto;
-  }
-
-  .product,
-  .mobileData,
-  .situation {
-    grid-column: 2 / -1;
+      'faixa select desc    acoes'
+      'faixa select dados   acoes'
+      'faixa select situacao acoes';
   }
 
   .actions {
-    grid-area: desc;
-    grid-column: 3;
+    grid-area: acoes;
     align-self: start;
+  }
+
+  .select {
+    grid-area: select;
+    /* Sem isto, o `height: 100%` da versão de mesa continua valendo aqui: a
+       marcação esticaria pela altura do cartão inteiro em vez de ficar do
+       tamanho do alvo de toque. */
+    height: var(--touch-target);
+    align-self: start;
+    width: var(--touch-target);
   }
 
   .stripe {
@@ -246,6 +261,12 @@
   outline: none;
   border-color: var(--brand);
   box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.delete:hover {
+  background: var(--expired-soft);
+  border-color: var(--expired);
+  color: var(--expired-text);
 }
 
 .srOnly {

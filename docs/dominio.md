@@ -437,6 +437,55 @@ exclusão de sempre. Se a quantidade sugerida estava errada e sobrou saldo do
 lote, desfazer traz o lote de volta em vez de forçar um lançamento manual
 para recuperar o acompanhamento perdido.
 
+### Vários lotes vencidos de uma vez, sem abrir formulário nenhum
+
+Selecionar vários lotes e marcar "Gerar quebra" na barra de seleção manda
+todos para a quebra de um só toque — sem abrir um formulário por item, e sem
+perguntar o motivo.
+
+Isso só é seguro porque a pergunta já tem resposta óbvia: todo lote na faixa
+**"venceu"** tem "vencido no estoque" como motivo, e esse motivo **é** o
+próprio fato de estar ali — perguntar de novo seria perguntar o que a tela já
+sabe. Por isso o botão só aparece quando **toda a seleção** está na faixa
+"venceu"; um só lote fora dela (que ainda vende, ou sem estimativa) esconde o
+botão inteiro, porque aí o motivo deixa de ser óbvio e alguém precisa decidir.
+
+A quantidade de cada registro segue a mesma regra do caminho de um lote só —
+o saldo do produto — e os lotes somem da lista de vencidos pelo mesmo caminho
+do botão de excluir, com o mesmo desfazer. Diferença proposital: como não há
+revisão antes de salvar (a própria ideia é pular o formulário), o desfazer
+aqui traz o lote de volta para revisão manual, mas não desfaz o registro de
+quebra já criado — que continua existindo em Quebra, e pode ser corrigido ou
+excluído por lá (a mesma seleção múltipla desta seção existe lá também).
+
+## Excluir sem abrir o registro, em toda tela que tem registro
+
+Toda tela com registro tem uma caixa de marcação por linha, "selecionar
+todos" e um botão de excluir que aparece só quando algo está marcado — a
+mesma barra de seleção em Cadastro, Validades, Quebra e Estoque (quando
+aplicável — ver abaixo). Continua existindo também um ícone de lixeira em
+cada linha, para excluir um registro só sem marcar nada.
+
+Sem confirmação antes, como toda exclusão neste projeto (ver "Registrar
+quebra" e CLAUDE.md): perguntar "tem certeza?" a cada exclusão de rotina
+treina a pessoa a confirmar sem ler. O desfazer aparece embaixo por ~8
+segundos e resolve o engano de verdade.
+
+**Não é igual em toda tela**, de propósito:
+
+- **Cadastro de produtos**: só o administrador vê a caixa de marcação e a
+  lixeira — é a mesma regra de quem pode escrever no cadastro (ver "Perfis de
+  acesso"). O operador continua sem a ação, não só sem o clique: mostrar um
+  botão que dá erro ao tocar é pior que não mostrar nada.
+- **Validades e Quebra**: os dois perfis excluem — acompanhar lote e
+  registrar quebra já são trabalho operacional de qualquer um dos dois.
+- **Estoque não ganhou exclusão nenhuma.** Uma linha de Estoque não é uma
+  entidade própria — é o mesmo `Product` do cadastro (ver "De onde vêm saldo
+  e saídas"). "Excluir" ali significaria excluir o produto inteiro, uma ação
+  do administrador — mas Estoque também é lido pelo operador, e oferecer o
+  botão lá vazaria para quem não pode usá-lo o que o Cadastro já bloqueia
+  escondendo a tela inteira. Quem precisa excluir um produto vai ao Cadastro.
+
 ## Criar registro à mão, em toda tela que tem registro
 
 Cada tela com registros tem sua própria porta de entrada manual, ao lado da

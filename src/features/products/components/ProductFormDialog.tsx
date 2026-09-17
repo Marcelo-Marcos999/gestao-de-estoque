@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { TextField } from '@/shared/ui/TextField'
 import { digitsOnly } from '@/shared/lib/cell'
-import { createProduct, deleteProduct, updateProduct } from '../api'
+import { createProduct, deleteProducts, updateProduct } from '../api'
 import type { Product, ProductDraft } from '../types'
 import styles from './ProductFormDialog.module.css'
 
@@ -111,7 +111,7 @@ function ProductForm({ product, onClose, onSaved }: ProductFormProps) {
   async function handleDelete() {
     if (!product) return
     setSaving(true)
-    await deleteProduct(product.id)
+    await deleteProducts([product.id])
     setSaving(false)
     onSaved()
     onClose()

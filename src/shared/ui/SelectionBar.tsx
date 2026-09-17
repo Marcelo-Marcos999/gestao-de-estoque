@@ -1,5 +1,5 @@
-import { Button } from '@/shared/ui/Button'
-import { CloseIcon, TrashIcon } from '@/shared/ui/icons'
+import { Button } from './Button'
+import { CloseIcon, TrashIcon } from './icons'
 import styles from './SelectionBar.module.css'
 
 interface SelectionBarProps {
@@ -8,6 +8,8 @@ interface SelectionBarProps {
   onSelectAll: () => void
   onClear: () => void
   onDelete: () => void
+  /** Ação extra opcional, à esquerda de "Excluir" — usada por Validades para enviar lotes vencidos direto para a quebra. */
+  extraAction?: { label: string; icon: React.ReactNode; onClick: () => void }
 }
 
 /**
@@ -23,18 +25,27 @@ export function SelectionBar({
   onSelectAll,
   onClear,
   onDelete,
+  extraAction,
 }: SelectionBarProps) {
   if (selected === 0) return null
 
   return (
     <div className={styles.bar} role="status">
       <span className={styles.count}>
-        {selected} de {total} {total === 1 ? 'selecionado' : 'selecionados'}
+        {selected.toLocaleString('pt-BR')} de {total.toLocaleString('pt-BR')}{' '}
+        {total === 1 ? 'selecionado' : 'selecionados'}
       </span>
 
       {selected < total && (
         <Button variant="secondary" onClick={onSelectAll}>
           Selecionar todos
+        </Button>
+      )}
+
+      {extraAction && (
+        <Button variant="secondary" onClick={extraAction.onClick}>
+          {extraAction.icon}
+          <span>{extraAction.label}</span>
         </Button>
       )}
 

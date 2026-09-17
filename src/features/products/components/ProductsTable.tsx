@@ -1,5 +1,5 @@
 import { Badge } from '@/shared/ui/Badge'
-import { BarcodeIcon, EditIcon } from '@/shared/ui/icons'
+import { BarcodeIcon, EditIcon, TrashIcon } from '@/shared/ui/icons'
 import { SortButton } from '@/shared/ui/SortButton'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import type { SortDir } from '@/shared/hooks/useSort'
@@ -10,8 +10,11 @@ export type ProductSortKey = 'barcode' | 'sku' | 'description'
 
 interface ProductsTableProps {
   products: Product[]
-  /** Ausente quando o perfil não pode editar: a coluna de ação some. */
+  /** Ausente quando o perfil não pode editar: a coluna de ação, seleção e exclusão somem juntas. */
   onEdit?: (product: Product) => void
+  onDelete?: (product: Product) => void
+  selection?: ReadonlySet<string>
+  onToggleSelect?: (id: string) => void
   /**
    * Altura provável de uma linha, usada só até ela ser medida de verdade.
    * Um palpite próximo do real deixa a barra de rolagem estável desde o
@@ -35,6 +38,9 @@ interface ProductsTableProps {
 export function ProductsTable({
   products,
   onEdit,
+  onDelete,
+  selection,
+  onToggleSelect,
   estimatedRowHeight,
   narrow,
   sortKey,
@@ -47,9 +53,12 @@ export function ProductsTable({
     narrow,
   })
 
+  const selectable = onToggleSelect !== undefined
+
   return (
-    <div className={styles.wrap}>
+    <div className={`${styles.wrap} ${selectable ? styles.withSelect : ''}`}>
       <div className={styles.head} role="presentation">
+        {selectable && <span></span>}
         <SortButton
           label="Código de barras"
           sortKey="barcode"
@@ -76,6 +85,7 @@ export function ProductsTable({
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const product = products[virtualRow.index]
+            const selecionado = selection?.has(product.id) ?? false
 
             return (
               <div
@@ -89,7 +99,19 @@ export function ProductsTable({
                 // posição que o virtualizador calcula já inclui o cabeçalho.
                 style={{ transform: `translateY(${virtualRow.start - scrollMargin}px)` }}
               >
-                <div className={styles.itemInner}>
+                <div className={`${styles.itemInner} ${selecionado ? styles.selected : ''}`}>
+                  {selectable && (
+                    <label className={styles.select}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={selecionado}
+                        onChange={() => onToggleSelect?.(product.id)}
+                      />
+                      <span className={styles.srOnly}>Selecionar {product.description}</span>
+                    </label>
+                  )}
+
                   <span className={styles.barcode}>
                     {product.barcode ? (
                       <>
@@ -118,15 +140,29 @@ export function ProductsTable({
                     )}
                   </span>
 
-                  {onEdit && (
-                    <button
-                      type="button"
-                      className={styles.editButton}
-                      onClick={() => onEdit(product)}
-                      aria-label={`Editar ${product.description}`}
-                    >
-                      <EditIcon width={18} height={18} />
-                    </button>
+                  {(onEdit || onDelete) && (
+                    <span className={styles.actions}>
+                      {onEdit && (
+                        <button
+                          type="button"
+                          className={styles.action}
+                          onClick={() => onEdit(product)}
+                          aria-label={`Editar ${product.description}`}
+                        >
+                          <EditIcon width={18} height={18} />
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          type="button"
+                          className={`${styles.action} ${styles.delete}`}
+                          onClick={() => onDelete(product)}
+                          aria-label={`Excluir ${product.description}`}
+                        >
+                          <TrashIcon width={18} height={18} />
+                        </button>
+                      )}
+                    </span>
                   )}
                 </div>
               </div>

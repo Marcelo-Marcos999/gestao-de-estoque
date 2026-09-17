@@ -1,14 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
+import { SelectionBar } from '@/shared/ui/SelectionBar'
 import { UndoBar } from '@/shared/ui/UndoBar'
 import { LossRecordDialog } from '@/features/breakage'
 import { ProductsSkeleton } from '@/features/products'
+import { useAuth } from '@/features/auth'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
-import { PlusIcon } from '@/shared/ui/icons'
+import { useSelection } from '@/shared/hooks/useSelection'
+import { BoltIcon, PlusIcon } from '@/shared/ui/icons'
 import { useSort } from '@/shared/hooks/useSort'
 import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
 import { ExpiryTable, type ExpirySortKey } from '../components/ExpiryTable'
@@ -17,6 +20,7 @@ import { NewExpiryDialog } from '../components/NewExpiryDialog'
 import { SituationTiles } from '../components/SituationTiles'
 import { ExpiryDialog } from '../components/ExpiryDialog'
 import { exportExpiryRows } from '../export'
+import { useBulkGenerateBreakage } from '../hooks/useBulkGenerateBreakage'
 import { useExpiryEditor } from '../hooks/useExpiryEditor'
 import { useExpiryList } from '../hooks/useExpiryList'
 import { useGenerateBreakage } from '../hooks/useGenerateBreakage'
@@ -40,6 +44,38 @@ export function ExpiryPage() {
   const breakage = useGenerateBreakage(editor.removeItems)
   const sort = useSort<ExpiryRow, ExpirySortKey>(list.rows, expiryValueOf)
   const rowHeight = isNarrow ? 128 : 62
+
+  const { user } = useAuth()
+  const bulkBreakage = useBulkGenerateBreakage(editor.removeItems, user?.name ?? 'Sistema')
+
+  const visibleIds = sort.sortedRows.map((row) => row.id)
+  const selectionState = useSelection(visibleIds)
+  const selectedRows = sort.sortedRows.filter((row) => selectionState.selection.has(row.id))
+  // Só faz sentido quando NENHUMA revisão de motivo é necessária: todo
+  // selecionado precisa estar na faixa "venceu", senão o botão nem aparece
+  // (ver docs/dominio.md).
+  const podeEnviarQuebra =
+    selectedRows.length > 0 && selectedRows.every((row) => row.situation === 'venceu')
+
+  // Trocar de filtro limpa a seleção — mesma regra da Quebra: um lote
+  // marcado e depois escondido por um filtro novo não devia poder ser
+  // excluído ou enviado para quebra sem que a pessoa o veja mais.
+  useEffect(() => {
+    selectionState.clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.filters])
+
+  function deleteSelected() {
+    const ids = [...selectionState.selection]
+    selectionState.clear()
+    void editor.removeItems(ids)
+  }
+
+  function sendSelectedToBreakage() {
+    const rows = selectedRows
+    selectionState.clear()
+    void bulkBreakage.send(rows)
+  }
 
   /**
    * As ações acompanham o cabeçalho quando ele existe e migram para a barra de
@@ -114,6 +150,23 @@ export function ExpiryPage() {
         onToggleFocus={focus.toggle}
       />
 
+      <SelectionBar
+        selected={selectionState.selection.size}
+        total={visibleIds.length}
+        onSelectAll={selectionState.selectAll}
+        onClear={selectionState.clear}
+        onDelete={deleteSelected}
+        extraAction={
+          podeEnviarQuebra
+            ? {
+                label: 'Gerar quebra',
+                icon: <BoltIcon width={16} height={16} />,
+                onClick: sendSelectedToBreakage,
+              }
+            : undefined
+        }
+      />
+
       {list.status === 'loading' && <ProductsSkeleton rowHeight={rowHeight} />}
 
       {list.status === 'error' && (
@@ -141,7 +194,10 @@ export function ExpiryPage() {
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
           onEdit={editor.open}
+          onDelete={(row) => void editor.removeItems([row.id])}
           onGenerateBreakage={breakage.open}
+          selection={selectionState.selection}
+          onToggleSelect={selectionState.toggle}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
           onSort={sort.cycleSort}
