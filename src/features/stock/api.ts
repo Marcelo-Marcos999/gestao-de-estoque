@@ -14,6 +14,8 @@ import {
   type StockImportRow,
   type StockValues,
 } from '@/features/products'
+import { matchesRange } from '@/shared/lib/numberRange'
+import { rowCostTotal, rowSaleTotal } from './totals'
 import type { StockQuery, StockRow } from './types'
 
 const LATENCY_MS = 180
@@ -38,6 +40,12 @@ function toRow(product: Product): StockRow {
 
 function matches(row: StockRow, query: StockQuery): boolean {
   if (query.onlyPending && !row.pendingCadastro) return false
+  if (!matchesRange(row.stock, query.numberRanges.stock)) return false
+  if (!matchesRange(row.outflow, query.numberRanges.outflow)) return false
+  if (!matchesRange(row.costPrice, query.numberRanges.costPrice)) return false
+  if (!matchesRange(row.salePrice, query.numberRanges.salePrice)) return false
+  if (!matchesRange(rowCostTotal(row), query.numberRanges.totalCost)) return false
+  if (!matchesRange(rowSaleTotal(row), query.numberRanges.totalSale)) return false
 
   const term = query.search.trim().toLowerCase()
   if (!term) return true

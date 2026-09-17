@@ -1,8 +1,20 @@
 import { Badge } from '@/shared/ui/Badge'
 import { EditIcon } from '@/shared/ui/icons'
+import { SortButton } from '@/shared/ui/SortButton'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
+import type { SortDir } from '@/shared/hooks/useSort'
+import { rowCostTotal, rowSaleTotal } from '../totals'
 import type { StockRow } from '../types'
 import styles from './StockTable.module.css'
+
+export type StockSortKey =
+  | 'description'
+  | 'stock'
+  | 'outflow'
+  | 'costPrice'
+  | 'salePrice'
+  | 'totalCost'
+  | 'totalSale'
 
 interface StockTableProps {
   rows: StockRow[]
@@ -10,6 +22,9 @@ interface StockTableProps {
   /** Tela estreita: quem rola é a página, e a lista se ancora nela. */
   narrow: boolean
   onEdit: (row: StockRow) => void
+  sortKey: StockSortKey | null
+  sortDir: SortDir | null
+  onSort: (key: StockSortKey) => void
 }
 
 const money = (value: number) =>
@@ -20,21 +35,33 @@ const money = (value: number) =>
  * outras telas: só as linhas visíveis existem no DOM, e cada linha mede a
  * própria altura porque a descrição pode quebrar em mais de uma linha.
  */
-export function StockTable({ rows, estimatedRowHeight, narrow, onEdit }: StockTableProps) {
+export function StockTable({
+  rows,
+  estimatedRowHeight,
+  narrow,
+  onEdit,
+  sortKey,
+  sortDir,
+  onSort,
+}: StockTableProps) {
   const { virtualizer, scrollerRef, canvasRef, scrollMargin } = useListVirtualizer({
     count: rows.length,
     estimateSize: estimatedRowHeight,
     narrow,
   })
 
+  const sortProps = { activeKey: sortKey, activeDir: sortDir, onSort }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.head} role="presentation">
-        <span>Produto</span>
-        <span>Estoque</span>
-        <span>Saídas</span>
-        <span>Custo</span>
-        <span>Venda</span>
+        <SortButton label="Produto" sortKey="description" {...sortProps} />
+        <SortButton label="Estoque" sortKey="stock" {...sortProps} />
+        <SortButton label="Saídas" sortKey="outflow" {...sortProps} />
+        <SortButton label="Custo" sortKey="costPrice" {...sortProps} />
+        <SortButton label="Venda" sortKey="salePrice" {...sortProps} />
+        <SortButton label="Total custo" sortKey="totalCost" {...sortProps} />
+        <SortButton label="Total venda" sortKey="totalSale" {...sortProps} />
         <span className={styles.srOnly}>Ações</span>
       </div>
 
@@ -79,6 +106,8 @@ export function StockTable({ rows, estimatedRowHeight, narrow, onEdit }: StockTa
                   <span className={styles.number}>{row.outflow}</span>
                   <span className={styles.number}>{money(row.costPrice)}</span>
                   <span className={styles.number}>{money(row.salePrice)}</span>
+                  <span className={styles.number}>{money(rowCostTotal(row))}</span>
+                  <span className={styles.number}>{money(rowSaleTotal(row))}</span>
 
                   {/* No celular os mesmos dados voltam com rótulo, porque ali
                       não existe cabeçalho de coluna para dizer o que é o quê. */}
@@ -98,6 +127,14 @@ export function StockTable({ rows, estimatedRowHeight, narrow, onEdit }: StockTa
                     <span>
                       <span className={styles.mobileLabel}>Venda </span>
                       <span className={styles.mobileValue}>{money(row.salePrice)}</span>
+                    </span>
+                    <span>
+                      <span className={styles.mobileLabel}>Total custo </span>
+                      <span className={styles.mobileValue}>{money(rowCostTotal(row))}</span>
+                    </span>
+                    <span>
+                      <span className={styles.mobileLabel}>Total venda </span>
+                      <span className={styles.mobileValue}>{money(rowSaleTotal(row))}</span>
                     </span>
                   </span>
 

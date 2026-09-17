@@ -13,10 +13,16 @@
    as colunas não saírem do eixo. */
 .row {
   display: grid;
-  grid-template-columns: 150px 90px 1fr 44px;
+  grid-template-columns: 150px 90px 1fr 80px;
   align-items: center;
   gap: var(--sp-4);
   padding: 0 var(--sp-4);
+}
+
+/* Só o administrador seleciona e exclui — a coluna de marcação só existe
+   quando essa ação existe (ver CLAUDE.md, "perfis de acesso"). */
+.withSelect .row {
+  grid-template-columns: 44px 150px 90px 1fr 80px;
 }
 
 .head {
@@ -68,6 +74,34 @@
   background: var(--surface-hover);
 }
 
+.selected {
+  background: var(--brand-soft);
+}
+
+.select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .barcode {
   display: flex;
   align-items: center;
@@ -117,7 +151,13 @@
   white-space: nowrap;
 }
 
-.editButton {
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-1);
+}
+
+.action {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,14 +167,28 @@
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   color: var(--text-subtle);
+  cursor: pointer;
   transition:
     background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
     color var(--dur-fast) var(--ease-out);
 }
 
-.editButton:hover {
+.action:hover {
   background: var(--brand-soft);
   color: var(--brand);
+}
+
+.action:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.delete:hover {
+  background: var(--expired-soft);
+  border-color: var(--expired);
+  color: var(--expired-text);
 }
 
 /* ---- Celular: a grade de 4 colunas não cabe; a linha vira um cartão ----- */
@@ -153,9 +207,29 @@
   .itemInner {
     min-height: 96px;
     grid-template-areas:
-      'desc  edit'
-      'sku   edit'
-      'barra edit';
+      'desc  actions'
+      'sku   actions'
+      'barra actions';
+  }
+
+  .withSelect .row {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .withSelect .itemInner {
+    grid-template-areas:
+      'select desc  actions'
+      'select sku   actions'
+      'select barra actions';
+  }
+
+  .select {
+    grid-area: select;
+    /* Sem isto, o `height: 100%` da versão de mesa esticaria a marcação pela
+       altura do cartão inteiro em vez do alvo de toque de 44px. */
+    height: var(--touch-target);
+    align-self: center;
+    width: var(--touch-target);
   }
 
   .description {
@@ -193,9 +267,12 @@
     font-size: var(--fs-sm);
   }
 
-  .editButton {
-    grid-area: edit;
+  .actions {
+    grid-area: actions;
     align-self: center;
+  }
+
+  .action {
     width: var(--touch-target);
     height: var(--touch-target);
   }

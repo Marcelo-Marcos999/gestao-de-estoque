@@ -6,6 +6,7 @@
  * não contra uma lista de dez itens. Quando o back-end existir, só este arquivo
  * muda.
  */
+import { matchesRange } from '@/shared/lib/numberRange'
 import { generateProducts } from './demoData'
 import type { Product, ProductDraft, ProductQuery } from './types'
 
@@ -22,6 +23,10 @@ let store: Product[] = generateProducts(26680)
 function matches(product: Product, query: ProductQuery): boolean {
   if (query.onlyWithoutBarcode && product.barcode) return false
   if (query.onlyPending && !product.pendingCadastro) return false
+  if (!matchesRange(product.stock, query.numberRanges.stock)) return false
+  if (!matchesRange(product.outflow, query.numberRanges.outflow)) return false
+  if (!matchesRange(product.costPrice, query.numberRanges.costPrice)) return false
+  if (!matchesRange(product.salePrice, query.numberRanges.salePrice)) return false
   if (!query.search) return true
 
   const term = query.search.trim().toLowerCase()
@@ -166,9 +171,28 @@ export async function updateProductStock(
   )
 }
 
-export async function deleteProduct(id: string): Promise<void> {
+/**
+ * Exclui um ou vários produtos de uma vez, devolvendo o que saiu.
+ *
+ * Sempre em lote, mesmo para um só, como na quebra: um caminho de exclusão só
+ * significa um lugar para o desfazer errar.
+ */
+export async function deleteProducts(ids: string[]): Promise<Product[]> {
   await delay(LATENCY_MS)
-  store = store.filter((p) => p.id !== id)
+
+  const alvos = new Set(ids)
+  const removed = store.filter((p) => alvos.has(p.id))
+  store = store.filter((p) => !alvos.has(p.id))
+  return removed
+}
+
+/** Devolve produtos excluídos ao seu lugar — o "desfazer" da tela. */
+export async function restoreProducts(products: Product[]): Promise<void> {
+  await delay(80)
+
+  const existentes = new Set(store.map((p) => p.id))
+  const voltando = products.filter((p) => !existentes.has(p.id))
+  if (voltando.length) store = [...voltando, ...store]
 }
 
 /**
@@ -209,84 +233,11 @@ export async function bulkCreate(
   return created.length
 }
 
-/** Uma linha da planilha de estoque, já com o SKU casado ou não. */
-export interface StockImportRow {
-  sku: string
-  /** Ausente quando a coluna não foi mapeada nesta importação: mantém o valor atual. */
-  stock?: number
-  outflow?: number
-  costPrice?: number
-  salePrice?: number
+/** Para `stockImport.ts`: mesmo `store`, sem expor a variável em si. */
+export function getStoreSnapshot(): Product[] {
+  return store
 }
 
-export interface StockImportResult {
-  /** Produtos existentes que tiveram os números atualizados. */
-  updated: number
-  /** Produtos novos, criados como pendentes por não existirem no cadastro. */
-  pendingCreated: number
-}
-
-/**
- * Aplica a planilha de estoque: atualiza quem já está no cadastro e cria como
- * pendente quem não está.
- *
- * Não bloquear pelo SKU desconhecido é a mesma decisão da quebra: a
- * importação normalmente é a única fonte desses números, e recusar a linha
- * até o administrador cadastrar o produto perderia o dado (ver
- * docs/dominio.md).
- */
-export async function bulkUpsertStock(
-  rows: StockImportRow[],
-  onProgress?: (done: number, total: number) => void,
-): Promise<StockImportResult> {
-  const BATCH = 500
-  const now = new Date().toISOString()
-  const bySku = new Map(store.map((p) => [p.sku, p]))
-
-  let updated = 0
-  const pending: Product[] = []
-
-  for (let i = 0; i < rows.length; i += BATCH) {
-    for (const row of rows.slice(i, i + BATCH)) {
-      const existing = bySku.get(row.sku)
-
-      if (existing) {
-        const patched: Product = {
-          ...existing,
-          stock: row.stock !== undefined ? Math.max(0, Math.round(row.stock)) : existing.stock,
-          outflow:
-            row.outflow !== undefined ? Math.max(0, Math.round(row.outflow)) : existing.outflow,
-          costPrice:
-            row.costPrice !== undefined ? Math.max(0, row.costPrice) : existing.costPrice,
-          salePrice:
-            row.salePrice !== undefined ? Math.max(0, row.salePrice) : existing.salePrice,
-          updatedAt: now,
-        }
-        bySku.set(row.sku, patched)
-        updated++
-      } else {
-        const created: Product = {
-          id: `p${row.sku}-${now}-${pending.length}`,
-          sku: row.sku,
-          description: '',
-          barcode: '',
-          stock: Math.max(0, Math.round(row.stock ?? 0)),
-          outflow: Math.max(0, Math.round(row.outflow ?? 0)),
-          costPrice: Math.max(0, row.costPrice ?? 0),
-          salePrice: Math.max(0, row.salePrice ?? 0),
-          pendingCadastro: true,
-          createdAt: now,
-          updatedAt: now,
-        }
-        bySku.set(row.sku, created)
-        pending.push(created)
-      }
-    }
-
-    onProgress?.(Math.min(i + BATCH, rows.length), rows.length)
-    await new Promise((resolve) => setTimeout(resolve, 0))
-  }
-
-  store = [...pending, ...store.map((p) => bySku.get(p.sku) ?? p)]
-  return { updated, pendingCreated: pending.length }
+export function replaceStore(next: Product[]): void {
+  store = next
 }

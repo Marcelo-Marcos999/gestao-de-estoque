@@ -1,3 +1,5 @@
+import { EMPTY_RANGE, type NumberRange } from '@/shared/lib/numberRange'
+
 export interface Product {
   id: string
   /** CÓDIGO no ERP. Identifica o produto e é a chave de comparação na importação. */
@@ -32,10 +34,27 @@ export interface Product {
 /** Campos que o usuário edita; o resto é responsabilidade do sistema. */
 export type ProductDraft = Pick<Product, 'sku' | 'description' | 'barcode'>
 
+export type ProductRangeKey = 'stock' | 'outflow' | 'costPrice' | 'salePrice'
+
+/** Rótulo de cada número filtrável, na ordem em que aparece no painel de filtro. */
+export const PRODUCT_RANGE_FIELDS: { key: ProductRangeKey; label: string }[] = [
+  { key: 'stock', label: 'Saldo' },
+  { key: 'outflow', label: 'Saídas' },
+  { key: 'costPrice', label: 'Custo' },
+  { key: 'salePrice', label: 'Venda' },
+]
+
+/** Sem filtro nenhum — para as buscas internas (seletor de produto, código lido) que não passam pelo painel. */
+export const EMPTY_PRODUCT_RANGES: Record<ProductRangeKey, NumberRange> = Object.fromEntries(
+  PRODUCT_RANGE_FIELDS.map((field) => [field.key, EMPTY_RANGE]),
+) as Record<ProductRangeKey, NumberRange>
+
 export interface ProductQuery {
   search: string
   /** Restringe a produtos sem código de barras — útil para completar o cadastro. */
   onlyWithoutBarcode: boolean
   /** Restringe a produtos pendentes de cadastro, criados pela tela de Estoque. */
   onlyPending: boolean
+  /** Um intervalo por número da linha, do painel "Filtro" (ver docs/dominio.md). */
+  numberRanges: Record<ProductRangeKey, NumberRange>
 }

@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/shared/ui/Button'
+import { FilterPanel } from '@/shared/ui/FilterPanel'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
 import { SearchIcon } from '@/shared/ui/icons'
-import type { ProductQuery } from '../types'
+import { countActiveRanges, describeRange, type NumberRange } from '@/shared/lib/numberRange'
+import { PRODUCT_RANGE_FIELDS, type ProductQuery, type ProductRangeKey } from '../types'
 import styles from './ProductsToolbar.module.css'
 
 interface ProductsToolbarProps {
@@ -20,6 +22,8 @@ interface ProductsToolbarProps {
   onSearch: (value: string) => void
   onToggleWithoutBarcode: (value: boolean) => void
   onTogglePending: (value: boolean) => void
+  onRangeChange: (key: ProductRangeKey, range: NumberRange) => void
+  onClearRanges: () => void
   onClear: () => void
   onToggleFocus: () => void
 }
@@ -35,9 +39,14 @@ export function ProductsToolbar({
   onSearch,
   onToggleWithoutBarcode,
   onTogglePending,
+  onRangeChange,
+  onClearRanges,
   onClear,
   onToggleFocus,
 }: ProductsToolbarProps) {
+  const rangeTexts = PRODUCT_RANGE_FIELDS.map((field) =>
+    describeRange(field.label, filters.numberRanges[field.key]),
+  ).filter((text): text is string => text !== null)
   return (
     <div className={styles.toolbar}>
       <div className={styles.search}>
@@ -80,6 +89,14 @@ export function ProductsToolbar({
         Só pendentes
       </label>
 
+      <FilterPanel
+        numberFields={PRODUCT_RANGE_FIELDS}
+        numberValues={filters.numberRanges}
+        onNumberChange={(key, range) => onRangeChange(key as ProductRangeKey, range)}
+        activeCount={countActiveRanges(filters.numberRanges)}
+        onClear={onClearRanges}
+      />
+
       {actions && <div className={styles.actions}>{actions}</div>}
 
       <FocusToggle focused={focused} available={focusAvailable} onToggle={onToggleFocus} />
@@ -97,7 +114,8 @@ export function ProductsToolbar({
                 para <span className={styles.term}>“{filters.search.trim()}”</span>
               </>
             )}
-            {filters.onlyWithoutBarcode && <> sem código de barras</>}.
+            {filters.onlyWithoutBarcode && <> sem código de barras</>}
+            {rangeTexts.length > 0 && <> com {rangeTexts.join(', ')}</>}.
           </span>
 
           <Button variant="secondary" onClick={onClear}>

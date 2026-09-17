@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
 import { PlusIcon, UploadIcon } from '@/shared/ui/icons'
@@ -6,16 +6,40 @@ import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
+import { useSort } from '@/shared/hooks/useSort'
 import { ImportWizard } from '../components/ImportWizard'
 import { NewStockDialog } from '../components/NewStockDialog'
 import { StockEmptyState, StockErrorState } from '../components/StockEmptyState'
 import { StockRowDialog } from '../components/StockRowDialog'
-import { StockTable } from '../components/StockTable'
+import { StockTable, type StockSortKey } from '../components/StockTable'
 import { StockToolbar } from '../components/StockToolbar'
+import { StockTotalsSummary } from '../components/StockTotalsSummary'
 import { exportStockRows } from '../export'
 import { useStockEditor } from '../hooks/useStockEditor'
 import { useStockList } from '../hooks/useStockList'
+import { rowCostTotal, rowSaleTotal, sumStockTotals } from '../totals'
+import type { StockRow } from '../types'
 import styles from './StockPage.module.css'
+
+/** O que cada coluna ordenável compara. */
+function stockValueOf(row: StockRow, key: StockSortKey): string | number {
+  switch (key) {
+    case 'description':
+      return row.description
+    case 'stock':
+      return row.stock
+    case 'outflow':
+      return row.outflow
+    case 'costPrice':
+      return row.costPrice
+    case 'salePrice':
+      return row.salePrice
+    case 'totalCost':
+      return rowCostTotal(row)
+    case 'totalSale':
+      return rowSaleTotal(row)
+  }
+}
 
 /**
  * Tela de Estoque: saldo, saídas, custo e venda dos produtos, acessível aos
@@ -30,8 +54,13 @@ export function StockPage() {
   const isNarrow = useMediaQuery('(max-width: 719px)')
   const focus = useFocusMode()
   const editor = useStockEditor(list.reload)
+  const sort = useSort<StockRow, StockSortKey>(list.rows, stockValueOf)
 
   const rowHeight = isNarrow ? 108 : 56
+
+  // Soma sobre o que está na tela, com os filtros aplicados: é o mesmo total
+  // que a lista abaixo já mostra, só resumido — não a base inteira.
+  const totals = useMemo(() => sumStockTotals(list.rows), [list.rows])
 
   const [importOpen, setImportOpen] = useState(false)
   const [novoAberto, setNovoAberto] = useState(false)
@@ -76,6 +105,12 @@ export function StockPage() {
         </header>
       )}
 
+      {/* Sai no modo foco, junto do cabeçalho: é o mesmo total que a tabela
+          abaixo já mostra por produto, só resumido. */}
+      {!focus.focused && list.status === 'ready' && list.rows.length > 0 && (
+        <StockTotalsSummary cost={totals.cost} sale={totals.sale} />
+      )}
+
       <StockToolbar
         filters={list.filters}
         isFiltered={list.isFiltered}
@@ -86,6 +121,8 @@ export function StockPage() {
         actions={focus.focused ? acoes : null}
         onSearch={list.setSearch}
         onTogglePending={list.setOnlyPending}
+        onRangeChange={list.setNumberRange}
+        onClearRanges={list.clearRanges}
         onClear={list.clearFilters}
         onToggleFocus={focus.toggle}
       />
@@ -105,10 +142,13 @@ export function StockPage() {
 
       {list.status === 'ready' && list.rows.length > 0 && (
         <StockTable
-          rows={list.rows}
+          rows={sort.sortedRows}
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
           onEdit={editor.open}
+          sortKey={sort.sortKey}
+          sortDir={sort.sortDir}
+          onSort={sort.cycleSort}
         />
       )}
 

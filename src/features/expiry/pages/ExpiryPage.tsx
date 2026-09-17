@@ -1,27 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
+import { SelectionBar } from '@/shared/ui/SelectionBar'
 import { UndoBar } from '@/shared/ui/UndoBar'
 import { LossRecordDialog } from '@/features/breakage'
 import { ProductsSkeleton } from '@/features/products'
+import { useAuth } from '@/features/auth'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
-import { FocusToggle } from '@/shared/ui/FocusToggle'
-import { ScanButton } from '@/shared/ui/ScanButton'
-import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
-import { SITUATIONS } from '../situation'
+import { useSelection } from '@/shared/hooks/useSelection'
+import { BoltIcon, PlusIcon } from '@/shared/ui/icons'
+import { useSort } from '@/shared/hooks/useSort'
 import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
-import { ExpiryTable } from '../components/ExpiryTable'
+import { ExpiryTable, type ExpirySortKey } from '../components/ExpiryTable'
+import { ExpiryToolbar } from '../components/ExpiryToolbar'
 import { NewExpiryDialog } from '../components/NewExpiryDialog'
-import { PeriodField } from '../components/PeriodField'
 import { SituationTiles } from '../components/SituationTiles'
 import { ExpiryDialog } from '../components/ExpiryDialog'
 import { exportExpiryRows } from '../export'
+import { useBulkGenerateBreakage } from '../hooks/useBulkGenerateBreakage'
 import { useExpiryEditor } from '../hooks/useExpiryEditor'
 import { useExpiryList } from '../hooks/useExpiryList'
 import { useGenerateBreakage } from '../hooks/useGenerateBreakage'
+import { expiryValueOf } from '../sort'
+import type { ExpiryRow } from '../types'
 import styles from './ExpiryPage.module.css'
 
 /**
@@ -38,7 +42,40 @@ export function ExpiryPage() {
   const focus = useFocusMode()
   const editor = useExpiryEditor(list.reload)
   const breakage = useGenerateBreakage(editor.removeItems)
+  const sort = useSort<ExpiryRow, ExpirySortKey>(list.rows, expiryValueOf)
   const rowHeight = isNarrow ? 128 : 62
+
+  const { user } = useAuth()
+  const bulkBreakage = useBulkGenerateBreakage(editor.removeItems, user?.name ?? 'Sistema')
+
+  const visibleIds = sort.sortedRows.map((row) => row.id)
+  const selectionState = useSelection(visibleIds)
+  const selectedRows = sort.sortedRows.filter((row) => selectionState.selection.has(row.id))
+  // Só faz sentido quando NENHUMA revisão de motivo é necessária: todo
+  // selecionado precisa estar na faixa "venceu", senão o botão nem aparece
+  // (ver docs/dominio.md).
+  const podeEnviarQuebra =
+    selectedRows.length > 0 && selectedRows.every((row) => row.situation === 'venceu')
+
+  // Trocar de filtro limpa a seleção — mesma regra da Quebra: um lote
+  // marcado e depois escondido por um filtro novo não devia poder ser
+  // excluído ou enviado para quebra sem que a pessoa o veja mais.
+  useEffect(() => {
+    selectionState.clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.filters])
+
+  function deleteSelected() {
+    const ids = [...selectionState.selection]
+    selectionState.clear()
+    void editor.removeItems(ids)
+  }
+
+  function sendSelectedToBreakage() {
+    const rows = selectedRows
+    selectionState.clear()
+    void bulkBreakage.send(rows)
+  }
 
   /**
    * As ações acompanham o cabeçalho quando ele existe e migram para a barra de
@@ -95,68 +132,40 @@ export function ExpiryPage() {
         />
       )}
 
-      <div className={styles.toolbar}>
-        <div className={styles.search}>
-          <SearchIcon className={styles.searchIcon} width={18} height={18} />
-          <input
-            className={styles.input}
-            type="search"
-            value={list.filters.search}
-            onChange={(event) => list.setSearch(event.target.value)}
-            placeholder={
-              isNarrow ? 'Buscar produto' : 'Buscar por descrição, SKU ou código de barras'
-            }
-            aria-label="Buscar lotes"
-            autoComplete="off"
-          />
+      <ExpiryToolbar
+        filters={list.filters}
+        isFiltered={list.isFiltered}
+        matching={list.matching}
+        narrow={isNarrow}
+        focused={focus.focused}
+        focusAvailable={focus.available}
+        actions={focus.focused ? acoes : null}
+        periodDays={list.periodDays}
+        onSearch={list.setSearch}
+        onPeriodChange={list.setPeriodDays}
+        onExpiryRangeChange={list.setExpiryRange}
+        onNumberRangeChange={list.setNumberRange}
+        onClearRanges={list.clearRanges}
+        onClear={list.clearFilters}
+        onToggleFocus={focus.toggle}
+      />
 
-          {/* A busca aceita o código lido, não só o digitado: no corredor a
-              etiqueta está na mão e o teclado do celular não. */}
-          <ScanButton onDetect={list.setSearch} label="Buscar por código de barras" />
-        </div>
-
-        {/* O número que sustenta a previsão fica visível e editável aqui: sem
-            ele, "sai em 195 dias" é um número sem procedência — e quem lê a
-            previsão é quem percebe que o intervalo está errado. */}
-        <PeriodField days={list.periodDays} onChange={list.setPeriodDays} />
-
-        {focus.focused && <div className={styles.actions}>{acoes}</div>}
-
-        <FocusToggle
-          focused={focus.focused}
-          available={focus.available}
-          onToggle={focus.toggle}
-        />
-      </div>
-
-      {list.isFiltered && (
-        <div className={styles.active} role="status">
-          <SearchIcon className={styles.activeIcon} width={16} height={16} />
-          <span className={styles.activeText}>
-            Mostrando {list.matching.toLocaleString('pt-BR')}{' '}
-            {list.matching === 1 ? 'lote' : 'lotes'}
-            {list.filters.situations.length > 0 && (
-              <>
-                {' '}
-                em{' '}
-                {list.filters.situations
-                  .map((s) => SITUATIONS[s].label.toLowerCase())
-                  .join(', ')}
-              </>
-            )}
-            {list.filters.search.trim() && (
-              <>
-                {' '}
-                para <span className={styles.term}>“{list.filters.search.trim()}”</span>
-              </>
-            )}
-            .
-          </span>
-          <Button variant="secondary" onClick={list.clearFilters}>
-            Limpar filtros
-          </Button>
-        </div>
-      )}
+      <SelectionBar
+        selected={selectionState.selection.size}
+        total={visibleIds.length}
+        onSelectAll={selectionState.selectAll}
+        onClear={selectionState.clear}
+        onDelete={deleteSelected}
+        extraAction={
+          podeEnviarQuebra
+            ? {
+                label: 'Gerar quebra',
+                icon: <BoltIcon width={16} height={16} />,
+                onClick: sendSelectedToBreakage,
+              }
+            : undefined
+        }
+      />
 
       {list.status === 'loading' && <ProductsSkeleton rowHeight={rowHeight} />}
 
@@ -181,11 +190,17 @@ export function ExpiryPage() {
 
       {list.status === 'ready' && list.rows.length > 0 && (
         <ExpiryTable
-          rows={list.rows}
+          rows={sort.sortedRows}
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
           onEdit={editor.open}
+          onDelete={(row) => void editor.removeItems([row.id])}
           onGenerateBreakage={breakage.open}
+          selection={selectionState.selection}
+          onToggleSelect={selectionState.toggle}
+          sortKey={sort.sortKey}
+          sortDir={sort.sortDir}
+          onSort={sort.cycleSort}
         />
       )}
 

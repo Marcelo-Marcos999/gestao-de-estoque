@@ -1,13 +1,17 @@
 import { Badge } from '@/shared/ui/Badge'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import { EditIcon, TrashIcon } from '@/shared/ui/icons'
+import { SortButton } from '@/shared/ui/SortButton'
 import { formatDate } from '@/shared/lib/date'
+import type { SortDir } from '@/shared/hooks/useSort'
 import { deadline } from '../deadline'
 import { recordLabel } from '../label'
 import { labelOf } from '../tags'
 import type { LossRecord, Tag } from '../types'
 import { AttachmentChips } from './AttachmentChips'
 import styles from './LossRecordTable.module.css'
+
+export type LossRecordSortKey = 'description' | 'expiryDate' | 'quantity' | 'reason'
 
 interface LossRecordTableProps {
   records: LossRecord[]
@@ -18,6 +22,9 @@ interface LossRecordTableProps {
   onEdit: (record: LossRecord) => void
   onDelete: (record: LossRecord) => void
   onOpenAttachment: (record: LossRecord, attachmentId: string) => void
+  sortKey: LossRecordSortKey | null
+  sortDir: SortDir | null
+  onSort: (key: LossRecordSortKey) => void
 }
 
 /**
@@ -39,6 +46,9 @@ export function LossRecordTable({
   onEdit,
   onDelete,
   onOpenAttachment,
+  sortKey,
+  sortDir,
+  onSort,
 }: LossRecordTableProps) {
   // A tabela só existe da largura de tablet para cima, onde a lista rola
   // dentro de si — daí `narrow` fixo em falso.
@@ -48,15 +58,17 @@ export function LossRecordTable({
     narrow: false,
   })
 
+  const sortProps = { activeKey: sortKey, activeDir: sortDir, onSort }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.head} role="presentation">
         <span></span>
         <span></span>
-        <span>Produto</span>
-        <span>Validade</span>
-        <span className={styles.number}>Qtd</span>
-        <span>Motivo e origem</span>
+        <SortButton label="Produto" sortKey="description" {...sortProps} />
+        <SortButton label="Validade" sortKey="expiryDate" {...sortProps} />
+        <SortButton label="Qtd" sortKey="quantity" {...sortProps} />
+        <SortButton label="Motivo e origem" sortKey="reason" {...sortProps} />
         <span>Anexos</span>
         <span></span>
       </div>

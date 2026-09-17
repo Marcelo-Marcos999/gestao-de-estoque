@@ -1,21 +1,38 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
+import { SelectionBar } from '@/shared/ui/SelectionBar'
+import { UndoBar } from '@/shared/ui/UndoBar'
 import { PlusIcon, UploadIcon } from '@/shared/ui/icons'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
+import { useSelection } from '@/shared/hooks/useSelection'
+import { useSort } from '@/shared/hooks/useSort'
 import { useAuth } from '@/features/auth'
 import { ImportWizard } from '../components/ImportWizard'
 import { ProductFormDialog } from '../components/ProductFormDialog'
 import { ProductsEmptyState, ProductsErrorState } from '../components/ProductsEmptyState'
 import { ProductsSkeleton } from '../components/ProductsSkeleton'
-import { ProductsTable } from '../components/ProductsTable'
+import { ProductsTable, type ProductSortKey } from '../components/ProductsTable'
 import { ProductsToolbar } from '../components/ProductsToolbar'
 import { exportProducts } from '../export'
+import { useProductDeletion } from '../hooks/useProductDeletion'
 import { useProductList } from '../hooks/useProductList'
 import type { Product } from '../types'
 import styles from './ProductsPage.module.css'
+
+/** O que cada coluna ordenável compara. */
+function productValueOf(product: Product, key: ProductSortKey): string | number {
+  switch (key) {
+    case 'barcode':
+      return product.barcode
+    case 'sku':
+      return product.sku
+    case 'description':
+      return product.description
+  }
+}
 
 /**
  * Tela do cadastro de produtos.
@@ -29,6 +46,7 @@ export function ProductsPage() {
   const list = useProductList()
   const isNarrow = useMediaQuery('(max-width: 719px)')
   const focus = useFocusMode()
+  const sort = useSort<Product, ProductSortKey>(list.products, productValueOf)
 
   // O cadastro é a base que todo registro de quebra consulta, então todos
   // leem. Só o administrador alimenta (ver CLAUDE.md, "Perfis de acesso").
@@ -36,6 +54,24 @@ export function ProductsPage() {
   // descobre que não pode só depois de preencher um formulário inteiro.
   const { user } = useAuth()
   const podeEditar = user?.role === 'admin'
+
+  const visibleIds = sort.sortedRows.map((product) => product.id)
+  const selectionState = useSelection(visibleIds)
+  const deletion = useProductDeletion(list.reload)
+
+  // Trocar de filtro limpa a seleção: marcar produtos numa busca e excluir
+  // depois de trocar o termo apagaria produtos que a pessoa não está vendo
+  // mais — o pior tipo de exclusão em massa (mesma regra da Quebra).
+  useEffect(() => {
+    selectionState.clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.filters])
+
+  function deleteSelected() {
+    const ids = [...selectionState.selection]
+    selectionState.clear()
+    void deletion.removeItems(ids)
+  }
 
   // Altura provável de uma linha, usada pelo esqueleto de carregamento e como
   // estimativa inicial da lista virtualizada. No celular a linha é mais alta
@@ -111,9 +147,21 @@ export function ProductsPage() {
         onSearch={list.setSearch}
         onToggleWithoutBarcode={list.setOnlyWithoutBarcode}
         onTogglePending={list.setOnlyPending}
+        onRangeChange={list.setNumberRange}
+        onClearRanges={list.clearRanges}
         onClear={list.clearFilters}
         onToggleFocus={focus.toggle}
       />
+
+      {podeEditar && (
+        <SelectionBar
+          selected={selectionState.selection.size}
+          total={visibleIds.length}
+          onSelectAll={selectionState.selectAll}
+          onClear={selectionState.clear}
+          onDelete={deleteSelected}
+        />
+      )}
 
       {/* Os quatro estados de uma tela que busca dados. Nenhum pode faltar:
           sem o de erro, uma falha de rede deixaria a tela em branco sem
@@ -133,13 +181,27 @@ export function ProductsPage() {
 
       {list.status === 'ready' && list.products.length > 0 && (
         <ProductsTable
-          products={list.products}
-          // Sem permissão de escrita a linha não oferece edição.
+          products={sort.sortedRows}
+          // Sem permissão de escrita a linha não oferece edição, seleção nem exclusão.
           onEdit={podeEditar ? (product) => openForm(product) : undefined}
+          onDelete={podeEditar ? (product) => void deletion.removeItems([product.id]) : undefined}
+          selection={podeEditar ? selectionState.selection : undefined}
+          onToggleSelect={podeEditar ? selectionState.toggle : undefined}
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
+          sortKey={sort.sortKey}
+          sortDir={sort.sortDir}
+          onSort={sort.cycleSort}
         />
       )}
+
+      <UndoBar
+        count={deletion.undoable.length}
+        label="Produto"
+        plural="produtos"
+        onUndo={() => void deletion.undo()}
+        onDismiss={deletion.dismissUndo}
+      />
 
       <ProductFormDialog
         open={formOpen && podeEditar}

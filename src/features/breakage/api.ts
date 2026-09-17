@@ -10,6 +10,8 @@
  */
 import { getAllProducts } from '@/features/products'
 import { ensureExpiryItem } from '@/features/expiry'
+import { matchesRange } from '@/shared/lib/numberRange'
+import { readReasons } from './tags'
 import type { LossRecord, LossRecordDraft, LossRecordQuery } from './types'
 
 const LATENCY_MS = 180
@@ -52,6 +54,10 @@ export async function listLossRecords(query: LossRecordQuery): Promise<LossRecor
     .filter((record) => {
       if (query.stockState === 'no-estoque' && record.quantity <= 0) return false
       if (query.stockState === 'zerados' && record.quantity > 0) return false
+
+      if (query.reasonIds.length > 0 && !query.reasonIds.includes(record.reasonId)) return false
+      if (query.originIds.length > 0 && !query.originIds.includes(record.originId)) return false
+      if (!matchesRange(record.quantity, query.numberRanges.quantity)) return false
 
       if (!term) return true
       return (
@@ -145,6 +151,34 @@ export async function createLossRecord(
   await ensureExpiryItem(record.productId, record.expiryDate)
 
   return record
+}
+
+/**
+ * Cria vários registros de uma vez, todos com o mesmo motivo — casado pelo
+ * **nome**, não por um id fixo, pela mesma razão do formulário: a lista de
+ * motivos é editável, e "Vencido" pode ter sido renomeado (ver
+ * docs/dominio.md).
+ *
+ * Existe para quem já sabe, sem perguntar, que o motivo é aquele — como a
+ * tela de Validades enviando vários lotes vencidos de uma vez: pedir para
+ * escolher o motivo de novo, um por um, seria perguntar o óbvio.
+ *
+ * Sequencial, não em paralelo: cada criação lê e regrava o mesmo `store`, e
+ * duas escritas ao mesmo tempo perderiam uma da outra.
+ */
+export async function createLossRecordsByReasonLabel(
+  drafts: Omit<LossRecordDraft, 'reasonId'>[],
+  reasonLabel: string,
+  createdBy: string,
+): Promise<LossRecord[]> {
+  const reasonId =
+    readReasons().find((r) => r.label.toLowerCase() === reasonLabel.toLowerCase())?.id ?? ''
+
+  const created: LossRecord[] = []
+  for (const draft of drafts) {
+    created.push(await createLossRecord({ ...draft, reasonId }, createdBy))
+  }
+  return created
 }
 
 /** Soma a quantidade a um registro que já existe, em vez de criar outro. */
