@@ -1,25 +1,43 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { usePersistedState } from '@/shared/hooks/usePersistedState'
+import { countActiveRanges, isRangesRecord, rangesKey, type NumberRange } from '@/shared/lib/numberRange'
 import { storageKey } from '@/shared/lib/storage'
 import { countProducts, listProducts } from '../api'
-import type { Product, ProductQuery } from '../types'
+import {
+  EMPTY_PRODUCT_RANGES,
+  PRODUCT_RANGE_FIELDS,
+  type Product,
+  type ProductQuery,
+  type ProductRangeKey,
+} from '../types'
 
 export type ListStatus = 'loading' | 'error' | 'ready'
 
 const FILTERS_KEY = storageKey('filtros', 'produtos')
 
-const NO_FILTERS: ProductQuery = { search: '', onlyWithoutBarcode: false, onlyPending: false }
+const RANGE_KEYS = PRODUCT_RANGE_FIELDS.map((field) => field.key)
+
+const NO_FILTERS: ProductQuery = {
+  search: '',
+  onlyWithoutBarcode: false,
+  onlyPending: false,
+  numberRanges: EMPTY_PRODUCT_RANGES,
+}
 
 /** Descarta um registro gravado fora de formato em vez de quebrar a tela. */
 function isProductQuery(value: unknown): value is ProductQuery {
   if (typeof value !== 'object' || value === null) return false
 
-  const { search, onlyWithoutBarcode, onlyPending } = value as Record<string, unknown>
+  const { search, onlyWithoutBarcode, onlyPending, numberRanges } = value as Record<
+    string,
+    unknown
+  >
   return (
     typeof search === 'string' &&
     typeof onlyWithoutBarcode === 'boolean' &&
-    typeof onlyPending === 'boolean'
+    typeof onlyPending === 'boolean' &&
+    isRangesRecord(numberRanges, RANGE_KEYS)
   )
 }
 
@@ -45,7 +63,7 @@ export function useProductList() {
    * gravar "carregando" antes de cada busca — o que custaria um render a mais
    * e faria a lista piscar a cada tecla.
    */
-  const queryKey = `${debouncedSearch}|${filters.onlyWithoutBarcode}|${filters.onlyPending}`
+  const queryKey = `${debouncedSearch}|${filters.onlyWithoutBarcode}|${filters.onlyPending}|${rangesKey(filters.numberRanges)}`
 
   const [result, setResult] = useState<{ key: string; items: Product[]; total: number } | null>(
     null,
@@ -61,6 +79,7 @@ export function useProductList() {
       search: debouncedSearch,
       onlyWithoutBarcode: filters.onlyWithoutBarcode,
       onlyPending: filters.onlyPending,
+      numberRanges: filters.numberRanges,
     })
       .then((page) => {
         if (cancelled) return
@@ -74,7 +93,14 @@ export function useProductList() {
     return () => {
       cancelled = true
     }
-  }, [queryKey, debouncedSearch, filters.onlyWithoutBarcode, filters.onlyPending, reloadKey])
+  }, [
+    queryKey,
+    debouncedSearch,
+    filters.onlyWithoutBarcode,
+    filters.onlyPending,
+    filters.numberRanges,
+    reloadKey,
+  ])
 
   useEffect(() => {
     let cancelled = false
@@ -113,6 +139,20 @@ export function useProductList() {
     [setFilters],
   )
 
+  const setNumberRange = useCallback(
+    (key: ProductRangeKey, range: NumberRange) =>
+      setFilters((current) => ({
+        ...current,
+        numberRanges: { ...current.numberRanges, [key]: range },
+      })),
+    [setFilters],
+  )
+
+  const clearRanges = useCallback(
+    () => setFilters((current) => ({ ...current, numberRanges: NO_FILTERS.numberRanges })),
+    [setFilters],
+  )
+
   const clearFilters = useCallback(() => setFilters(NO_FILTERS), [setFilters])
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), [])
@@ -120,7 +160,10 @@ export function useProductList() {
   // Usa o valor com atraso, não o que está sendo digitado: senão a contagem
   // trocaria de formato antes de a lista mudar.
   const isFiltered =
-    debouncedSearch.trim() !== '' || filters.onlyWithoutBarcode || filters.onlyPending
+    debouncedSearch.trim() !== '' ||
+    filters.onlyWithoutBarcode ||
+    filters.onlyPending ||
+    countActiveRanges(filters.numberRanges) > 0
 
   return {
     filters,
@@ -132,6 +175,8 @@ export function useProductList() {
     setSearch,
     setOnlyWithoutBarcode,
     setOnlyPending,
+    setNumberRange,
+    clearRanges,
     clearFilters,
     reload,
   }

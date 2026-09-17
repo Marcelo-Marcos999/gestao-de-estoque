@@ -8,15 +8,12 @@ import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
-import { FocusToggle } from '@/shared/ui/FocusToggle'
-import { ScanButton } from '@/shared/ui/ScanButton'
-import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
+import { PlusIcon } from '@/shared/ui/icons'
 import { useSort } from '@/shared/hooks/useSort'
-import { SITUATIONS } from '../situation'
 import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
 import { ExpiryTable, type ExpirySortKey } from '../components/ExpiryTable'
+import { ExpiryToolbar } from '../components/ExpiryToolbar'
 import { NewExpiryDialog } from '../components/NewExpiryDialog'
-import { PeriodField } from '../components/PeriodField'
 import { SituationTiles } from '../components/SituationTiles'
 import { ExpiryDialog } from '../components/ExpiryDialog'
 import { exportExpiryRows } from '../export'
@@ -99,68 +96,23 @@ export function ExpiryPage() {
         />
       )}
 
-      <div className={styles.toolbar}>
-        <div className={styles.search}>
-          <SearchIcon className={styles.searchIcon} width={18} height={18} />
-          <input
-            className={styles.input}
-            type="search"
-            value={list.filters.search}
-            onChange={(event) => list.setSearch(event.target.value)}
-            placeholder={
-              isNarrow ? 'Buscar produto' : 'Buscar por descrição, SKU ou código de barras'
-            }
-            aria-label="Buscar lotes"
-            autoComplete="off"
-          />
-
-          {/* A busca aceita o código lido, não só o digitado: no corredor a
-              etiqueta está na mão e o teclado do celular não. */}
-          <ScanButton onDetect={list.setSearch} label="Buscar por código de barras" />
-        </div>
-
-        {/* O número que sustenta a previsão fica visível e editável aqui: sem
-            ele, "sai em 195 dias" é um número sem procedência — e quem lê a
-            previsão é quem percebe que o intervalo está errado. */}
-        <PeriodField days={list.periodDays} onChange={list.setPeriodDays} />
-
-        {focus.focused && <div className={styles.actions}>{acoes}</div>}
-
-        <FocusToggle
-          focused={focus.focused}
-          available={focus.available}
-          onToggle={focus.toggle}
-        />
-      </div>
-
-      {list.isFiltered && (
-        <div className={styles.active} role="status">
-          <SearchIcon className={styles.activeIcon} width={16} height={16} />
-          <span className={styles.activeText}>
-            Mostrando {list.matching.toLocaleString('pt-BR')}{' '}
-            {list.matching === 1 ? 'lote' : 'lotes'}
-            {list.filters.situations.length > 0 && (
-              <>
-                {' '}
-                em{' '}
-                {list.filters.situations
-                  .map((s) => SITUATIONS[s].label.toLowerCase())
-                  .join(', ')}
-              </>
-            )}
-            {list.filters.search.trim() && (
-              <>
-                {' '}
-                para <span className={styles.term}>“{list.filters.search.trim()}”</span>
-              </>
-            )}
-            .
-          </span>
-          <Button variant="secondary" onClick={list.clearFilters}>
-            Limpar filtros
-          </Button>
-        </div>
-      )}
+      <ExpiryToolbar
+        filters={list.filters}
+        isFiltered={list.isFiltered}
+        matching={list.matching}
+        narrow={isNarrow}
+        focused={focus.focused}
+        focusAvailable={focus.available}
+        actions={focus.focused ? acoes : null}
+        periodDays={list.periodDays}
+        onSearch={list.setSearch}
+        onPeriodChange={list.setPeriodDays}
+        onExpiryRangeChange={list.setExpiryRange}
+        onNumberRangeChange={list.setNumberRange}
+        onClearRanges={list.clearRanges}
+        onClear={list.clearFilters}
+        onToggleFocus={focus.toggle}
+      />
 
       {list.status === 'loading' && <ProductsSkeleton rowHeight={rowHeight} />}
 

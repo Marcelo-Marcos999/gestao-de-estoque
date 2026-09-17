@@ -1,39 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { usePersistedState } from '@/shared/hooks/usePersistedState'
+import { countActiveRanges, rangesKey, type NumberRange } from '@/shared/lib/numberRange'
 import { storageKey } from '@/shared/lib/storage'
 import { deleteLossRecords, listLossRecords, restoreLossRecords } from '../api'
-import type { LossRecord, LossRecordQuery } from '../types'
+import { isLossRecordQuery, NO_FILTERS } from '../query'
+import type { LossRecord, LossRecordQuery, LossRecordRangeKey } from '../types'
 
 export type ListStatus = 'loading' | 'error' | 'ready'
 
 const FILTERS_KEY = storageKey('filtros', 'quebra')
-
-const NO_FILTERS: LossRecordQuery = {
-  search: '',
-  stockState: 'no-estoque',
-  reasonIds: [],
-  originIds: [],
-}
-
-const STOCK_STATES: LossRecordQuery['stockState'][] = ['todos', 'no-estoque', 'zerados']
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((v) => typeof v === 'string')
-}
-
-/** Descarta registro fora de formato em vez de deixar a tela num estado impossível. */
-function isLossRecordQuery(value: unknown): value is LossRecordQuery {
-  if (typeof value !== 'object' || value === null) return false
-
-  const { search, stockState, reasonIds, originIds } = value as Record<string, unknown>
-  return (
-    typeof search === 'string' &&
-    STOCK_STATES.includes(stockState as LossRecordQuery['stockState']) &&
-    isStringArray(reasonIds) &&
-    isStringArray(originIds)
-  )
-}
 
 /**
  * Estado da tela de quebra: filtros lembrados entre sessões, a lista que eles
@@ -64,7 +40,7 @@ export function useLossRecordList() {
   // Sem espera, cada tecla dispararia uma varredura da lista inteira.
   const debouncedSearch = useDebouncedValue(filters.search, 250)
 
-  const queryKey = `${debouncedSearch}|${filters.stockState}|${filters.reasonIds.join(',')}|${filters.originIds.join(',')}|${reloadKey}`
+  const queryKey = `${debouncedSearch}|${filters.stockState}|${filters.reasonIds.join(',')}|${filters.originIds.join(',')}|${rangesKey(filters.numberRanges)}|${reloadKey}`
 
   useEffect(() => {
     let cancelled = false
@@ -74,6 +50,7 @@ export function useLossRecordList() {
       stockState: filters.stockState,
       reasonIds: filters.reasonIds,
       originIds: filters.originIds,
+      numberRanges: filters.numberRanges,
     })
       .then((items) => {
         if (cancelled) return
@@ -87,7 +64,14 @@ export function useLossRecordList() {
     return () => {
       cancelled = true
     }
-  }, [queryKey, debouncedSearch, filters.stockState, filters.reasonIds, filters.originIds])
+  }, [
+    queryKey,
+    debouncedSearch,
+    filters.stockState,
+    filters.reasonIds,
+    filters.originIds,
+    filters.numberRanges,
+  ])
 
   // O desfazer some sozinho; sem esta limpeza, um temporizador sobreviveria à
   // saída da tela e tentaria escrever estado de um componente já desmontado.
@@ -159,6 +143,20 @@ export function useLossRecordList() {
     [changeFilters],
   )
 
+  const setNumberRange = useCallback(
+    (key: LossRecordRangeKey, range: NumberRange) =>
+      changeFilters((current) => ({
+        ...current,
+        numberRanges: { ...current.numberRanges, [key]: range },
+      })),
+    [changeFilters],
+  )
+
+  const clearRanges = useCallback(
+    () => changeFilters((current) => ({ ...current, numberRanges: NO_FILTERS.numberRanges })),
+    [changeFilters],
+  )
+
   const clearFilters = useCallback(() => changeFilters(() => NO_FILTERS), [changeFilters])
 
   const toggleSelected = useCallback((id: string) => {
@@ -223,7 +221,8 @@ export function useLossRecordList() {
     debouncedSearch.trim() !== '' ||
     filters.stockState !== NO_FILTERS.stockState ||
     filters.reasonIds.length > 0 ||
-    filters.originIds.length > 0
+    filters.originIds.length > 0 ||
+    countActiveRanges(filters.numberRanges) > 0
 
   return {
     filters,
@@ -238,6 +237,8 @@ export function useLossRecordList() {
     toggleOriginFilter,
     clearReasonFilter,
     clearOriginFilter,
+    setNumberRange,
+    clearRanges,
     clearFilters,
     toggleSelected,
     selectAll,

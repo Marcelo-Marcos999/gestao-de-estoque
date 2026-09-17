@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { listProducts } from '../api'
+import { EMPTY_PRODUCT_RANGES } from '../types'
 import { useProductSearch } from '../hooks/useProductSearch'
 import { AlertIcon, CheckIcon, SearchIcon } from '@/shared/ui/icons'
 import { ScanButton } from '@/shared/ui/ScanButton'
@@ -125,7 +126,12 @@ export function ProductPicker({
   async function scanned(code: string) {
     setTerm(code)
 
-    const page = await listProducts({ search: code, onlyWithoutBarcode: false, onlyPending: false })
+    const page = await listProducts({
+      search: code,
+      onlyWithoutBarcode: false,
+      onlyPending: false,
+      numberRanges: EMPTY_PRODUCT_RANGES,
+    })
     if (page.items.length !== 1) return
 
     const product = page.items[0]

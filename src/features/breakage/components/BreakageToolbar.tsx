@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { FilterMenu } from '@/shared/ui/FilterMenu'
+import { FilterPanel } from '@/shared/ui/FilterPanel'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
 import { SearchIcon } from '@/shared/ui/icons'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
-import type { LossRecordQuery, Tag } from '../types'
+import { countActiveRanges, describeRange, type NumberRange } from '@/shared/lib/numberRange'
+import { LOSS_RECORD_RANGE_FIELDS, type LossRecordQuery, type LossRecordRangeKey, type Tag } from '../types'
 import styles from './BreakageToolbar.module.css'
 
 const ABAS: { value: LossRecordQuery['stockState']; label: string }[] = [
@@ -32,6 +34,8 @@ interface BreakageToolbarProps {
   onToggleOrigin: (id: string) => void
   onClearReason: () => void
   onClearOrigin: () => void
+  onRangeChange: (key: LossRecordRangeKey, range: NumberRange) => void
+  onClearRanges: () => void
   onClear: () => void
   onToggleFocus: () => void
 }
@@ -58,10 +62,15 @@ export function BreakageToolbar({
   onToggleOrigin,
   onClearReason,
   onClearOrigin,
+  onRangeChange,
+  onClearRanges,
   onClear,
   onToggleFocus,
 }: BreakageToolbarProps) {
   const isNarrow = useMediaQuery('(max-width: 719px)')
+  const rangeTexts = LOSS_RECORD_RANGE_FIELDS.map((field) =>
+    describeRange(field.label, filters.numberRanges[field.key]),
+  ).filter((text): text is string => text !== null)
 
   return (
     <>
@@ -121,6 +130,14 @@ export function BreakageToolbar({
           onClear={onClearOrigin}
         />
 
+        <FilterPanel
+          numberFields={LOSS_RECORD_RANGE_FIELDS}
+          numberValues={filters.numberRanges}
+          onNumberChange={(key, range) => onRangeChange(key as LossRecordRangeKey, range)}
+          activeCount={countActiveRanges(filters.numberRanges)}
+          onClear={onClearRanges}
+        />
+
         {actions && <div className={styles.actions}>{actions}</div>}
 
         <FocusToggle focused={focused} available={focusAvailable} onToggle={onToggleFocus} />
@@ -159,7 +176,7 @@ export function BreakageToolbar({
                 para <span className={styles.term}>“{filters.search.trim()}”</span>
               </>
             )}
-            .
+            {rangeTexts.length > 0 && <> com {rangeTexts.join(', ')}</>}.
           </span>
           <Button variant="secondary" onClick={onClear}>
             Limpar filtros

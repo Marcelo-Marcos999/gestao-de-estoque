@@ -493,6 +493,37 @@ são etiquetas editáveis (ver "O que é editável à mão"), então o filtro gu
 o **id** da etiqueta, não o texto — renomear "Vencido" não quebra um filtro já
 salvo.
 
+## Painel de filtro por período e por faixa numérica
+
+O ícone de filtro do AppSheet reunia, num painel só, período (quando a coluna
+tinha data), mínimo e máximo (para número) e uma lista de opções (para texto).
+Aqui ele virou um botão "Filtro" à parte — ao lado de Motivo, Origem e dos
+outros controles que já existiam — porque período e faixa numérica são uma
+pergunta diferente de "qual destas opções": não têm lista fixa para marcar, e
+juntar os dois formatos num controle só obrigaria a interface de um a servir o
+outro mal.
+
+| Tela | Período (data) | Faixa numérica |
+|---|---|---|
+| Cadastro de produtos | — | Saldo, Saídas, Custo, Venda |
+| **Validades** | **Validade** | Saldo, Saídas |
+| Quebra | — | Quantidade |
+| Estoque | — | Saldo, Saídas, Custo, Venda, Total custo, Total venda |
+
+Em Validades, período de validade não é redundante com os quatro cartões de
+situação: os cartões respondem "quão urgente" (vencido, alerta, ok, sem data),
+o período responde "vence entre estas duas datas específicas" — perguntas
+diferentes que cruzam livremente (dá para marcar "vence antes de vender" **e**
+restringir a um mês do calendário ao mesmo tempo).
+
+Cada campo aceita mínimo, máximo, os dois ou nenhum — um filtro "a partir de
+500" é tão válido quanto um intervalo fechado. Sem data cadastrada nunca casa
+com um período: perguntar "vence entre X e Y" sobre uma data que a linha não
+tem faria mais sentido sumir da lista do que aparecer como se coincidisse. Em
+Estoque, os dois totais calculados (ver "De onde vêm saldo e saídas") entram
+na faixa numérica como qualquer outra coluna — filtrar por eles não precisa
+saber que são conta, não campo gravado.
+
 ## O que veio do AppSheet e não se repete aqui
 
 O app anterior tinha tabelas que existiam para contornar limitações da

@@ -10,6 +10,7 @@
  */
 import { getAllProducts } from '@/features/products'
 import { ensureExpiryItem } from '@/features/expiry'
+import { matchesRange } from '@/shared/lib/numberRange'
 import type { LossRecord, LossRecordDraft, LossRecordQuery } from './types'
 
 const LATENCY_MS = 180
@@ -55,6 +56,7 @@ export async function listLossRecords(query: LossRecordQuery): Promise<LossRecor
 
       if (query.reasonIds.length > 0 && !query.reasonIds.includes(record.reasonId)) return false
       if (query.originIds.length > 0 && !query.originIds.includes(record.originId)) return false
+      if (!matchesRange(record.quantity, query.numberRanges.quantity)) return false
 
       if (!term) return true
       return (

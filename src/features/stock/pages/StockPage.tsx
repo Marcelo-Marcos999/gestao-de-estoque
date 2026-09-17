@@ -121,6 +121,8 @@ export function StockPage() {
         actions={focus.focused ? acoes : null}
         onSearch={list.setSearch}
         onTogglePending={list.setOnlyPending}
+        onRangeChange={list.setNumberRange}
+        onClearRanges={list.clearRanges}
         onClear={list.clearFilters}
         onToggleFocus={focus.toggle}
       />

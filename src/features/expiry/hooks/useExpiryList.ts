@@ -1,17 +1,32 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { usePersistedState } from '@/shared/hooks/usePersistedState'
+import { dateRangeKey, EMPTY_DATE_RANGE, isDateRange, type DateRange } from '@/shared/lib/dateRange'
+import { countActiveRanges, isRangesRecord, rangesKey, type NumberRange } from '@/shared/lib/numberRange'
 import { storageKey } from '@/shared/lib/storage'
 import { usePeriodDays } from '@/features/settings'
 import { listExpiryItems, type ExpiryPage } from '../api'
 import type { Situation } from '../situation'
-import type { ExpiryQuery, ExpiryRow } from '../types'
+import {
+  EMPTY_EXPIRY_RANGES,
+  EXPIRY_RANGE_FIELDS,
+  type ExpiryQuery,
+  type ExpiryRangeKey,
+  type ExpiryRow,
+} from '../types'
 
 export type ListStatus = 'loading' | 'error' | 'ready'
 
 const FILTERS_KEY = storageKey('filtros', 'validades')
 
-const NO_FILTERS: ExpiryQuery = { search: '', situations: [] }
+const RANGE_KEYS = EXPIRY_RANGE_FIELDS.map((field) => field.key)
+
+const NO_FILTERS: ExpiryQuery = {
+  search: '',
+  situations: [],
+  numberRanges: EMPTY_EXPIRY_RANGES,
+  expiryRange: EMPTY_DATE_RANGE,
+}
 
 const SITUATIONS: Situation[] = ['venceu', 'vence-antes', 'vende-antes', 'sem-estimativa']
 
@@ -19,11 +34,13 @@ const SITUATIONS: Situation[] = ['venceu', 'vence-antes', 'vende-antes', 'sem-es
 function isExpiryQuery(value: unknown): value is ExpiryQuery {
   if (typeof value !== 'object' || value === null) return false
 
-  const { search, situations } = value as Record<string, unknown>
+  const { search, situations, numberRanges, expiryRange } = value as Record<string, unknown>
   return (
     typeof search === 'string' &&
     Array.isArray(situations) &&
-    situations.every((s) => SITUATIONS.includes(s as Situation))
+    situations.every((s) => SITUATIONS.includes(s as Situation)) &&
+    isRangesRecord(numberRanges, RANGE_KEYS) &&
+    isDateRange(expiryRange)
   )
 }
 
@@ -53,12 +70,20 @@ export function useExpiryList() {
   const debouncedSearch = useDebouncedValue(filters.search, 250)
   const [periodDays, setPeriodDays] = usePeriodDays()
 
-  const queryKey = `${debouncedSearch}|${filters.situations.join(',')}|${periodDays}`
+  const queryKey = `${debouncedSearch}|${filters.situations.join(',')}|${periodDays}|${rangesKey(filters.numberRanges)}|${dateRangeKey(filters.expiryRange)}`
 
   useEffect(() => {
     let cancelled = false
 
-    listExpiryItems({ search: debouncedSearch, situations: filters.situations }, periodDays)
+    listExpiryItems(
+      {
+        search: debouncedSearch,
+        situations: filters.situations,
+        numberRanges: filters.numberRanges,
+        expiryRange: filters.expiryRange,
+      },
+      periodDays,
+    )
       .then((page) => {
         if (cancelled) return
         setFailedKey(null)
@@ -71,7 +96,15 @@ export function useExpiryList() {
     return () => {
       cancelled = true
     }
-  }, [queryKey, debouncedSearch, filters.situations, periodDays, reloadKey])
+  }, [
+    queryKey,
+    debouncedSearch,
+    filters.situations,
+    filters.numberRanges,
+    filters.expiryRange,
+    periodDays,
+    reloadKey,
+  ])
 
   const setSearch = useCallback(
     (search: string) => setFilters((current) => ({ ...current, search })),
@@ -90,13 +123,42 @@ export function useExpiryList() {
     [setFilters],
   )
 
+  const setNumberRange = useCallback(
+    (key: ExpiryRangeKey, range: NumberRange) =>
+      setFilters((current) => ({
+        ...current,
+        numberRanges: { ...current.numberRanges, [key]: range },
+      })),
+    [setFilters],
+  )
+
+  const setExpiryRange = useCallback(
+    (expiryRange: DateRange) => setFilters((current) => ({ ...current, expiryRange })),
+    [setFilters],
+  )
+
+  const clearRanges = useCallback(
+    () =>
+      setFilters((current) => ({
+        ...current,
+        numberRanges: NO_FILTERS.numberRanges,
+        expiryRange: NO_FILTERS.expiryRange,
+      })),
+    [setFilters],
+  )
+
   const clearFilters = useCallback(() => setFilters(NO_FILTERS), [setFilters])
   const reload = useCallback(() => setReloadKey((key) => key + 1), [])
 
   const status: ListStatus =
     failedKey === queryKey ? 'error' : result === null ? 'loading' : 'ready'
 
-  const isFiltered = debouncedSearch.trim() !== '' || filters.situations.length > 0
+  const isFiltered =
+    debouncedSearch.trim() !== '' ||
+    filters.situations.length > 0 ||
+    countActiveRanges(filters.numberRanges) > 0 ||
+    filters.expiryRange.from !== null ||
+    filters.expiryRange.to !== null
 
   return {
     filters,
@@ -110,6 +172,9 @@ export function useExpiryList() {
     isFiltered,
     setSearch,
     toggleSituation,
+    setNumberRange,
+    setExpiryRange,
+    clearRanges,
     clearFilters,
     reload,
   }

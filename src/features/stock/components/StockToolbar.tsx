@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/shared/ui/Button'
+import { FilterPanel } from '@/shared/ui/FilterPanel'
 import { FocusToggle } from '@/shared/ui/FocusToggle'
 import { ScanButton } from '@/shared/ui/ScanButton'
 import { SearchIcon } from '@/shared/ui/icons'
-import type { StockQuery } from '../types'
+import { countActiveRanges, describeRange, type NumberRange } from '@/shared/lib/numberRange'
+import { STOCK_RANGE_FIELDS, type StockQuery, type StockRangeKey } from '../types'
 import styles from './StockToolbar.module.css'
 
 interface StockToolbarProps {
@@ -16,6 +18,8 @@ interface StockToolbarProps {
   actions: ReactNode
   onSearch: (value: string) => void
   onTogglePending: (value: boolean) => void
+  onRangeChange: (key: StockRangeKey, range: NumberRange) => void
+  onClearRanges: () => void
   onClear: () => void
   onToggleFocus: () => void
 }
@@ -30,9 +34,14 @@ export function StockToolbar({
   actions,
   onSearch,
   onTogglePending,
+  onRangeChange,
+  onClearRanges,
   onClear,
   onToggleFocus,
 }: StockToolbarProps) {
+  const rangeTexts = STOCK_RANGE_FIELDS.map((field) =>
+    describeRange(field.label, filters.numberRanges[field.key]),
+  ).filter((text): text is string => text !== null)
   return (
     <div className={styles.toolbar}>
       <div className={styles.search}>
@@ -59,6 +68,14 @@ export function StockToolbar({
         Só pendentes
       </label>
 
+      <FilterPanel
+        numberFields={STOCK_RANGE_FIELDS}
+        numberValues={filters.numberRanges}
+        onNumberChange={(key, range) => onRangeChange(key as StockRangeKey, range)}
+        activeCount={countActiveRanges(filters.numberRanges)}
+        onClear={onClearRanges}
+      />
+
       {actions && <div className={styles.actions}>{actions}</div>}
 
       <FocusToggle focused={focused} available={focusAvailable} onToggle={onToggleFocus} />
@@ -76,7 +93,8 @@ export function StockToolbar({
                 para <span className={styles.term}>“{filters.search.trim()}”</span>
               </>
             )}
-            {filters.onlyPending && <> pendentes de cadastro</>}.
+            {filters.onlyPending && <> pendentes de cadastro</>}
+            {rangeTexts.length > 0 && <> com {rangeTexts.join(', ')}</>}.
           </span>
 
           <Button variant="secondary" onClick={onClear}>

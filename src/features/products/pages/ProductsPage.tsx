@@ -125,6 +125,8 @@ export function ProductsPage() {
         onSearch={list.setSearch}
         onToggleWithoutBarcode={list.setOnlyWithoutBarcode}
         onTogglePending={list.setOnlyPending}
+        onRangeChange={list.setNumberRange}
+        onClearRanges={list.clearRanges}
         onClear={list.clearFilters}
         onToggleFocus={focus.toggle}
       />

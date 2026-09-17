@@ -19,23 +19,9 @@ import { exportLossRecords } from '../export'
 import { recordLabel } from '../label'
 import { useLossRecordList } from '../hooks/useLossRecordList'
 import { useTagLists } from '../hooks/useTagLists'
-import { labelOf } from '../tags'
-import type { Attachment, LossRecord, Tag } from '../types'
+import { recordValueOf } from '../sort'
+import type { Attachment, LossRecord } from '../types'
 import styles from './BreakagePage.module.css'
-
-/** O que cada coluna ordenável compara. Motivo ordena pelo texto exibido, não pelo id. */
-function recordValueOf(record: LossRecord, key: LossRecordSortKey, reasons: Tag[]): string | number {
-  switch (key) {
-    case 'description':
-      return record.description
-    case 'expiryDate':
-      return record.expiryDate ?? ''
-    case 'quantity':
-      return record.quantity
-    case 'reason':
-      return labelOf(reasons, record.reasonId)
-  }
-}
 
 /** Diálogo fechado, criando um registro novo, ou alterando um existente. */
 type DialogState = { open: false } | { open: true; record?: LossRecord }
@@ -133,6 +119,8 @@ export function BreakagePage() {
         onToggleOrigin={list.toggleOriginFilter}
         onClearReason={list.clearReasonFilter}
         onClearOrigin={list.clearOriginFilter}
+        onRangeChange={list.setNumberRange}
+        onClearRanges={list.clearRanges}
         onClear={list.clearFilters}
         onToggleFocus={focus.toggle}
       />

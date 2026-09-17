@@ -9,6 +9,8 @@
 import { getAllProducts } from '@/features/products'
 import type { Product } from '@/features/products'
 import type { IsoDate } from '@/shared/lib/date'
+import { matchesDateRange } from '@/shared/lib/dateRange'
+import { matchesRange } from '@/shared/lib/numberRange'
 import { classify, type Situation } from './situation'
 import type { ExpiryItem, ExpiryQuery, ExpiryRow } from './types'
 
@@ -96,6 +98,9 @@ function toRow(item: ExpiryItem, product: Product, periodDays: number): ExpiryRo
 
 function matches(row: ExpiryRow, query: ExpiryQuery): boolean {
   if (query.situations.length && !query.situations.includes(row.situation)) return false
+  if (!matchesRange(row.stock, query.numberRanges.stock)) return false
+  if (!matchesRange(row.outflow, query.numberRanges.outflow)) return false
+  if (!matchesDateRange(row.expiryDate, query.expiryRange)) return false
 
   const term = query.search.trim().toLowerCase()
   if (!term) return true

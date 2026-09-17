@@ -1,5 +1,6 @@
 import type { ChosenProduct } from '@/features/products'
 import type { IsoDate } from '@/shared/lib/date'
+import { EMPTY_RANGE, type NumberRange } from '@/shared/lib/numberRange'
 
 /**
  * Etiqueta escolhida pelo usuário. Dois eixos separados usam a mesma forma:
@@ -72,6 +73,16 @@ export interface LossRecordDraft {
   attachments: Attachment[]
 }
 
+export type LossRecordRangeKey = 'quantity'
+
+export const LOSS_RECORD_RANGE_FIELDS: { key: LossRecordRangeKey; label: string }[] = [
+  { key: 'quantity', label: 'Quantidade' },
+]
+
+export const EMPTY_LOSS_RECORD_RANGES: Record<LossRecordRangeKey, NumberRange> = Object.fromEntries(
+  LOSS_RECORD_RANGE_FIELDS.map((field) => [field.key, EMPTY_RANGE]),
+) as Record<LossRecordRangeKey, NumberRange>
+
 export interface LossRecordQuery {
   search: string
   /** 'no-estoque' esconde os que zeraram; 'zerados' mostra só eles. */
@@ -80,6 +91,8 @@ export interface LossRecordQuery {
   reasonIds: string[]
   /** Vazio mostra todas as origens. */
   originIds: string[]
+  /** Um intervalo por número do registro, do painel "Filtro" (ver docs/dominio.md). */
+  numberRanges: Record<LossRecordRangeKey, NumberRange>
 }
 
 /**
