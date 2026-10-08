@@ -46,12 +46,36 @@ npm install
 npm run dev
 ```
 
+Abre em <http://localhost:5173> e recarrega sozinho ao salvar.
+
+Para conferir exatamente o que vai para produção:
+
+```bash
+npm run preview
+```
+
+Isso builda e sobe o resultado em <http://localhost:4173>. O comando já faz o build
+antes de servir, então funciona mesmo na primeira execução — sem precisar lembrar de
+rodar `npm run build` primeiro.
+
+E, para abrir o app sem servidor nenhum (basta dar dois cliques no arquivo gerado):
+
+```bash
+npm run build:demo
+```
+
+Escreve `dist-demo/gestao-validades.html` com CSS e JS embutidos. Não altera o app —
+só o empacotamento muda o roteamento para o fragmento do endereço.
+
 Contas de teste: `admin@exemplo.com.br` ou `operador@exemplo.com.br`, senha `senha123`.
 
 | Comando | O que faz |
 |---|---|
-| `npm run dev` | servidor de desenvolvimento |
+| `npm run dev` | servidor de desenvolvimento, em <http://localhost:5173> |
 | `npm run build` | build de produção em `dist/` |
+| `npm run preview` | builda e serve `dist/`, em <http://localhost:4173> |
+| `npm run build:demo` | arquivo HTML único em `dist-demo/`, abre sem servidor |
+| `npm run build:pages` | build para o GitHub Pages (`404.html` e `.nojekyll`) |
 | `npm run lint` | tipos, código e CSS — o mesmo que roda antes de cada commit |
 
 ## Estrutura
