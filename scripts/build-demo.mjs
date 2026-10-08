@@ -22,8 +22,20 @@ execFileSync('npx', ['vite', 'build', '--base', './', '--outDir', 'dist-demo'], 
 
 const dir = 'dist-demo/assets'
 const arquivos = readdirSync(dir)
-const css = readFileSync(`${dir}/${arquivos.find((f) => f.endsWith('.css'))}`, 'utf8')
-const js = readFileSync(`${dir}/${arquivos.find((f) => f.endsWith('.js'))}`, 'utf8')
+
+/**
+ * O empacotamento depende de achar um CSS e um JS gerados pelo Vite. Se algum
+ * não existir, seguir em frente embutiria `undefined` no HTML e o arquivo
+ * sairia em branco sem dizer por quê — melhor falhar aqui, com o nome da pasta.
+ */
+const ler = (extensao) => {
+  const nome = arquivos.find((f) => f.endsWith(extensao))
+  if (!nome) throw new Error(`Nenhum arquivo ${extensao} em ${dir}: o build não gerou o esperado.`)
+  return readFileSync(`${dir}/${nome}`, 'utf8')
+}
+
+const css = ler('.css')
+const js = ler('.js')
 
 /**
  * O visualizador da demonstração não deixa a página baixar arquivo sozinha: o
@@ -64,18 +76,38 @@ const DESVIO_DE_DOWNLOAD = `
 })()
 `
 
-const html = `<title>Gestão de Validades</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
+/**
+ * O arquivo é aberto com dois cliques, sem servidor, então ele é um documento
+ * inteiro: sem `<!doctype html>` o navegador abriria em modo de compatibilidade,
+ * e sem o `charset` ele adivinharia a codificação — o "demonstração" do aviso
+ * acima chegaria à tela com os acentos trocados.
+ *
+ * O bundle entra como `<script type="module">`: o app é ESM e usa
+ * `import.meta.env`, que só existe em módulo. Sem o atributo, o navegador
+ * recusaria o arquivo com "Cannot use 'import.meta' outside a module".
+ */
+const html = `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1014" />
+    <title>Gestão de Validades</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
 ${css}
-</style>
-<div id="root"></div>
-<script>${DESVIO_DE_DOWNLOAD}</script>
-<script type="module">
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>${DESVIO_DE_DOWNLOAD}</script>
+    <script type="module">
 ${js}
-</script>
+    </script>
+  </body>
+</html>
 `
 
 writeFileSync(SAIDA, html)
