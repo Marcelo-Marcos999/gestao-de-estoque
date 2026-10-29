@@ -1,22 +1,15 @@
 /**
  * Camada de acesso a dados do cadastro de produtos.
  *
- * PROVISÓRIO: resolve tudo em memória, com volume parecido com o real (~26 mil
- * produtos) para que a interface seja construída contra o problema verdadeiro,
- * não contra uma lista de dez itens. Quando o back-end existir, só este arquivo
- * muda.
+ * Fala com o back-end de verdade. Um `Product` daqui é a junção de duas
+ * rotas — GET /produtos (catálogo da conta) e GET /estoque (números da
+ * loja de quem está logado) — feita em `store.ts`, junto do cache que
+ * evita refazer as duas chamadas em toda função deste arquivo.
  */
+import { ApiError, apiFetch } from '@/shared/lib/http'
 import { matchesRange } from '@/shared/lib/numberRange'
-import { generateProducts } from './demoData'
+import { carregar, invalidar, paraProduct, type EstoqueApi, type ProdutoApi } from './store'
 import type { Product, ProductDraft, ProductQuery } from './types'
-
-const LATENCY_MS = 180
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-let store: Product[] = generateProducts(26680)
 
 /* ---- Consultas ----------------------------------------------------------- */
 
@@ -46,25 +39,23 @@ export interface ProductPage {
 }
 
 export async function listProducts(query: ProductQuery): Promise<ProductPage> {
-  await delay(LATENCY_MS)
+  const store = await carregar()
   const items = store.filter((p) => matches(p, query))
   return { items, total: items.length }
 }
 
 export async function countProducts(): Promise<number> {
-  await delay(30)
-  return store.length
+  return (await carregar()).length
 }
 
 /** Um produto pelo id, para quem já guardou a referência e precisa do saldo atual. */
 export async function getProduct(id: string): Promise<Product | null> {
-  await delay(30)
+  const store = await carregar()
   return store.find((p) => p.id === id) ?? null
 }
 
 export async function getAllProducts(): Promise<Product[]> {
-  await delay(30)
-  return store
+  return carregar()
 }
 
 /* ---- Escrita -------------------------------------------------------------- */
@@ -75,51 +66,53 @@ export type SaveResult =
   | { data: Product; error: null }
   | { data: null; error: SaveError }
 
-function conflict(draft: ProductDraft, ignoreId?: string): SaveError | null {
-  for (const product of store) {
-    if (product.id === ignoreId) continue
-    if (product.sku === draft.sku) return 'sku_duplicado'
-    if (draft.barcode && product.barcode === draft.barcode) return 'barras_duplicado'
+function comoSaveError(erro: unknown): SaveError | null {
+  if (erro instanceof ApiError && erro.status === 409) {
+    return (erro.codigo as SaveError | undefined) ?? 'sku_duplicado'
   }
   return null
 }
 
 export async function createProduct(draft: ProductDraft): Promise<SaveResult> {
-  await delay(LATENCY_MS)
-
-  const error = conflict(draft)
-  if (error) return { data: null, error }
-
-  const now = new Date().toISOString()
-  // Produto criado à mão nasce sem saldo: quem traz esses números é a
-  // importação do relatório, ou o usuário depois.
-  const product: Product = {
-    id: `p${draft.sku}-${now}`,
-    ...draft,
-    stock: 0,
-    outflow: 0,
-    costPrice: 0,
-    salePrice: 0,
-    pendingCadastro: false,
-    createdAt: now,
-    updatedAt: now,
+  try {
+    const produto = await apiFetch<ProdutoApi>('/produtos', {
+      method: 'POST',
+      body: { sku: draft.sku, descricao: draft.description, codigoBarras: draft.barcode || undefined },
+    })
+    invalidar()
+    // Nasce sem saldo (nenhuma loja lançou estoque dele ainda) — paraProduct
+    // sem segundo argumento já cobre isso com os quatro números em zero.
+    return { data: paraProduct(produto), error: null }
+  } catch (erro) {
+    const saveError = comoSaveError(erro)
+    if (saveError) return { data: null, error: saveError }
+    throw erro
   }
-  store = [product, ...store]
-  return { data: product, error: null }
 }
 
 export async function updateProduct(id: string, draft: ProductDraft): Promise<SaveResult> {
-  await delay(LATENCY_MS)
-
-  const error = conflict(draft, id)
-  if (error) return { data: null, error }
-
-  const index = store.findIndex((p) => p.id === id)
-  if (index === -1) return { data: null, error: 'sku_duplicado' }
-
-  const updated: Product = { ...store[index], ...draft, updatedAt: new Date().toISOString() }
-  store = [...store.slice(0, index), updated, ...store.slice(index + 1)]
-  return { data: updated, error: null }
+  try {
+    const produto = await apiFetch<ProdutoApi>(`/produtos/${id}`, {
+      method: 'PATCH',
+      body: { sku: draft.sku, descricao: draft.description, codigoBarras: draft.barcode || undefined },
+    })
+    invalidar()
+    // Preserva os números de estoque que essa loja já tinha pra esse
+    // produto — PATCH /produtos só devolve o lado do catálogo.
+    const anterior = (await carregar()).find((p) => p.id === id)
+    const estoqueAnterior: EstoqueApi | undefined = anterior && {
+      produto_id: id,
+      saldo: anterior.stock,
+      saidas: anterior.outflow,
+      valor_custo: String(anterior.costPrice),
+      valor_venda: String(anterior.salePrice),
+    }
+    return { data: paraProduct(produto, estoqueAnterior), error: null }
+  } catch (erro) {
+    const saveError = comoSaveError(erro)
+    if (saveError) return { data: null, error: saveError }
+    throw erro
+  }
 }
 
 /** Números do produto que a tela de Estoque importa ou corrige à mão. */
@@ -131,113 +124,106 @@ export interface StockValues {
 }
 
 /**
- * Corrige saldo, saídas e valores de um produto.
+ * Corrige saldo, saídas e valores de um produto, na loja de quem está
+ * logado — ver cabeçalho do arquivo pra por que estoque é por loja.
  *
- * Separado de `updateProduct` porque são coisas de origens diferentes: SKU,
- * descrição e código de barras são cadastro; estes quatro números vêm da
- * importação dos relatórios (tela de Estoque) e podem ser ajustados à mão
- * quando o relatório não bate com a prateleira — ou enquanto não há
- * importação nenhuma.
- *
- * Aceita qualquer subconjunto dos quatro campos: quem chama pode ter só saldo
- * e saídas em mãos (ver docs/dominio.md, "três fontes"), e os que faltam
- * continuam com o valor que já tinham em vez de zerar.
- *
- * Valem para o **produto**, não para um lote: é o mesmo número que a tela de
- * quebra usa para saber se o item ainda está no estoque.
+ * Aceita qualquer subconjunto dos quatro campos; o `PATCH /estoque/:id` do
+ * back-end faz o mesmo upsert com `coalesce` que esta função fazia em
+ * memória.
  */
 export async function updateProductStock(
   id: string,
   values: Partial<StockValues>,
 ): Promise<void> {
-  await delay(LATENCY_MS)
-
-  // Negativo não existe em prateleira nem em preço; seria um número que a
-  // previsão ou a tela de estoque aceitariam e exibiriam sem sentido.
-  const semNegativo = (n: number) => Math.max(0, n)
-
-  store = store.map((p) =>
-    p.id === id
-      ? {
-          ...p,
-          stock: values.stock !== undefined ? Math.round(semNegativo(values.stock)) : p.stock,
-          outflow:
-            values.outflow !== undefined ? Math.round(semNegativo(values.outflow)) : p.outflow,
-          costPrice: values.costPrice !== undefined ? semNegativo(values.costPrice) : p.costPrice,
-          salePrice: values.salePrice !== undefined ? semNegativo(values.salePrice) : p.salePrice,
-          updatedAt: new Date().toISOString(),
-        }
-      : p,
-  )
+  await apiFetch(`/estoque/${id}`, {
+    method: 'PATCH',
+    body: {
+      saldo: values.stock,
+      saidas: values.outflow,
+      valorCusto: values.costPrice,
+      valorVenda: values.salePrice,
+    },
+  })
+  invalidar()
 }
 
 /**
- * Exclui um ou vários produtos de uma vez, devolvendo o que saiu.
+ * Exclui um ou vários produtos de uma vez, devolvendo o que saiu de
+ * verdade.
  *
- * Sempre em lote, mesmo para um só, como na quebra: um caminho de exclusão só
- * significa um lugar para o desfazer errar.
+ * Um produto com saldo em alguma loja nunca é excluído (ver `DELETE
+ * /produtos` no back-end) — por isso a resposta pode trazer menos ids do
+ * que foi pedido, e são só esses que saem da tela.
  */
 export async function deleteProducts(ids: string[]): Promise<Product[]> {
-  await delay(LATENCY_MS)
+  const antes = await carregar()
+  const removidos = await apiFetch<Array<{ id: string }>>('/produtos', {
+    method: 'DELETE',
+    body: { ids },
+  })
+  invalidar()
 
-  const alvos = new Set(ids)
-  const removed = store.filter((p) => alvos.has(p.id))
-  store = store.filter((p) => !alvos.has(p.id))
-  return removed
+  const idsRemovidos = new Set(removidos.map((p) => p.id))
+  return antes.filter((p) => idsRemovidos.has(p.id))
 }
 
 /** Devolve produtos excluídos ao seu lugar — o "desfazer" da tela. */
 export async function restoreProducts(products: Product[]): Promise<void> {
-  await delay(80)
+  if (!products.length) return
 
-  const existentes = new Set(store.map((p) => p.id))
-  const voltando = products.filter((p) => !existentes.has(p.id))
-  if (voltando.length) store = [...voltando, ...store]
+  await apiFetch('/produtos/restaurar', {
+    method: 'POST',
+    body: {
+      produtos: products.map((p) => ({
+        id: p.id,
+        sku: p.sku,
+        descricao: p.description,
+        codigoBarras: p.barcode || undefined,
+        pendingCadastro: p.pendingCadastro,
+      })),
+    },
+  })
+  invalidar()
 }
 
 /**
  * Grava os produtos novos da importação, informando o progresso.
  *
- * Processa em lotes e devolve o controle ao navegador entre eles: sem isso,
- * inserir milhares de linhas trava a interface e a barra de progresso não
- * chega a ser desenhada.
+ * Processa em lotes de 500 — o mesmo tamanho que o back-end aceita por
+ * chamada (`POST /produtos/importar-lote`) — e devolve o controle ao
+ * navegador entre eles, pra barra de progresso aparecer durante uma
+ * importação de milhares de linhas, não só no fim.
  */
 export async function bulkCreate(
   drafts: ProductDraft[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<number> {
   const BATCH = 500
-  const now = new Date().toISOString()
-  const created: Product[] = []
+  let total = 0
 
   for (let i = 0; i < drafts.length; i += BATCH) {
-    for (const draft of drafts.slice(i, i + BATCH)) {
-      created.push({
-        id: `p${draft.sku}-${now}-${created.length}`,
-        ...draft,
-        stock: 0,
-        outflow: 0,
-        costPrice: 0,
-        salePrice: 0,
-        pendingCadastro: false,
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
+    const lote = drafts.slice(i, i + BATCH)
+    const { criados } = await apiFetch<{ criados: number }>('/produtos/importar-lote', {
+      method: 'POST',
+      body: {
+        produtos: lote.map((d) => ({
+          sku: d.sku,
+          descricao: d.description,
+          codigoBarras: d.barcode || undefined,
+        })),
+      },
+    })
+    total += criados
 
     onProgress?.(Math.min(i + BATCH, drafts.length), drafts.length)
     await new Promise((resolve) => setTimeout(resolve, 0))
   }
 
-  store = [...created, ...store]
-  return created.length
+  invalidar()
+  return total
 }
 
-/** Para `stockImport.ts`: mesmo `store`, sem expor a variável em si. */
-export function getStoreSnapshot(): Product[] {
-  return store
-}
-
-export function replaceStore(next: Product[]): void {
-  store = next
+/** Pra `stockImport.ts` avisar que os números de estoque mudaram por fora desta feature. */
+export function invalidateStore(): void {
+  invalidar()
 }
