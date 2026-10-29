@@ -10,7 +10,11 @@ import tseslint from 'typescript-eslint'
  * checagem automática: elas falham na hora, sem depender de alguém lembrar.
  */
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage'] },
+  // backend/ é outro projeto Node (Express/Postgres), com seu próprio
+  // tsconfig e suas próprias dependências — não tem como o parser daqui
+  // entender esses arquivos, e as regras desta config (tokens de cor,
+  // localStorage, limite entre features) são todas sobre o front-end.
+  { ignores: ['dist', 'node_modules', 'coverage', 'backend'] },
 
   {
     files: ['**/*.{ts,tsx}'],
