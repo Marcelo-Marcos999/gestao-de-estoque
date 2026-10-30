@@ -5,7 +5,14 @@ import type { ExpiryRow } from '../types'
 import { ExpiryTableRow } from './ExpiryTableRow'
 import styles from './ExpiryTable.module.css'
 
-export type ExpirySortKey = 'description' | 'expiryDate' | 'stock' | 'daysToZero' | 'situation'
+export type ExpirySortKey =
+  | 'description'
+  | 'expiryDate'
+  | 'stock'
+  | 'costPrice'
+  | 'totalCost'
+  | 'daysToZero'
+  | 'situation'
 
 interface ExpiryTableProps {
   rows: ExpiryRow[]
@@ -71,6 +78,22 @@ export function ExpiryTable({
         <SortButton
           label="Estoque"
           sortKey="stock"
+          activeKey={sortKey}
+          activeDir={sortDir}
+          onSort={onSort}
+        />
+        <span className={styles.unitCost}>
+          <SortButton
+            label="Custo"
+            sortKey="costPrice"
+            activeKey={sortKey}
+            activeDir={sortDir}
+            onSort={onSort}
+          />
+        </span>
+        <SortButton
+          label="Total custo"
+          sortKey="totalCost"
           activeKey={sortKey}
           activeDir={sortDir}
           onSort={onSort}

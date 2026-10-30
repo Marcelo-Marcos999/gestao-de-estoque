@@ -3,6 +3,7 @@ import { EditIcon } from '@/shared/ui/icons'
 import { SortButton } from '@/shared/ui/SortButton'
 import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import type { SortDir } from '@/shared/hooks/useSort'
+import { formatMoney } from '@/shared/lib/money'
 import { rowCostTotal, rowSaleTotal } from '../totals'
 import type { StockRow } from '../types'
 import styles from './StockTable.module.css'
@@ -27,8 +28,7 @@ interface StockTableProps {
   onSort: (key: StockSortKey) => void
 }
 
-const money = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const money = formatMoney
 
 /**
  * Lista virtualizada dos produtos vistos pelo estoque. Mesma técnica das

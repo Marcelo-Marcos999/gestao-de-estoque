@@ -35,7 +35,7 @@ export interface Attachment {
  *
  * Identidade: produto + validade + motivo. A validade é o que distingue de
  * verdade — dois lotes do mesmo produto com datas diferentes são coisas
- * diferentes. A origem é atributo, não parte da identidade.
+ * diferentes. A origem é atributo obrigatório, mas não parte da identidade.
  */
 export interface LossRecord {
   id: string
@@ -50,12 +50,24 @@ export interface LossRecord {
   expiryDate: IsoDate | null
   quantity: number
   reasonId: string
-  /** Vazio quando o usuário não informou. */
+  /** Obrigatória, como o motivo: é o que separa "quanto perdemos" de "de onde veio". */
   originId: string
   note: string
   attachments: Attachment[]
+  /**
+   * Custo unitário do produto no estoque da loja, lido na hora: a quebra não
+   * guarda cópia, porque dois números de custo para o mesmo produto numa
+   * mesma tela é exatamente o que se quer evitar. `null` para produto
+   * pendente de cadastro, que ainda não tem estoque.
+   */
+  costPrice: number | null
+  /** Quantidade × custo: quanto a perda custou. Calculado, nunca guardado. */
+  totalCost: number | null
   createdAt: string
+  /** Nome de quem registrou. */
   createdBy: string
+  /** Login de quem registrou: o "desfazer" devolve o registro ao mesmo autor. */
+  createdById: string
 }
 
 /** O que o formulário coleta; o resto é responsabilidade do sistema. */
@@ -73,10 +85,12 @@ export interface LossRecordDraft {
   attachments: Attachment[]
 }
 
-export type LossRecordRangeKey = 'quantity'
+export type LossRecordRangeKey = 'quantity' | 'costPrice' | 'totalCost'
 
 export const LOSS_RECORD_RANGE_FIELDS: { key: LossRecordRangeKey; label: string }[] = [
   { key: 'quantity', label: 'Quantidade' },
+  { key: 'costPrice', label: 'Custo' },
+  { key: 'totalCost', label: 'Total custo' },
 ]
 
 export const EMPTY_LOSS_RECORD_RANGES: Record<LossRecordRangeKey, NumberRange> = Object.fromEntries(

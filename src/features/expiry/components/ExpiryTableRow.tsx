@@ -1,5 +1,6 @@
 import { BoltIcon, EditIcon, TrashIcon } from '@/shared/ui/icons'
 import { formatDate } from '@/shared/lib/date'
+import { formatMoney } from '@/shared/lib/money'
 import { SITUATIONS } from '../situation'
 import type { ExpiryRow } from '../types'
 import { SituationBadge } from './SituationBadge'
@@ -76,6 +77,8 @@ export function ExpiryTableRow({
       )}
 
       <span className={styles.number}>{row.stock}</span>
+      <span className={`${styles.number} ${styles.unitCost}`}>{formatMoney(row.costPrice)}</span>
+      <span className={styles.number}>{formatMoney(row.totalCost)}</span>
 
       {row.daysToZero === null ? (
         <span className={styles.absent}>sem saídas</span>
@@ -95,6 +98,14 @@ export function ExpiryTableRow({
         <span>
           <span className={styles.mobileLabel}>Estoque </span>
           <span className={styles.mobileValue}>{row.stock}</span>
+        </span>
+        <span>
+          <span className={styles.mobileLabel}>Custo </span>
+          <span className={styles.mobileValue}>{formatMoney(row.costPrice)}</span>
+        </span>
+        <span>
+          <span className={styles.mobileLabel}>Total custo </span>
+          <span className={styles.mobileValue}>{formatMoney(row.totalCost)}</span>
         </span>
         <span>
           <span className={styles.mobileLabel}>Sai em </span>

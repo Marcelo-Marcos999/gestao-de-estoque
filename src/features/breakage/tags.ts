@@ -1,80 +1,74 @@
 /**
  * Listas de motivo e origem.
  *
- * São editáveis por qualquer usuário, mas a lista é **uma só, da loja**. Se
+ * São editáveis por qualquer usuário, mas a lista é **uma só, da conta**. Se
  * cada pessoa mantivesse a própria, "danificado", "danificada" e "avaria"
  * virariam três motivos e a soma por motivo deixaria de fechar — o mesmo
  * problema que manter o cadastro de produtos sob o administrador evita.
+ *
+ * Moram no back-end (`/motivos` e `/origens`): o registro de quebra aponta
+ * para o id da etiqueta, e esse id precisa existir no banco.
  */
-import { readJson, storageKey, writeJson } from '@/shared/lib/storage'
+import { ApiError, apiFetch } from '@/shared/lib/http'
 import type { Tag } from './types'
 
-const REASONS_KEY = storageKey('motivos')
-const ORIGINS_KEY = storageKey('origens')
+export type TagKind = 'reason' | 'origin'
 
-/** Os casos que a loja já usa, para o primeiro uso não começar com nada. */
-const DEFAULT_REASONS: Tag[] = [
-  { id: 'vencido', label: 'Vencido', builtIn: true },
-  { id: 'danificado', label: 'Danificado', builtIn: true },
-  { id: 'avaria-transporte', label: 'Avaria de transporte', builtIn: true },
-  { id: 'divergencia', label: 'Divergência de quantidade', builtIn: true },
-  { id: 'furto', label: 'Furto ou perda', builtIn: true },
-]
+/** Quantos registros usam cada etiqueta, por id. */
+export type TagUsage = Record<string, number>
 
-const DEFAULT_ORIGINS: Tag[] = [
-  { id: 'cd', label: 'Centro de distribuição', builtIn: true },
-  { id: 'loja', label: 'Loja', builtIn: true },
-  { id: 'fornecedor', label: 'Fornecedor', builtIn: true },
-]
-
-function isTagList(value: unknown): value is Tag[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (t) =>
-        typeof t === 'object' &&
-        t !== null &&
-        typeof (t as Tag).id === 'string' &&
-        typeof (t as Tag).label === 'string',
-    )
-  )
+export interface TagLists {
+  reasons: Tag[]
+  origins: Tag[]
+  usage: { reasons: TagUsage; origins: TagUsage }
 }
 
-function read(key: string, fallback: Tag[]): Tag[] {
-  const stored = readJson<unknown>(key, null)
-  return isTagList(stored) && stored.length > 0 ? stored : fallback
+const ROTA: Record<TagKind, string> = { reason: '/motivos', origin: '/origens' }
+
+interface EtiquetaApi {
+  id: string
+  label: string
+  embutido: boolean
+  uso?: number
 }
 
-export function readReasons(): Tag[] {
-  return read(REASONS_KEY, DEFAULT_REASONS)
+function paraTag(e: EtiquetaApi): Tag {
+  return { id: e.id, label: e.label, builtIn: e.embutido }
 }
 
-export function readOrigins(): Tag[] {
-  return read(ORIGINS_KEY, DEFAULT_ORIGINS)
+function usoPorId(lista: EtiquetaApi[]): TagUsage {
+  return Object.fromEntries(lista.map((e) => [e.id, e.uso ?? 0]))
 }
 
-export function writeReasons(tags: Tag[]): void {
-  writeJson(REASONS_KEY, tags)
+/** As duas listas de uma vez, com a contagem de uso de cada etiqueta. Sempre fresca: o uso muda a cada registro. */
+export async function loadTags(): Promise<TagLists> {
+  const [motivos, origens] = await Promise.all([
+    apiFetch<EtiquetaApi[]>(ROTA.reason),
+    apiFetch<EtiquetaApi[]>(ROTA.origin),
+  ])
+
+  return {
+    reasons: motivos.map(paraTag),
+    origins: origens.map(paraTag),
+    usage: { reasons: usoPorId(motivos), origins: usoPorId(origens) },
+  }
 }
 
-export function writeOrigins(tags: Tag[]): void {
-  writeJson(ORIGINS_KEY, tags)
+export async function createTag(kind: TagKind, label: string): Promise<Tag> {
+  return paraTag(await apiFetch<EtiquetaApi>(ROTA[kind], { method: 'POST', body: { label } }))
 }
 
-/** Identificador a partir do texto, para a etiqueta nova não colidir. */
-export function tagIdFrom(label: string, existing: Tag[]): string {
-  const base =
-    label
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || 'etiqueta'
+export async function renameTag(kind: TagKind, id: string, label: string): Promise<void> {
+  await apiFetch(`${ROTA[kind]}/${id}`, { method: 'PATCH', body: { label } })
+}
 
-  let id = base
-  let n = 2
-  while (existing.some((t) => t.id === id)) id = `${base}-${n++}`
-  return id
+export async function deleteTag(kind: TagKind, id: string): Promise<void> {
+  await apiFetch(`${ROTA[kind]}/${id}`, { method: 'DELETE' })
+}
+
+/** Etiqueta recusada por já existir (nome repetido) ou por estar em uso. */
+export function isTagConflict(erro: unknown): boolean {
+  return erro instanceof ApiError && erro.status === 409
 }
 
 export function labelOf(tags: Tag[], id: string): string {

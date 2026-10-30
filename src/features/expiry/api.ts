@@ -1,74 +1,46 @@
 /**
  * Acesso a dados do acompanhamento de validades.
  *
- * PROVISÓRIO: em memória, como as demais features. A situação de cada item é
- * calculada na leitura, nunca gravada — guardá-la deixaria a tela mentindo no
- * dia seguinte, quando o produto já teria mudado de faixa sem ninguém tocar
- * nele (ver docs/dominio.md).
+ * Os lotes moram no back-end (`/validades`); descrição, saldo, saídas e custo
+ * são lidos do produto na hora, nunca copiados para o lote. A situação de cada
+ * item é calculada na leitura, nunca gravada — guardá-la deixaria a tela
+ * mentindo no dia seguinte, quando o produto já teria mudado de faixa sem
+ * ninguém tocar nele (ver docs/dominio.md).
+ *
+ * Não existe base de exemplo: a lista começa vazia e só mostra o que a loja
+ * lançou. Dados sorteados numa tela de produção fazem o usuário duvidar de
+ * todo número que vê.
  */
 import { getAllProducts } from '@/features/products'
 import type { Product } from '@/features/products'
 import type { IsoDate } from '@/shared/lib/date'
 import { matchesDateRange } from '@/shared/lib/dateRange'
+import { apiFetch } from '@/shared/lib/http'
+import { lineTotal } from '@/shared/lib/money'
 import { matchesRange } from '@/shared/lib/numberRange'
 import { classify, type Situation } from './situation'
 import type { ExpiryItem, ExpiryQuery, ExpiryRow } from './types'
 
-const LATENCY_MS = 180
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+/** O lote como o back-end o entrega. */
+interface LoteApi {
+  id: string
+  produto_id: string
+  data_validade: IsoDate | null
+  criado_em: string
 }
 
-/* ---- Base de demonstração ------------------------------------------------ */
-
-/** Gerador determinístico, como no cadastro: a mesma base a cada recarga. */
-function pseudoRandom(seed: number) {
-  let state = seed
-  return () => {
-    state = (state * 1103515245 + 12345) % 2147483648
-    return state / 2147483648
+function paraExpiryItem(lote: LoteApi): ExpiryItem {
+  return {
+    id: lote.id,
+    productId: lote.produto_id,
+    expiryDate: lote.data_validade,
+    createdAt: lote.criado_em,
   }
 }
 
-function isoFrom(base: Date, days: number): string {
-  const d = new Date(base.getTime() + days * 86_400_000)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`
-}
-
-let store: ExpiryItem[] | null = null
-
-/**
- * Sorteia lotes entre os produtos existentes, com validades espalhadas do
- * passado até dois anos à frente, para as quatro faixas aparecerem.
- */
-async function ensureStore(): Promise<ExpiryItem[]> {
-  if (store) return store
-
-  const products = await getAllProducts()
-  const random = pseudoRandom(20260901)
-  const hoje = new Date('2026-08-29T00:00:00Z')
-  const items: ExpiryItem[] = []
-
-  for (let i = 0; i < 341; i++) {
-    const product = products[Math.floor(random() * products.length)]
-
-    // De 200 dias atrás a 500 à frente; uma parte sem data, como no cadastro
-    // real, onde ninguém preencheu ainda.
-    const semData = random() > 0.94
-    const offset = Math.floor(random() * 700) - 200
-
-    items.push({
-      id: `v${i}`,
-      productId: product.id,
-      expiryDate: semData ? null : isoFrom(hoje, offset),
-      createdAt: hoje.toISOString(),
-    })
-  }
-
-  store = items
-  return store
+async function loadItems(): Promise<ExpiryItem[]> {
+  const lotes = await apiFetch<LoteApi[]>('/validades')
+  return lotes.map(paraExpiryItem)
 }
 
 /* ---- Consulta ------------------------------------------------------------ */
@@ -90,6 +62,8 @@ function toRow(item: ExpiryItem, product: Product, periodDays: number): ExpiryRo
     expiryDate: item.expiryDate,
     stock: product.stock,
     outflow: product.outflow,
+    costPrice: product.costPrice,
+    totalCost: lineTotal(product.stock, product.costPrice),
     situation,
     daysToExpiry,
     daysToZero,
@@ -100,6 +74,8 @@ function matches(row: ExpiryRow, query: ExpiryQuery): boolean {
   if (query.situations.length && !query.situations.includes(row.situation)) return false
   if (!matchesRange(row.stock, query.numberRanges.stock)) return false
   if (!matchesRange(row.outflow, query.numberRanges.outflow)) return false
+  if (!matchesRange(row.costPrice, query.numberRanges.costPrice)) return false
+  if (!matchesRange(row.totalCost, query.numberRanges.totalCost)) return false
   if (!matchesDateRange(row.expiryDate, query.expiryRange)) return false
 
   const term = query.search.trim().toLowerCase()
@@ -126,9 +102,7 @@ export async function listExpiryItems(
   query: ExpiryQuery,
   periodDays: number,
 ): Promise<ExpiryPage> {
-  await delay(LATENCY_MS)
-
-  const [items, products] = await Promise.all([ensureStore(), getAllProducts()])
+  const [items, products] = await Promise.all([loadItems(), getAllProducts()])
   const byId = new Map(products.map((p) => [p.id, p]))
 
   const rows: ExpiryRow[] = []
@@ -174,10 +148,7 @@ export async function listExpiryItems(
  * docs/dominio.md).
  */
 export async function updateExpiryItem(id: string, expiryDate: IsoDate | null): Promise<void> {
-  await delay(LATENCY_MS)
-
-  const items = await ensureStore()
-  store = items.map((item) => (item.id === id ? { ...item, expiryDate } : item))
+  await apiFetch(`/validades/${id}`, { method: 'PATCH', body: { dataValidade: expiryDate } })
 }
 
 /**
@@ -202,42 +173,34 @@ export async function ensureExpiryItem(
 ): Promise<boolean> {
   if (!productId || !expiryDate) return false
 
-  const items = await ensureStore()
-  const existe = items.some(
-    (item) => item.productId === productId && item.expiryDate === expiryDate,
-  )
-  if (existe) return false
-
-  store = [
-    {
-      id: `v${Date.now()}-${items.length}`,
-      productId,
-      expiryDate,
-      createdAt: new Date().toISOString(),
-    },
-    ...items,
-  ]
-
-  return true
+  const { criado } = await apiFetch<{ id: string; criado: boolean }>('/validades', {
+    method: 'POST',
+    body: { produtoId: productId, dataValidade: expiryDate },
+  })
+  return criado
 }
 
 /** Exclui um ou vários lotes de uma vez, devolvendo o que saiu. */
 export async function deleteExpiryItems(ids: string[]): Promise<ExpiryItem[]> {
-  await delay(LATENCY_MS)
+  if (ids.length === 0) return []
 
-  const items = await ensureStore()
-  const alvos = new Set(ids)
-  const removed = items.filter((item) => alvos.has(item.id))
-  store = items.filter((item) => !alvos.has(item.id))
-  return removed
+  const removidos = await apiFetch<LoteApi[]>('/validades', { method: 'DELETE', body: { ids } })
+  return removidos.map(paraExpiryItem)
 }
 
 /** Devolve lotes excluídos ao seu lugar — o "desfazer" da tela. */
 export async function restoreExpiryItems(voltando: ExpiryItem[]): Promise<void> {
-  await delay(80)
+  if (voltando.length === 0) return
 
-  const items = await ensureStore()
-  const existentes = new Set(items.map((item) => item.id))
-  const novos = voltando.filter((item) => !existentes.has(item.id))
-  if (novos.length) store = [...novos, ...items]
+  await apiFetch('/validades/restaurar', {
+    method: 'POST',
+    body: {
+      lotes: voltando.map((item) => ({
+        id: item.id,
+        produtoId: item.productId,
+        dataValidade: item.expiryDate,
+        criadoEm: item.createdAt,
+      })),
+    },
+  })
 }

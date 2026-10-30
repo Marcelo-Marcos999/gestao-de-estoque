@@ -5,7 +5,6 @@ import { Dialog } from '@/shared/ui/Dialog'
 import { AlertIcon } from '@/shared/ui/icons'
 import { daysUntil, parseDate } from '@/shared/lib/date'
 import { useState } from 'react'
-import { useAuth } from '@/features/auth'
 import { useLossRecordForm } from '../hooks/useLossRecordForm'
 import type { Attachment, LossRecord, LossRecordInitialDraft } from '../types'
 import { AttachmentSlots } from './AttachmentSlots'
@@ -66,9 +65,7 @@ function LossRecordForm({
   onClose,
   onSaved,
 }: Omit<LossRecordDialogProps, 'open'>) {
-  const { user } = useAuth()
   const form = useLossRecordForm(
-    user?.name ?? 'Sistema',
     () => {
       onSaved()
       onClose()
@@ -126,6 +123,8 @@ function LossRecordForm({
             {form.errors.product && <Alert tone="danger">{form.errors.product}</Alert>}
           </div>
 
+          {form.errors.form && <Alert tone="danger">{form.errors.form}</Alert>}
+
           <div className={styles.pair}>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="loss-expiry">
@@ -173,7 +172,7 @@ function LossRecordForm({
             label="Origem"
             tags={form.origins}
             value={form.originId}
-            optional
+            error={form.errors.origin}
             usage={form.tagUsage.origins}
             onChange={form.setOriginId}
             onCreate={form.addOrigin}

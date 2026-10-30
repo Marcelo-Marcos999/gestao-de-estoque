@@ -1,8 +1,8 @@
+import { formatMoney } from '@/shared/lib/money'
 import type { StockTotals } from '../totals'
 import styles from './StockTotalsSummary.module.css'
 
-const money = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const money = formatMoney
 
 /**
  * Quanto vale o estoque mostrado agora: soma de saldo × custo e saldo × venda

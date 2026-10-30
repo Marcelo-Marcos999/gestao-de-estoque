@@ -17,6 +17,10 @@ export function expiryValueOf(row: ExpiryRow, key: ExpirySortKey): string | numb
       return row.expiryDate ?? ''
     case 'stock':
       return row.stock
+    case 'costPrice':
+      return row.costPrice
+    case 'totalCost':
+      return row.totalCost
     case 'daysToZero':
       return row.daysToZero ?? Number.POSITIVE_INFINITY
     case 'situation':

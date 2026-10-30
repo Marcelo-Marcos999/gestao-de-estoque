@@ -15,6 +15,9 @@ import { useTagLists } from './useTagLists'
 export interface FormErrors {
   product?: string
   reason?: string
+  origin?: string
+  /** Falha ao falar com o servidor, que não é de nenhum campo. */
+  form?: string
 }
 
 /**
@@ -54,7 +57,6 @@ function initialProduct(record: LossRecord | undefined): ChosenProduct | null {
  * está ausente: corrigir um registro que já existe usa os valores dele.
  */
 export function useLossRecordForm(
-  createdBy: string,
   onSaved: () => void,
   editing?: LossRecord,
   initial?: LossRecordInitialDraft,
@@ -71,13 +73,16 @@ export function useLossRecordForm(
 
   // O motivo sugerido casa pelo nome, não por um id fixo: a lista é editável,
   // e "Vencido" pode ter sido renomeado ou excluído (ver docs/dominio.md).
-  // Sem casamento, o campo abre vazio — nunca com um id que não existe mais.
-  const [reasonId, setReasonId] = useState(() => {
-    if (editing) return editing.reasonId
-    if (!initial?.reasonLabel) return ''
-    const alvo = initial.reasonLabel.toLowerCase()
-    return reasons.find((r) => r.label.toLowerCase() === alvo)?.id ?? ''
-  })
+  // Sem casamento, o campo fica vazio — nunca com um id que não existe mais.
+  // A lista chega do servidor depois de o formulário abrir; por isso a
+  // sugestão é calculada a cada render, e a escolha da pessoa, quando houver,
+  // vale mais que ela (`null` = ainda não escolheu).
+  const [chosenReasonId, setReasonId] = useState<string | null>(editing?.reasonId ?? null)
+  const suggestedLabel = editing ? undefined : initial?.reasonLabel?.toLowerCase()
+  const suggestedReasonId = suggestedLabel
+    ? (reasons.find((r) => r.label.toLowerCase() === suggestedLabel)?.id ?? '')
+    : ''
+  const reasonId = chosenReasonId ?? suggestedReasonId
 
   const [originId, setOriginId] = useState(editing?.originId ?? '')
   const [note, setNote] = useState(editing?.note ?? '')
@@ -148,14 +153,27 @@ export function useLossRecordForm(
     setAttachments((current) => current.filter((a) => a.kind !== kind))
   }, [])
 
+  // Falha de rede ou recusa do servidor: sem isto o botão ficaria girando para
+  // sempre, e quem tocou em "Salvar" não saberia se o registro existe.
+  const reportFailure = useCallback((erro: unknown) => {
+    setSaving(false)
+    setDuplicate(null)
+    setErrors({ form: erro instanceof Error ? erro.message : 'Não foi possível salvar.' })
+  }, [])
+
   const persist = useCallback(async () => {
     setSaving(true)
-    if (editing) await updateLossRecord(editing.id, draft)
-    else await createLossRecord(draft, createdBy)
+    try {
+      if (editing) await updateLossRecord(editing.id, draft)
+      else await createLossRecord(draft)
+    } catch (erro) {
+      reportFailure(erro)
+      return
+    }
     setSaving(false)
     setDuplicate(null)
     onSaved()
-  }, [draft, createdBy, editing, onSaved])
+  }, [draft, editing, onSaved, reportFailure])
 
   /**
    * Grava o registro, avisando antes se já existe um igual.
@@ -170,12 +188,19 @@ export function useLossRecordForm(
     const found: FormErrors = {}
     if (!product) found.product = 'Escolha o produto.'
     if (!reasonId) found.reason = 'Escolha o motivo.'
+    if (!originId) found.origin = 'Escolha a origem.'
 
     setErrors(found)
     if (Object.keys(found).length) return
 
     setSaving(true)
-    const igual = await findSameRecord(draft, editing?.id)
+    let igual: LossRecord | null
+    try {
+      igual = await findSameRecord(draft, editing?.id)
+    } catch (erro) {
+      reportFailure(erro)
+      return
+    }
     setSaving(false)
 
     if (igual) {
@@ -184,17 +209,22 @@ export function useLossRecordForm(
     }
 
     await persist()
-  }, [draft, product, reasonId, editing, persist])
+  }, [draft, product, reasonId, originId, editing, persist, reportFailure])
 
   const mergeIntoExisting = useCallback(async () => {
     if (!duplicate) return
 
     setSaving(true)
-    await addToRecord(duplicate.id, quantity)
+    try {
+      await addToRecord(duplicate.id, quantity)
+    } catch (erro) {
+      reportFailure(erro)
+      return
+    }
     setSaving(false)
     setDuplicate(null)
     onSaved()
-  }, [duplicate, quantity, onSaved])
+  }, [duplicate, quantity, onSaved, reportFailure])
 
   return {
     /** True quando o formulário altera um registro que já existe. */
