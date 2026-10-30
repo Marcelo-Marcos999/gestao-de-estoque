@@ -6,7 +6,7 @@ import { formatDate } from '@/shared/lib/date'
 import { formatMoney } from '@/shared/lib/money'
 import type { SortDir } from '@/shared/hooks/useSort'
 import { deadline } from '../deadline'
-import { recordLabel } from '../label'
+import { ownerLabel, recordLabel } from '../label'
 import { labelOf } from '../tags'
 import type { LossRecord, Tag } from '../types'
 import { AttachmentChips } from './AttachmentChips'
@@ -29,6 +29,8 @@ interface LossRecordTableProps {
   onEdit: (record: LossRecord) => void
   onDelete: (record: LossRecord) => void
   onOpenAttachment: (record: LossRecord, attachmentId: string) => void
+  /** O administrador, com mais de uma loja: mostra a loja do registro. */
+  showStore?: boolean
   sortKey: LossRecordSortKey | null
   sortDir: SortDir | null
   onSort: (key: LossRecordSortKey) => void
@@ -53,6 +55,7 @@ export function LossRecordTable({
   onEdit,
   onDelete,
   onOpenAttachment,
+  showStore = false,
   sortKey,
   sortDir,
   onSort,
@@ -130,7 +133,7 @@ export function LossRecordTable({
                     <span className={styles.codes}>
                       {record.sku ? `SKU ${record.sku}` : 'SKU pendente'}
                       {record.barcode && ` · ${record.barcode}`}
-                      {` · ${record.createdBy}`}
+                      {` · ${ownerLabel(record, showStore)}`}
                     </span>
                   </span>
 

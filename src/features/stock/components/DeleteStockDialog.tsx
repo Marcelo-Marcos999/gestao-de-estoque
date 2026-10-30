@@ -10,16 +10,21 @@ import {
   getSelectionCounts,
   getStockCounts,
   type StockCounts,
+  type StockTarget,
 } from '../clearApi'
 import styles from './DeleteStockDialog.module.css'
 
 /** O que a pessoa precisa digitar para apagar TUDO: um clique errado não pode bastar. */
 const CONFIRMATION = 'EXCLUIR'
 
+/** O que apagar: todo o estoque de UMA loja, ou as posições escolhidas na tela. */
+export type DeleteTarget =
+  | { kind: 'all'; storeId?: string; storeName?: string }
+  | { kind: 'rows'; rows: StockTarget[] }
+
 interface DeleteStockDialogProps {
   open: boolean
-  /** Os produtos escolhidos na tela; `null` apaga o estoque inteiro da loja. */
-  productIds: string[] | null
+  target: DeleteTarget
   onClose: () => void
   onDeleted: () => void
 }
@@ -35,8 +40,8 @@ interface DeleteStockDialogProps {
  *
  * Quem usa troca a `key` a cada abertura, então o que foi digitado não volta.
  */
-export function DeleteStockDialog({ open, productIds, onClose, onDeleted }: DeleteStockDialogProps) {
-  const all = productIds === null
+export function DeleteStockDialog({ open, target, onClose, onDeleted }: DeleteStockDialogProps) {
+  const all = target.kind === 'all'
   const [counts, setCounts] = useState<StockCounts | null>(null)
   const [typed, setTyped] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -46,7 +51,7 @@ export function DeleteStockDialog({ open, productIds, onClose, onDeleted }: Dele
     if (!open) return
 
     let cancelled = false
-    ;(all ? getStockCounts() : getSelectionCounts(productIds))
+    ;(target.kind === 'all' ? getStockCounts(target.storeId) : getSelectionCounts(target.rows))
       .then((c) => {
         if (!cancelled) setCounts(c)
       })
@@ -56,13 +61,13 @@ export function DeleteStockDialog({ open, productIds, onClose, onDeleted }: Dele
     return () => {
       cancelled = true
     }
-  }, [open, all, productIds])
+  }, [open, target])
 
   async function confirm() {
     setError(null)
     setDeleting(true)
     try {
-      await (all ? deleteAllStock() : deleteStockRows(productIds))
+      await (target.kind === 'all' ? deleteAllStock(target.storeId) : deleteStockRows(target.rows))
       onDeleted()
       onClose()
     } catch (erro) {
@@ -81,7 +86,11 @@ export function DeleteStockDialog({ open, productIds, onClose, onDeleted }: Dele
     <Dialog
       open={open}
       onClose={onClose}
-      title={all ? 'Excluir todo o estoque?' : `Excluir ${productIds.length.toLocaleString('pt-BR')} do estoque?`}
+      title={
+        target.kind === 'all'
+          ? `Excluir todo o estoque${target.storeName ? ` de ${target.storeName}` : ''}?`
+          : `Excluir ${target.rows.length.toLocaleString('pt-BR')} do estoque?`
+      }
       subtitle="Não tem desfazer."
       dismissible={!deleting}
       footer={

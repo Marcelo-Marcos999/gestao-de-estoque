@@ -129,8 +129,10 @@ export function useLossRecordForm(
       originId,
       note,
       attachments,
+      // Corrigir o registro de outra loja (ou gerar a quebra de um lote dela) mantém a loja.
+      storeId: editing?.storeId ?? initial?.storeId,
     }),
-    [product, expiryDate, quantity, reasonId, originId, note, attachments],
+    [product, expiryDate, quantity, reasonId, originId, note, attachments, editing, initial],
   )
 
   /**

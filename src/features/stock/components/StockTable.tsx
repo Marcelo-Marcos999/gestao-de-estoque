@@ -5,7 +5,7 @@ import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import type { SortDir } from '@/shared/hooks/useSort'
 import { formatMoney } from '@/shared/lib/money'
 import { rowCostTotal, rowSaleTotal } from '../totals'
-import type { StockRow } from '../types'
+import { rowKey, type StockRow } from '../types'
 import styles from './StockTable.module.css'
 
 export type StockSortKey =
@@ -28,7 +28,10 @@ interface StockTableProps {
    * marcação: quem não pode excluir (o operador) não vê uma caixa que não faz nada.
    */
   selection?: ReadonlySet<string>
-  onToggleSelect?: (productId: string) => void
+  /** Recebe a chave da linha (`rowKey`): produto **e** loja. */
+  onToggleSelect?: (key: string) => void
+  /** O administrador, com mais de uma loja: mostra a loja de cada posição. */
+  showStore?: boolean
   sortKey: StockSortKey | null
   sortDir: SortDir | null
   onSort: (key: StockSortKey) => void
@@ -48,6 +51,7 @@ export function StockTable({
   onEdit,
   selection,
   onToggleSelect,
+  showStore = false,
   sortKey,
   sortDir,
   onSort,
@@ -83,11 +87,12 @@ export function StockTable({
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const row = rows[virtualRow.index]
-            const selected = selection?.has(row.productId) ?? false
+            const key = rowKey(row)
+            const selected = selection?.has(key) ?? false
 
             return (
               <div
-                key={row.productId}
+                key={key}
                 className={styles.item}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
@@ -104,7 +109,7 @@ export function StockTable({
                         type="checkbox"
                         className={styles.checkbox}
                         checked={selected}
-                        onChange={() => onToggleSelect(row.productId)}
+                        onChange={() => onToggleSelect(key)}
                       />
                       <span className={styles.srOnly}>
                         Selecionar {row.description || `SKU ${row.sku}`}
@@ -116,7 +121,10 @@ export function StockTable({
                     {row.pendingCadastro ? (
                       <span className={styles.pendingLine}>
                         <Badge tone="pendente">pendente</Badge>
-                        <span className={styles.codes}>SKU {row.sku}</span>
+                        <span className={styles.codes}>
+                          SKU {row.sku}
+                          {showStore && ` · ${row.storeName}`}
+                        </span>
                       </span>
                     ) : (
                       <>
@@ -126,6 +134,7 @@ export function StockTable({
                         <span className={styles.codes}>
                           SKU {row.sku}
                           {row.barcode && ` · ${row.barcode}`}
+                          {showStore && ` · ${row.storeName}`}
                         </span>
                       </>
                     )}

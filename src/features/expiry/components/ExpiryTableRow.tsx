@@ -13,6 +13,8 @@ interface ExpiryTableRowProps {
   onEdit: (row: ExpiryRow) => void
   onDelete: (row: ExpiryRow) => void
   onGenerateBreakage: (row: ExpiryRow) => void
+  /** O administrador, com mais de uma loja: mostra a loja do lote. */
+  showStore?: boolean
 }
 
 /** "em 212 dias", "venceu há 149 dias" — o número cru não diz o que significa. */
@@ -32,6 +34,7 @@ export function ExpiryTableRow({
   onEdit,
   onDelete,
   onGenerateBreakage,
+  showStore = false,
 }: ExpiryTableRowProps) {
   const remaining = remainingLabel(row.daysToExpiry)
   const token = SITUATIONS[row.situation].token
@@ -60,6 +63,7 @@ export function ExpiryTableRow({
         <span className={styles.codes}>
           SKU {row.sku}
           {row.barcode && ` · ${row.barcode}`}
+          {showStore && ` · ${row.storeName}`}
         </span>
       </span>
 

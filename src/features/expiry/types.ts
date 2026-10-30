@@ -9,19 +9,27 @@ import type { Situation } from './situation'
  * O mesmo produto pode aparecer mais de uma vez, com validades diferentes —
  * são coisas distintas, uma ainda se vende e a outra não.
  *
- * Saldo e saídas não moram aqui: são do produto (ver docs/dominio.md).
+ * Saldo, saídas e custo são do estoque da loja do lote (ver docs/dominio.md).
  */
 export interface ExpiryItem {
   id: string
   productId: string
   expiryDate: IsoDate | null
   createdAt: string
+  /** A loja do lote e os números do estoque DELA: o administrador vê lotes de várias lojas. */
+  storeId: string
+  storeName: string
+  stock: number
+  outflow: number
+  costPrice: number
 }
 
 /** Item com o produto resolvido e a situação já calculada, pronto para a tela. */
 export interface ExpiryRow {
   id: string
   productId: string
+  storeId: string
+  storeName: string
   sku: string
   description: string
   barcode: string

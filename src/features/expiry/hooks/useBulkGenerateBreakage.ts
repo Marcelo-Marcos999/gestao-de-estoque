@@ -56,6 +56,7 @@ export function useBulkGenerateBreakage(
         originId,
         note: '',
         attachments: [],
+        storeId: row.storeId,
       }))
 
       try {

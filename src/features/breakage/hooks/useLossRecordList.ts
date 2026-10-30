@@ -19,7 +19,10 @@ const FILTERS_KEY = storageKey('filtros', 'quebra')
  * pendente, e deixá-lo à vista faria a tela crescer com o que não exige nada
  * de ninguém. Continua a um clique de distância na aba "zerados".
  */
-export function useLossRecordList() {
+export function useLossRecordList(
+  /** `?loja=…` do escopo de loja da tela (vazio para o operador). Entra na chave da busca. */
+  storeParam = '',
+) {
   const [filters, setFilters] = usePersistedState<LossRecordQuery>(
     FILTERS_KEY,
     NO_FILTERS,
@@ -40,18 +43,21 @@ export function useLossRecordList() {
   // Sem espera, cada tecla dispararia uma varredura da lista inteira.
   const debouncedSearch = useDebouncedValue(filters.search, 250)
 
-  const queryKey = `${debouncedSearch}|${filters.stockState}|${filters.reasonIds.join(',')}|${filters.originIds.join(',')}|${rangesKey(filters.numberRanges)}|${reloadKey}`
+  const queryKey = `${debouncedSearch}|${filters.stockState}|${filters.reasonIds.join(',')}|${filters.originIds.join(',')}|${rangesKey(filters.numberRanges)}|${storeParam}|${reloadKey}`
 
   useEffect(() => {
     let cancelled = false
 
-    listLossRecords({
-      search: debouncedSearch,
-      stockState: filters.stockState,
-      reasonIds: filters.reasonIds,
-      originIds: filters.originIds,
-      numberRanges: filters.numberRanges,
-    })
+    listLossRecords(
+      {
+        search: debouncedSearch,
+        stockState: filters.stockState,
+        reasonIds: filters.reasonIds,
+        originIds: filters.originIds,
+        numberRanges: filters.numberRanges,
+      },
+      storeParam,
+    )
       .then((items) => {
         if (cancelled) return
         setFailedKey(null)
@@ -66,6 +72,7 @@ export function useLossRecordList() {
     }
   }, [
     queryKey,
+    storeParam,
     debouncedSearch,
     filters.stockState,
     filters.reasonIds,

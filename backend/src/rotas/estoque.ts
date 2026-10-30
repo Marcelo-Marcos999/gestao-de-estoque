@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { comContextoDoUsuario } from '../db/contexto.js'
 import { exigirAdmin, exigirAutenticacao } from '../auth/middleware.js'
 import { assincrono } from '../lib/assincrono.js'
+import { lojaDaConsulta, lojaDaEscrita } from '../lib/lojas.js'
 
 export const rotasEstoque = Router()
 
@@ -14,23 +15,24 @@ rotasEstoque.use(exigirAutenticacao)
  * uma loja só nas regras de permissão). Aqui o login age como a loja que ele
  * é, admin ou não: cada um só tem UMA posição de estoque, que é a sua.
  *
- * Isto é o jeito mais simples de atender o app de hoje (uma tela de Estoque
- * só, sem seletor de loja). O dia em que o admin precisar ver o estoque de
- * OUTRAS lojas da conta num painel próprio, essa rota ganha um parâmetro
- * `lojaId` opcional — a RLS (estoque_all) já permite isso pro admin, só o
- * código da rota ainda não pede.
+ * Sem parâmetro, é isso mesmo. O administrador pode pedir `?loja=todas` (ou o id
+ * de uma loja) para ver o estoque de outras lojas da conta — a RLS
+ * (`estoque_all`) já permitia, e é ela que impede o operador de ver mais que a
+ * própria. Ver `lib/lojas.ts`.
  */
 rotasEstoque.get('/', assincrono(async (req, res) => {
   const linhas = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows } = await client.query(
       `select p.id as produto_id, p.sku, p.descricao, p.codigo_barras, p.pendente_cadastro,
               p.criado_em, p.atualizado_em,
-              e.saldo, e.saidas, e.valor_custo, e.valor_venda
+              e.saldo, e.saidas, e.valor_custo, e.valor_venda,
+              l.id as loja_id, l.nome as loja_nome
        from estoque e
        join produtos p on p.id = e.produto_id
-       where e.loja_id = $1
-       order by p.descricao`,
-      [req.loginId],
+       join lojas l on l.id = e.loja_id
+       where ($1::uuid is null or e.loja_id = $1)
+       order by p.descricao, l.nome`,
+      [lojaDaConsulta(req)],
     )
     return rows
   })
@@ -73,6 +75,9 @@ rotasEstoque.patch('/:produtoId', assincrono(async (req, res) => {
     return
   }
 
+  const loja = lojaDaEscrita(req, res)
+  if (!loja) return
+
   const linha = await comContextoDoUsuario(req.sessao!, async (client) => {
     // O `::numeric` em valor_custo/valor_venda não é sobre converter o
     // valor — é pra impedir que o Postgres chute o tipo do parâmetro a
@@ -95,7 +100,7 @@ rotasEstoque.patch('/:produtoId', assincrono(async (req, res) => {
              valor_venda = coalesce($6::numeric, estoque.valor_venda)
        returning produto_id, saldo, saidas, valor_custo, valor_venda`,
       [
-        req.loginId,
+        loja,
         req.params.produtoId,
         arredondarSeDefinido(corpo.data.saldo),
         arredondarSeDefinido(corpo.data.saidas),
@@ -278,12 +283,15 @@ rotasEstoque.post('/importar', assincrono(async (req, res) => {
  * tudo" sem dizer o tamanho do estrago não é uma confirmação de verdade.
  */
 rotasEstoque.get('/contagem', exigirAdmin, assincrono(async (req, res) => {
+  const loja = lojaDaEscrita(req, res)
+  if (!loja) return
+
   const linha = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows } = await client.query(
       `select (select count(*) from estoque where loja_id = $1)::int as linhas,
               (select count(*) from validades v join estoque e on e.id = v.estoque_id
                 where e.loja_id = $1)::int as lotes`,
-      [req.loginId],
+      [loja],
     )
     return rows[0]
   })
@@ -302,13 +310,18 @@ rotasEstoque.get('/contagem', exigirAdmin, assincrono(async (req, res) => {
  * Só o administrador: é a ação mais destrutiva da tela e não tem desfazer.
  */
 rotasEstoque.delete('/', exigirAdmin, assincrono(async (req, res) => {
+  // Sempre UMA loja: a do login, ou a de `?loja=<id>`. "todas" cai na do login —
+  // apagar o estoque de todas as lojas de uma vez nunca é pedido por engano.
+  const loja = lojaDaEscrita(req, res)
+  if (!loja) return
+
   const resultado = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows: lotes } = await client.query(
       `select count(*)::int as n from validades v join estoque e on e.id = v.estoque_id
         where e.loja_id = $1`,
-      [req.loginId],
+      [loja],
     )
-    const { rowCount } = await client.query('delete from estoque where loja_id = $1', [req.loginId])
+    const { rowCount } = await client.query('delete from estoque where loja_id = $1', [loja])
     return { linhas: rowCount ?? 0, lotes: lotes[0].n as number }
   })
   res.json(resultado)
@@ -319,6 +332,8 @@ const corpoLinhas = z.object({ produtoIds: z.array(z.string().uuid()).min(1).max
 /** O que sairia se estas posições fossem apagadas: a tela mostra antes de confirmar. */
 rotasEstoque.post('/linhas/contagem', exigirAdmin, assincrono(async (req, res) => {
   const corpo = corpoLinhas.safeParse(req.body)
+  const loja = lojaDaEscrita(req, res)
+  if (!loja) return
   if (!corpo.success) {
     res.status(400).json({ erro: 'Informe os produtos.' })
     return
@@ -329,7 +344,7 @@ rotasEstoque.post('/linhas/contagem', exigirAdmin, assincrono(async (req, res) =
       `select (select count(*) from estoque where loja_id = $1 and produto_id = any($2::uuid[]))::int as linhas,
               (select count(*) from validades v join estoque e on e.id = v.estoque_id
                 where e.loja_id = $1 and e.produto_id = any($2::uuid[]))::int as lotes`,
-      [req.loginId, corpo.data.produtoIds],
+      [loja, corpo.data.produtoIds],
     )
     return rows[0]
   })
@@ -343,6 +358,8 @@ rotasEstoque.post('/linhas/contagem', exigirAdmin, assincrono(async (req, res) =
  */
 rotasEstoque.delete('/linhas', exigirAdmin, assincrono(async (req, res) => {
   const corpo = corpoLinhas.safeParse(req.body)
+  const loja = lojaDaEscrita(req, res)
+  if (!loja) return
   if (!corpo.success) {
     res.status(400).json({ erro: 'Informe os produtos.' })
     return
@@ -352,11 +369,11 @@ rotasEstoque.delete('/linhas', exigirAdmin, assincrono(async (req, res) => {
     const { rows: lotes } = await client.query(
       `select count(*)::int as n from validades v join estoque e on e.id = v.estoque_id
         where e.loja_id = $1 and e.produto_id = any($2::uuid[])`,
-      [req.loginId, corpo.data.produtoIds],
+      [loja, corpo.data.produtoIds],
     )
     const { rowCount } = await client.query(
       'delete from estoque where loja_id = $1 and produto_id = any($2::uuid[])',
-      [req.loginId, corpo.data.produtoIds],
+      [loja, corpo.data.produtoIds],
     )
     return { linhas: rowCount ?? 0, lotes: lotes[0].n as number }
   })

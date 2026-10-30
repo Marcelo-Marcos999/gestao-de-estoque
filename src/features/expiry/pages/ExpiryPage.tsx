@@ -10,6 +10,9 @@ import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { useSelection } from '@/shared/hooks/useSelection'
 import { BoltIcon } from '@/shared/ui/icons'
+import { StoreFilter } from '@/shared/ui/StoreFilter'
+import { useStoreScope } from '@/shared/hooks/useStoreScope'
+import { useAuth } from '@/features/auth'
 import { useSort } from '@/shared/hooks/useSort'
 import { ExpiryActions } from '../components/ExpiryActions'
 import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
@@ -35,7 +38,9 @@ import styles from './ExpiryPage.module.css'
  * cartões do topo são o filtro — clicar num deles restringe a lista.
  */
 export function ExpiryPage() {
-  const list = useExpiryList()
+  // O administrador vê as lojas todas da conta (e filtra por uma); o operador, só a própria.
+  const scope = useStoreScope('validades', useAuth().user?.role === 'admin')
+  const list = useExpiryList(scope.param)
   const [novoAberto, setNovoAberto] = useState(false)
   const [importAberto, setImportAberto] = useState(false)
   const isNarrow = useMediaQuery('(max-width: 719px)')
@@ -125,6 +130,8 @@ export function ExpiryPage() {
         onToggleFocus={focus.toggle}
       />
 
+      <StoreFilter scope={scope} />
+
       <SelectionBar
         selected={selectionState.selection.size}
         total={visibleIds.length}
@@ -171,6 +178,7 @@ export function ExpiryPage() {
           onEdit={editor.open}
           onDelete={(row) => void editor.removeItems([row.id])}
           onGenerateBreakage={breakage.open}
+          showStore={scope.multi}
           selection={selectionState.selection}
           onToggleSelect={selectionState.toggle}
           sortKey={sort.sortKey}

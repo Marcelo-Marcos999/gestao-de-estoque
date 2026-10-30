@@ -61,9 +61,14 @@ export interface LossRecord {
    * pendente de cadastro, que ainda não tem estoque.
    */
   costPrice: number | null
+  /** Saldo do estoque DA LOJA do registro, que limita a quantidade; `null` quando não há posição. */
+  availableStock: number | null
   /** Quantidade × custo: quanto a perda custou. Calculado, nunca guardado. */
   totalCost: number | null
   createdAt: string
+  /** A loja dona do registro. O administrador vê as de todas as lojas da conta. */
+  storeId: string
+  storeName: string
   /** Nome de quem registrou. */
   createdBy: string
   /** Login de quem registrou: o "desfazer" devolve o registro ao mesmo autor. */
@@ -83,6 +88,8 @@ export interface LossRecordDraft {
   originId: string
   note: string
   attachments: Attachment[]
+  /** Só o administrador: registrar em nome de outra loja. Ausente = a do próprio login. */
+  storeId?: string
 }
 
 export type LossRecordRangeKey = 'quantity' | 'costPrice' | 'totalCost'
@@ -126,4 +133,6 @@ export interface LossRecordInitialDraft {
    * em vez de gravar um id que não aponta para etiqueta nenhuma.
    */
   reasonLabel?: string
+  /** A loja do lote, quando o administrador gera a quebra de um lote de outra loja. */
+  storeId?: string
 }

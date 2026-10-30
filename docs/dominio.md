@@ -704,6 +704,32 @@ sem estoque nesta loja entra com saldo zerado.
 - A data do registro e quem registrou **não são importados** (ficam o momento da
   importação e quem importou).
 
+## O administrador vê as lojas todas
+
+O login **é** a loja (ver `docs/modelo-de-dados.md`), então "os registros de todos
+os usuários" são os registros de todas as lojas da conta. O banco já definia isso
+(RLS: o administrador enxerga a conta inteira, o operador só a própria loja); as
+telas de **Estoque, Validades e Quebra** passam a mostrar isso:
+
+- **Administrador com mais de uma loja:** aparece o filtro **Loja** ("Todas as
+  lojas" ou uma só) e cada registro traz o nome da loja. O filtro é lembrado por
+  tela, como todo filtro, e fica sempre à vista — uma lista de uma loja só que
+  parece a da conta inteira seria o engano a evitar.
+- **Operador, ou administrador com uma loja só:** nada muda; sem filtro, sem rótulo.
+- **Os números são os da loja do registro.** O mesmo produto tem saldo e custo
+  diferentes em cada loja; a coluna de custo de um lote, ou o teto da quantidade
+  de uma quebra, vêm do estoque **daquela** loja, nunca do login de quem olha.
+- **O administrador age por outra loja.** Corrigir o saldo de uma linha, gerar a
+  quebra de um lote vencido ou desfazer uma exclusão acontece **na loja do
+  registro**, não na do administrador (a quebra gerada fica com a loja do lote, e
+  o administrador como autor). O operador não consegue: o servidor responde 403 e
+  a RLS barra de qualquer forma.
+- **"Excluir tudo" age sobre uma loja.** Em "Todas as lojas" o botão some; com uma
+  loja escolhida, o diálogo diz o nome dela. Apagar o estoque da conta inteira
+  por um clique seria a pior forma de errar a loja.
+- **Importar** planilha continua gravando na loja de quem importa (o
+  administrador); importar por outra loja fica para depois.
+
 ## Excluir estoque
 
 O administrador exclui estoque de duas formas, na tela de Estoque:

@@ -138,8 +138,10 @@ export interface StockValues {
 export async function updateProductStock(
   id: string,
   values: Partial<StockValues>,
+  /** A loja a corrigir, quando não é a do próprio login (só o administrador). */
+  storeId?: string,
 ): Promise<void> {
-  await apiFetch(`/estoque/${id}`, {
+  await apiFetch(`/estoque/${id}${storeId ? `?loja=${storeId}` : ''}`, {
     method: 'PATCH',
     body: {
       saldo: values.stock,

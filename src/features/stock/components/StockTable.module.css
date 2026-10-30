@@ -194,6 +194,14 @@
     grid-area: produto;
   }
 
+  /* Com várias lojas à vista o nome da loja vai ao fim desta linha: cortá-lo
+     com reticências esconderia justamente o que distingue as linhas. */
+  .codes {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .description {
     white-space: normal;
     overflow: visible;

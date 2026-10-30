@@ -20,7 +20,7 @@ export function useStockEditor(onChanged: () => void) {
       if (!editing) return
 
       setSaving(true)
-      await updateStockRow(editing.productId, edit)
+      await updateStockRow(editing.productId, edit, editing.storeId)
       setSaving(false)
       setEditing(null)
       onChanged()
