@@ -193,6 +193,8 @@ const corpoImportarEstoque = z.object({
     .array(
       z.object({
         sku: z.string().trim().min(1),
+        /** Só usado ao criar o produto pendente de um SKU novo. */
+        codigoBarras: z.string().trim().max(64).optional(),
         saldo: z.number().min(0).optional(),
         saidas: z.number().min(0).optional(),
         valorCusto: z.number().min(0).optional(),
@@ -227,6 +229,8 @@ rotasEstoque.post('/importar', assincrono(async (req, res) => {
   const { linhas } = corpo.data
   // null (e não undefined) é o que vira NULL dentro do array do Postgres.
   const skus = linhas.map((l) => l.sku)
+  // Só dígitos, como o cadastro guarda; vazio vira NULL no insert.
+  const barras = linhas.map((l) => (l.codigoBarras ?? '').replace(/\D/g, ''))
   const saldos = linhas.map((l) => arredondarSeDefinido(l.saldo) ?? null)
   const saidas = linhas.map((l) => arredondarSeDefinido(l.saidas) ?? null)
   const custos = linhas.map((l) => l.valorCusto ?? null)
@@ -238,13 +242,21 @@ rotasEstoque.post('/importar', assincrono(async (req, res) => {
                    as x(sku, saldo, saidas, valor_custo, valor_venda)`
 
   const resultado = await comContextoDoUsuario(req.sessao!, async (client) => {
+    // O código de barras só entra se ainda não for de outro produto: é único por
+    // empresa, e a planilha não pode derrubar a importação por causa dele — o
+    // produto pendente nasce sem o código e o administrador completa depois.
     const { rowCount: pendentesCriados } = await client.query(
-      `insert into produtos (conta_id, sku, pendente_cadastro, loja_origem_id)
-       select $1, s.sku, true, $2
-       from (select distinct sku from unnest($3::text[]) as sku) s
+      `insert into produtos (conta_id, sku, codigo_barras, pendente_cadastro, loja_origem_id)
+       select $1, s.sku,
+              case when s.barras <> '' and not exists (select 1 from produtos p where p.codigo_barras = s.barras)
+                   then s.barras end,
+              true, $2
+       from (select distinct on (sku) sku, barras
+             from unnest($3::text[], $4::text[]) as t(sku, barras)
+             order by sku, (barras <> '') desc) s
        where not exists (select 1 from produtos p where p.sku = s.sku)
-       on conflict (conta_id, sku) do nothing`,
-      [req.sessao!.contaId, req.loginId, skus],
+       on conflict do nothing`,
+      [req.sessao!.contaId, req.loginId, skus, barras],
     )
 
     await client.query(

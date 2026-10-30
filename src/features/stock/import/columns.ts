@@ -1,121 +1,95 @@
 /**
  * Reconhecimento das colunas da planilha de estoque.
  *
- * Mesma ideia do cadastro de produtos: casa pelo cabeçalho, porque o relatório
- * do ERP varia de nome ("SALDO", "estoque_atual", "QTD ESTOQUE"). Diferente do
- * cadastro, só o SKU é obrigatório — a loja pode trazer só saldo e saídas numa
- * planilha e completar custo e venda depois, numa segunda (ver
+ * Mesma ideia das outras importações: casa pelo cabeçalho, porque o relatório
+ * do ERP varia de nome ("SALDO", "estoque_atual", "QTD ESTOQUE"). A linha diz
+ * qual é o produto por SKU **ou** código de barras (um dos dois basta, como em
+ * Validades); saldo, saídas, custo e venda são opcionais — a loja pode trazer
+ * só parte numa planilha e completar o resto numa segunda (ver
  * docs/dominio.md, "três fontes").
+ *
+ * O casamento de cabeçalhos é o de `shared/import/fields`: aqui só se declaram
+ * os campos e os nomes que cada um aceita.
  */
-export type StockField = 'sku' | 'stock' | 'outflow' | 'costPrice' | 'salePrice'
+import {
+  detectMapping as detectSharedMapping,
+  emptyMapping,
+  type ColumnMapping as SharedColumnMapping,
+  type FieldSpec as SharedFieldSpec,
+} from '@/shared/import/fields'
 
-export interface FieldSpec {
-  field: StockField
-  label: string
-  required: boolean
-  hint: string
-}
+export type StockField = 'sku' | 'barcode' | 'stock' | 'outflow' | 'costPrice' | 'salePrice'
 
-export const STOCK_FIELDS: FieldSpec[] = [
+export type ColumnMapping = SharedColumnMapping<StockField>
+
+/**
+ * A ordem é a da tela e também a da detecção: quem vem antes reserva a coluna.
+ * Dentro de cada campo, termos específicos antes dos genéricos — "saldo em
+ * estoque" não pode cair em "estoque".
+ */
+export const STOCK_FIELDS: SharedFieldSpec<StockField>[] = [
   {
     field: 'sku',
     label: 'Código SKU',
-    required: true,
-    hint: 'O mesmo código do cadastro de produtos — é por ele que a linha casa com o produto.',
+    required: false,
+    hint: 'O mesmo código do cadastro de produtos. Use este ou o código de barras.',
+    patterns: ['codigosku', 'sku', 'codproduto', 'codigoproduto'],
+    // "Código" sozinho é o cabeçalho de SKU numa planilha, mas por "conter" a
+    // palavra também pegaria "Código de barras" — por isso só vale inteiro.
+    exactPatterns: ['codigo', 'cod', 'id'],
+  },
+  {
+    field: 'barcode',
+    label: 'Código de barras',
+    required: false,
+    hint: 'Usado quando a linha não tem SKU, ou quando o SKU não está no cadastro.',
+    patterns: ['codigodebarras', 'codbarras', 'codigobarras', 'ean', 'gtin', 'barras'],
   },
   {
     field: 'stock',
     label: 'Saldo em estoque',
     required: false,
     hint: 'Quantidade atual na loja.',
+    patterns: ['saldoemestoque', 'saldo', 'qtdestoque', 'quantidadeestoque', 'estoqueatual', 'estoque'],
   },
   {
     field: 'outflow',
     label: 'Saídas no período',
     required: false,
     hint: 'Quantidade vendida no período configurado nas Validades.',
+    patterns: ['saidasnoperiodo', 'saidas', 'qtdsaida', 'quantidadesaida', 'vendas', 'saida'],
   },
   {
     field: 'costPrice',
     label: 'Valor de custo',
     required: false,
     hint: 'Custo unitário do produto.',
+    patterns: ['valordecusto', 'valorcusto', 'precocusto', 'custounitario', 'custo'],
   },
   {
     field: 'salePrice',
     label: 'Valor de venda',
     required: false,
     hint: 'Preço de venda unitário.',
+    patterns: ['valordevenda', 'valorvenda', 'precovenda', 'precodevenda', 'venda'],
   },
 ]
 
-export type ColumnMapping = Record<StockField, number>
-
-export const EMPTY_MAPPING: ColumnMapping = {
-  sku: -1,
-  stock: -1,
-  outflow: -1,
-  costPrice: -1,
-  salePrice: -1,
-}
-
-/** Remove acento, pontuação e caixa para comparar cabeçalhos. */
-export function normalizeHeader(header: string): string {
-  return header
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
-}
-
-const HEADER_PATTERNS: Record<StockField, string[]> = {
-  // Ordem importa: o primeiro que casar vence, então termos mais específicos
-  // vêm antes dos genéricos — "saldo em estoque" não pode cair em "estoque".
-  sku: ['codigosku', 'sku', 'codproduto', 'codigoproduto', 'codigo', 'cod', 'id'],
-  stock: ['saldoemestoque', 'saldo', 'qtdestoque', 'quantidadeestoque', 'estoqueatual', 'estoque'],
-  outflow: ['saidasnoperiodo', 'saidas', 'qtdsaida', 'quantidadesaida', 'vendas', 'saida'],
-  costPrice: ['valordecusto', 'valorcusto', 'precocusto', 'custounitario', 'custo'],
-  salePrice: ['valordevenda', 'valorvenda', 'precovenda', 'precodevenda', 'venda'],
-}
-
-function matchByHeader(headers: string[], field: StockField, taken: Set<number>): number {
-  const normalized = headers.map(normalizeHeader)
-
-  for (const pass of ['exact', 'partial'] as const) {
-    for (const pattern of HEADER_PATTERNS[field]) {
-      for (let i = 0; i < normalized.length; i++) {
-        if (taken.has(i) || !normalized[i]) continue
-
-        const hit =
-          pass === 'exact' ? normalized[i] === pattern : normalized[i].includes(pattern)
-
-        if (hit) return i
-      }
-    }
-  }
-
-  return -1
-}
+export const EMPTY_MAPPING: ColumnMapping = emptyMapping(STOCK_FIELDS)
 
 /**
- * Monta o mapeamento inicial. Diferente do cadastro, aqui não há conteúdo que
- * ajude a adivinhar uma coluna numérica sem nome — só o cabeçalho decide. O
- * usuário sempre pode corrigir antes de importar; a detecção é um palpite bem
- * informado, não uma decisão final.
+ * Mapeamento inicial. Diferente do cadastro, aqui não há conteúdo que ajude a
+ * adivinhar uma coluna numérica sem nome — só o cabeçalho decide. O usuário
+ * sempre pode corrigir antes de importar; a detecção é um palpite, não uma
+ * decisão final.
  */
 export function detectMapping(headers: string[]): ColumnMapping {
-  const mapping: ColumnMapping = { ...EMPTY_MAPPING }
-  const taken = new Set<number>()
+  return detectSharedMapping(headers, STOCK_FIELDS)
+}
 
-  // Ordem pensada para o termo mais específico reservar a coluna primeiro:
-  // "saldo" antes de deixar sobrar ambiguidade com outros campos numéricos.
-  for (const field of ['sku', 'stock', 'outflow', 'costPrice', 'salePrice'] as const) {
-    const index = matchByHeader(headers, field, taken)
-    if (index >= 0) {
-      mapping[field] = index
-      taken.add(index)
-    }
-  }
+const NOT_CHOSEN = 'Escolha a coluna de SKU ou de código de barras.'
 
-  return mapping
+/** Não há campo obrigatório sozinho: é preciso um jeito de achar o produto, SKU ou código de barras. */
+export function checkStockMapping(mapping: ColumnMapping): string | null {
+  return mapping.sku < 0 && mapping.barcode < 0 ? NOT_CHOSEN : null
 }

@@ -139,9 +139,16 @@ Três fontes, para os mesmos dois números:
 
 A importação vive na **tela de Estoque**, aberta aos dois perfis: saldo, saídas
 e valores não são a bancada do administrador, que é o cadastro de produtos. Ela
-casa a planilha com o cadastro pelo **SKU**, e cada coluna é opcional — uma
+casa a planilha com o cadastro pelo **SKU ou pelo código de barras** — um dos dois
+basta, como na importação de Validades — e as demais colunas são opcionais: uma
 importação pode trazer só saldo e saídas, e o que não veio fica como estava em
 vez de zerar. O usuário trata o arquivo antes se precisar.
+
+Como a linha acha o produto: primeiro pelo SKU; se o SKU não está no cadastro (ou
+a linha não tem), pelo código de barras. O mesmo produto citado duas vezes — uma
+por SKU, outra por código de barras — conta como **repetido**. Uma linha só com
+código de barras que o cadastro não conhece fica **de fora**: criar um produto
+pendente exige um SKU (próximo parágrafo).
 
 Os quatro campos continuam editáveis à mão, ali e no diálogo de lote das
 Validades: o número importado é ponto de partida, não verdade intocável.
@@ -184,8 +191,8 @@ Os dois valores entram no filtro por faixa e na exportação das duas telas.
 ### SKU que a importação não reconhece
 
 Não bloqueia. O produto entra no cadastro como **pendente**, com os números da
-planilha e sem descrição nem código de barras — mesma decisão do registro de
-quebra, e pelo mesmo motivo: recusar a linha perderia o dado, porque a
+planilha, sem descrição e com o código de barras que a linha trouxe (se trouxe, e
+se ele ainda não for de outro produto) — mesma decisão do registro de quebra, e pelo mesmo motivo: recusar a linha perderia o dado, porque a
 importação costuma ser a única fonte desses números.
 
 Resolver a pendência é do administrador, no cadastro de produtos, que mostra o

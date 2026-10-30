@@ -62,7 +62,7 @@ export function ImportWizard({ open, onClose, onImported }: ImportWizardProps) {
         <MappingStep
           sheet={wizard.sheet}
           mapping={wizard.mapping}
-          missingRequired={wizard.missingRequired}
+          mappingProblem={wizard.mappingProblem}
           onChange={wizard.setFieldColumn}
           sampleOf={wizard.sampleOf}
         />
@@ -100,7 +100,7 @@ function Footer({ wizard, onCancel }: { wizard: Wizard; onCancel: () => void }) 
           <Button
             onClick={() => void wizard.buildPlan()}
             loading={wizard.busy}
-            disabled={wizard.missingRequired.length > 0}
+            disabled={wizard.mappingProblem !== null}
           >
             Conferir o que será importado
           </Button>
