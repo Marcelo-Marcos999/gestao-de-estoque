@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
-import { ExportButton } from '@/shared/ui/ExportButton'
 import { SelectionBar } from '@/shared/ui/SelectionBar'
 import { UndoBar } from '@/shared/ui/UndoBar'
 import { LossRecordDialog, OriginChoiceDialog } from '@/features/breakage'
@@ -10,15 +9,16 @@ import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { useSelection } from '@/shared/hooks/useSelection'
-import { BoltIcon, PlusIcon } from '@/shared/ui/icons'
+import { BoltIcon } from '@/shared/ui/icons'
 import { useSort } from '@/shared/hooks/useSort'
+import { ExpiryActions } from '../components/ExpiryActions'
 import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
 import { ExpiryTable, type ExpirySortKey } from '../components/ExpiryTable'
 import { ExpiryToolbar } from '../components/ExpiryToolbar'
+import { ExpiryImportDialog } from '../components/ExpiryImportDialog'
 import { NewExpiryDialog } from '../components/NewExpiryDialog'
 import { SituationTiles } from '../components/SituationTiles'
 import { ExpiryDialog } from '../components/ExpiryDialog'
-import { exportExpiryRows } from '../export'
 import { useBulkGenerateBreakage } from '../hooks/useBulkGenerateBreakage'
 import { useExpiryEditor } from '../hooks/useExpiryEditor'
 import { useExpiryList } from '../hooks/useExpiryList'
@@ -37,6 +37,7 @@ import styles from './ExpiryPage.module.css'
 export function ExpiryPage() {
   const list = useExpiryList()
   const [novoAberto, setNovoAberto] = useState(false)
+  const [importAberto, setImportAberto] = useState(false)
   const isNarrow = useMediaQuery('(max-width: 719px)')
   const focus = useFocusMode()
   const editor = useExpiryEditor(list.reload)
@@ -68,30 +69,13 @@ export function ExpiryPage() {
     void editor.removeItems(ids)
   }
 
-  /**
-   * As ações acompanham o cabeçalho quando ele existe e migram para a barra de
-   * busca no modo foco.
-   *
-   * Importar saldo e saídas não é mais daqui: os dois números são do produto,
-   * e quem os importa é a tela de Estoque — este cabeçalho só acompanha
-   * validade, que é o assunto desta tela (ver docs/dominio.md).
-   */
   const acoes = (
-    <>
-      <ExportButton
-        count={list.rows.length}
-        onExport={() => exportExpiryRows(list.rows, list.periodDays)}
-      />
-
-      {/* Acompanhar um lote é o que se vem fazer nesta tela: some no modo foco
-          junto do cabeçalho, mas volta na barra de busca, como nas outras. */}
-      <Button onClick={() => setNovoAberto(true)}>
-        <PlusIcon width={18} height={18} />
-        <span>
-          Novo<span className={styles.labelExtra}> lote</span>
-        </span>
-      </Button>
-    </>
+    <ExpiryActions
+      rows={list.rows}
+      periodDays={list.periodDays}
+      onImport={() => setImportAberto(true)}
+      onNew={() => setNovoAberto(true)}
+    />
   )
 
   return (
@@ -201,6 +185,12 @@ export function ExpiryPage() {
         onClose={editor.close}
         onSave={(edit) => void editor.save(edit)}
         onDelete={() => void editor.remove()}
+      />
+
+      <ExpiryImportDialog
+        open={importAberto}
+        onClose={() => setImportAberto(false)}
+        onImported={list.reload}
       />
 
       <NewExpiryDialog

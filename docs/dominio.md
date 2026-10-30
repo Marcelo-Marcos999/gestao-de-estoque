@@ -643,6 +643,63 @@ Regras que evitam travar a conta:
 O login criado pelo admin já nasce com o e-mail como confirmado: ele digitou o
 endereço e entregou a senha, e esperar um link que não chega travaria o acesso.
 
+## Importar planilha em Validades e em Quebra
+
+Quem já tem os dados numa base antiga importa por planilha em vez de digitar de
+novo. Estoque já tinha o assistente; Validades e Quebra ganharam o seu, com a
+mesma sequência (arquivo → colunas → revisão → gravação) montada uma vez só em
+`shared/import/`. O que muda de tela para tela é só a *configuração*: quais
+colunas, como classificar as linhas e como gravar.
+
+Em todas, **nada é gravado antes da revisão**, que mostra quantas linhas entram,
+quantas são puladas e **por quê** (linha por linha, as com problema na frente).
+Reaplicar o mesmo arquivo não duplica: o que já existe aparece como "já existe" e
+fica de fora. Se a gravação falhar no meio, a revisão é refeita contra o que já
+foi gravado, e só o que falta é reenviado.
+
+**Validades** — colunas: SKU e/ou código de barras (um dos dois), e a validade
+(obrigatória). Cada linha vira um lote. Produto que não está no cadastro **não é
+criado**: uma validade sozinha não basta para inventar um produto (diferente do
+Estoque, onde o SKU novo vem com saldo e custo). Linha sem data é recusada, porque
+sem data não há lote. Saldo, saídas e custo continuam vindo do Estoque; produto
+sem estoque nesta loja entra com saldo zerado.
+
+**Quebra** — colunas: SKU / código de barras / descrição, validade, **quantidade
+(obrigatória)**, motivo, origem e observação.
+
+- Produto fora do cadastro vira registro de produto **pendente**, como no registro
+  manual; só é recusada a linha que não diz de qual produto se trata.
+- Motivo e origem são casados **pelo nome**, sem ligar para caixa e acento. Nome
+  que a lista ainda não tem **é criado** (uma base antiga tem as próprias
+  categorias), e a revisão avisa quais — porque um nome escrito diferente vira um
+  item a mais.
+- Motivo e origem são obrigatórios. Linha que veio sem eles usa o **padrão
+  escolhido na revisão**; sem padrão, fica de fora. Isto importa porque a origem
+  já foi opcional: uma base antiga provavelmente tem muita linha sem origem.
+- Importar **não cria lotes** em Validades, diferente de registrar à mão: ali a
+  quebra de um lote diz que ele existe na loja; aqui são perdas já ocorridas, e
+  lotes vencidos antigos encheriam Validades de coisa que ninguém mais acompanha.
+- A data do registro e quem registrou **não são importados** (ficam o momento da
+  importação e quem importou).
+
+## Excluir todo o estoque
+
+O administrador pode apagar **todo o estoque da loja** (botão "Excluir tudo" na
+tela de Estoque), para reimportar uma base do zero. É a ação mais destrutiva do
+sistema e **não tem desfazer**, então a confirmação é forte: mostra quantos
+produtos e quantos lotes de validade saem e exige digitar `EXCLUIR`.
+
+- Saem saldo, saídas, custo e venda, e os **lotes de validade** junto (um lote só
+  existe como filho de uma posição de estoque).
+- **Ficam** os produtos no Cadastro e os registros de quebra.
+- Só o administrador vê o botão, e o servidor recusa os outros.
+
+**A tela de Estoque lista só quem tem estoque.** O cadastro tem todos os produtos,
+muitos sem estoque nenhum; listá-los aqui, com zeros, enchia a tela de "registros"
+que ninguém lançou e fazia "Excluir tudo" parecer não ter feito nada. Um produto
+só do cadastro entra no Estoque quando alguém lança o estoque dele (importação ou
+"Adicionar produto").
+
 ## O que veio do AppSheet e não se repete aqui
 
 O app anterior tinha tabelas que existiam para contornar limitações da

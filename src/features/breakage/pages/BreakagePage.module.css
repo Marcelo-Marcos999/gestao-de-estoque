@@ -106,15 +106,6 @@
    botões ocupavam três linhas antes do primeiro registro. Aqui tudo vira uma
    linha só, e o rótulo do exportar sai (o nome acessível fica no aria-label). */
 @media (max-width: 599px) {
-  .labelExtra {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-
   /* 12px de cada lado em vez de 16: em 360px são 8px devolvidos ao conteúdo,
      e é o que decide se o motivo cabe ao lado da validade. */
   .page {

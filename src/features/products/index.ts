@@ -4,6 +4,7 @@ export type { Product, ProductDraft } from './types'
 export {
   getAllProducts,
   getProduct,
+  invalidateStore,
   listProducts,
   updateProductStock,
   type StockValues,

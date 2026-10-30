@@ -27,6 +27,12 @@ export interface Product {
    * administrador aqui no cadastro.
    */
   pendingCadastro: boolean
+  /**
+   * A loja tem uma posição de estoque deste produto (saldo, saídas, custo e
+   * venda foram lançados, ainda que zerados). Produto só do cadastro, que nunca
+   * entrou no estoque, tem `false`: a tela de Estoque lista só quem tem.
+   */
+  inStock: boolean
   createdAt: string
   updatedAt: string
 }

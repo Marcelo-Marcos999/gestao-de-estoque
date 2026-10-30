@@ -59,11 +59,24 @@ const itemQuebra = z.object({
   observacao: z.string().trim().max(2000).default(''),
 })
 
-const corpoCriar = z.object({
-  motivoId: z.string().uuid(),
-  origemId: z.string().uuid(),
-  itens: z.array(itemQuebra).min(1).max(1000),
-})
+const corpoCriar = z
+  .object({
+    /** Valem para os itens que não trazem o próprio (envio em massa: um só para todos). */
+    motivoId: z.string().uuid().optional(),
+    origemId: z.string().uuid().optional(),
+    // Importação de planilha: cada linha traz o seu motivo e a sua origem.
+    itens: z
+      .array(
+        itemQuebra.extend({
+          motivoId: z.string().uuid().optional(),
+          origemId: z.string().uuid().optional(),
+        }),
+      )
+      .min(1)
+      .max(1000),
+  })
+  // Motivo e origem são obrigatórios: o item traz o seu ou herda o do pedido.
+  .refine((c) => c.itens.every((i) => (i.motivoId ?? c.motivoId) && (i.origemId ?? c.origemId)))
 
 /**
  * Cria um ou vários registros, todos com o mesmo motivo e a mesma origem.
@@ -82,7 +95,7 @@ rotasQuebras.post('/', assincrono(async (req, res) => {
     res.status(400).json({ erro: 'Dados do registro inválidos. Confira motivo, origem e quantidade.' })
     return
   }
-  const { motivoId, origemId, itens } = corpo.data
+  const { itens } = corpo.data
 
   try {
     const ids = await comContextoDoUsuario(req.sessao!, async (client) => {
@@ -92,15 +105,16 @@ rotasQuebras.post('/', assincrono(async (req, res) => {
          select $1, p.id, nullif(i.sku, ''), nullif(i.descricao, ''), nullif(i.codigo_barras, ''),
                 i.pendente, i.data_validade, i.quantidade, m.id, o.id, nullif(i.observacao, ''), $1
          from unnest($4::uuid[], $5::text[], $6::text[], $7::text[], $8::boolean[],
-                     $9::date[], $10::int[], $11::text[])
-              as i(produto_id, sku, descricao, codigo_barras, pendente, data_validade, quantidade, observacao)
-         join motivos m on m.id = $2
-         join origens o on o.id = $3
+                     $9::date[], $10::int[], $11::text[], $12::uuid[], $13::uuid[])
+              as i(produto_id, sku, descricao, codigo_barras, pendente, data_validade, quantidade,
+                   observacao, motivo_id, origem_id)
+         join motivos m on m.id = coalesce(i.motivo_id, $2::uuid)
+         join origens o on o.id = coalesce(i.origem_id, $3::uuid)
          left join produtos p on p.id = i.produto_id
          where i.produto_id is null or p.id is not null
          returning id`,
         [
-          req.loginId, motivoId, origemId,
+          req.loginId, corpo.data.motivoId ?? null, corpo.data.origemId ?? null,
           itens.map((i) => i.produtoId),
           itens.map((i) => i.sku),
           itens.map((i) => i.descricao),
@@ -109,6 +123,8 @@ rotasQuebras.post('/', assincrono(async (req, res) => {
           itens.map((i) => i.dataValidade),
           itens.map((i) => i.quantidade),
           itens.map((i) => i.observacao),
+          itens.map((i) => i.motivoId ?? null),
+          itens.map((i) => i.origemId ?? null),
         ],
       )
       if (rows.length !== itens.length) throw new EntradaInvalida()

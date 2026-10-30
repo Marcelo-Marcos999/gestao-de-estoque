@@ -106,7 +106,8 @@ de dentro de outra — só do `index.ts` dela ou de `shared/`.
 src/
   app/        rotas, guarda de sessão, layout geral
   features/   auth/, products/ ...
-  shared/     ui/ (design system), lib/ (helpers puros)
+  shared/     ui/ (design system), lib/ (helpers puros),
+              import/ (assistente de importação por planilha, genérico)
   styles/     tokens.css, global.css
 backend/      API (Express + Postgres) — projeto Node separado, com seu
               próprio package.json; não entra no lint/typecheck do front-end
