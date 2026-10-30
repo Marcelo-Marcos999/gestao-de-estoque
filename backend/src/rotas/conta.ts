@@ -126,6 +126,52 @@ rotasConta.get('/', assincrono(async (req, res) => {
   })
 }))
 
+/**
+ * Preferências de quem está logado — hoje só o período do relatório de saídas.
+ *
+ * É do LOGIN (não da empresa): cada pessoa edita o seu, e quem exporta o
+ * relatório é quem sabe o intervalo que ele cobre. `null` = nunca definido, e a
+ * tela usa o padrão. A linha é sempre a do `req.loginId`; a RLS garante o resto.
+ */
+rotasConta.get('/preferencias', assincrono(async (req, res) => {
+  const linha = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rows } = await client.query('select periodo_saidas_dias from lojas where id = $1', [req.loginId])
+    return rows[0]
+  })
+
+  if (!linha) {
+    res.status(404).json({ erro: 'Login não encontrado.' })
+    return
+  }
+  res.json({ periodoSaidasDias: linha.periodo_saidas_dias as number | null })
+}))
+
+// Teto de 10 anos: acima disso é erro de digitação, e a divisão da previsão
+// devolveria prazos sem sentido.
+const corpoPreferencias = z.object({ periodoSaidasDias: z.number().int().min(1).max(3650) })
+
+rotasConta.patch('/preferencias', assincrono(async (req, res) => {
+  const corpo = corpoPreferencias.safeParse(req.body)
+  if (!corpo.success) {
+    res.status(400).json({ erro: 'O período precisa ser um número de dias entre 1 e 3650.' })
+    return
+  }
+
+  const alteradas = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rowCount } = await client.query('update lojas set periodo_saidas_dias = $1 where id = $2', [
+      corpo.data.periodoSaidasDias,
+      req.loginId,
+    ])
+    return rowCount ?? 0
+  })
+
+  if (alteradas === 0) {
+    res.status(404).json({ erro: 'Login não encontrado.' })
+    return
+  }
+  res.json({ periodoSaidasDias: corpo.data.periodoSaidasDias })
+}))
+
 const corpoAtualizarConta = z.object({ nome: z.string().trim().min(2).max(120) })
 
 rotasConta.patch('/', exigirAdmin, assincrono(async (req, res) => {
