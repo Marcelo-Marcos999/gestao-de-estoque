@@ -5,7 +5,8 @@ import styles from './PeriodField.module.css'
 
 interface PeriodFieldProps {
   days: number
-  onChange: (days: number) => void
+  /** Resolve `true` quando o período foi guardado no servidor. */
+  onChange: (days: number) => Promise<boolean>
 }
 
 /**
@@ -25,6 +26,9 @@ export function PeriodField({ days, onChange }: PeriodFieldProps) {
   // Texto, e não número: um campo numérico controlado não deixa apagar o
   // conteúdo para digitar outro valor — o valor antigo volta a cada tecla.
   const [draft, setDraft] = useState(String(days))
+  // O número novo já vale na tela, mas não foi guardado: sem este aviso ele
+  // voltaria ao valor antigo na próxima abertura sem ninguém saber por quê.
+  const [notSaved, setNotSaved] = useState(false)
 
   function abrir() {
     setDraft(String(days))
@@ -35,17 +39,27 @@ export function PeriodField({ days, onChange }: PeriodFieldProps) {
     const valor = Number(draft)
     // Valor impossível não vira erro na cara do usuário: mantém o que havia,
     // que é o comportamento que ele já esperava do campo.
-    if (Number.isFinite(valor) && valor >= 1) onChange(valor)
+    if (Number.isFinite(valor) && valor >= 1) {
+      setNotSaved(false)
+      void onChange(valor).then((saved) => setNotSaved(!saved))
+    }
     setEditing(false)
   }
 
   if (!editing) {
     return (
-      <button type="button" className={styles.display} onClick={abrir}>
-        Período das saídas:
-        <span className={styles.value}>{days} dias</span>
-        <EditIcon className={styles.icon} width={14} height={14} />
-      </button>
+      <>
+        <button type="button" className={styles.display} onClick={abrir}>
+          Período das saídas:
+          <span className={styles.value}>{days} dias</span>
+          <EditIcon className={styles.icon} width={14} height={14} />
+        </button>
+        {notSaved && (
+          <span className={styles.notSaved} role="alert">
+            Não foi possível guardar o período; ele pode voltar ao valor anterior. Tente de novo.
+          </span>
+        )}
+      </>
     )
   }
 

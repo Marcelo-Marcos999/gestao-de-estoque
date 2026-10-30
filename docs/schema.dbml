@@ -44,6 +44,7 @@ Table lojas {
   ativo boolean [not null]
   email_confirmado_em timestamptz
   senha_alterada_em timestamptz [not null]
+  periodo_saidas_dias integer [note: 'período do relatório de saídas deste login, em dias (1 a 3650); nulo = padrão']
   criado_em timestamptz [not null]
   atualizado_em timestamptz
 

@@ -69,3 +69,9 @@
   border-color: var(--brand);
   box-shadow: 0 0 0 3px var(--brand-ring);
 }
+
+/* Mesma cor de erro do Alert; o texto diz o problema, a cor só reforça. */
+.notSaved {
+  font-size: var(--fs-xs);
+  color: var(--expired-text);
+}

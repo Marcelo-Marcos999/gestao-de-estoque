@@ -21,7 +21,8 @@ interface ExpiryToolbarProps {
   actions: ReactNode
   periodDays: number
   onSearch: (value: string) => void
-  onPeriodChange: (days: number) => void
+  /** Devolve se o servidor guardou o período; `false` faz o campo avisar. */
+  onPeriodChange: (days: number) => Promise<boolean>
   onExpiryRangeChange: (range: DateRange) => void
   onNumberRangeChange: (key: ExpiryRangeKey, range: NumberRange) => void
   onClearRanges: () => void

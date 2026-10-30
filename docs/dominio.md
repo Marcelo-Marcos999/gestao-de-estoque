@@ -224,7 +224,10 @@ dias para zerar        = estoque ÷ média de saída por dia
 ```
 
 O **período** é configurado pelo usuário — é a janela de dias que o relatório
-de saídas cobre. Sem saídas no período não há divisão possível, e o produto
+de saídas cobre. **Cada login edita o seu** e ele fica gravado no banco, no
+próprio login (padrão 390 dias, até 3650), então vale em qualquer aparelho e não
+interfere no de outra pessoa. Quem exporta o relatório é quem sabe o intervalo;
+por isso não é uma configuração única da empresa. Sem saídas no período não há divisão possível, e o produto
 fica **sem estimativa** em vez de receber um número inventado.
 
 Conferido contra os números do app anterior: `estoque × período ÷ saídas`
@@ -452,7 +455,8 @@ corrigido era falha, não desenho — e foi resolvido:
 - O **período do relatório de saídas** é editado na própria tela de Validades,
   onde o número aparece e onde está à vista a previsão que ele sustenta. Ele
   desloca todas as situações de uma vez, então a edição é explícita: um toque
-  para abrir, confirmar para gravar.
+  para abrir, confirmar para gravar. Se o servidor não guardar, a tela avisa em
+  vez de deixar o valor antigo voltar sem explicação.
 - As listas de **motivo e origem** são renomeadas e excluídas pelo "Editar
   lista", dentro do registro de quebra. Renomear conserta os registros que já
   usam a etiqueta, porque eles apontam para o `id` e não para o texto —

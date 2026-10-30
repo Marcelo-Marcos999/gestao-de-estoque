@@ -82,6 +82,7 @@ Uma loja **e** o seu login.
 | `ativo`* | boolean | Desativar bloqueia o login sem apagar o histórico |
 | `email_confirmado_em` | timestamptz | Nulo = e-mail ainda não confirmado, e o login é recusado. Conta nova nasce nula; quem existia antes do cadastro público foi preenchido na migration |
 | `senha_alterada_em`* | timestamptz | Quando a senha mudou pela última vez. Refresh token emitido antes disso deixa de valer: trocar a senha encerra as outras sessões |
+| `periodo_saidas_dias` | integer | Período do relatório de saídas **deste login**, em dias (1 a 3650; `check`). Nulo = nunca definido, e a tela usa 390. Sustenta a previsão de validades (ver `docs/dominio.md`); cada login edita o seu |
 | `criado_em`*, `atualizado_em` | timestamptz | `atualizado_em` mantido por gatilho |
 
 ### `configuracoes_conta`
@@ -260,7 +261,7 @@ um erro numa rota não consegue vazar dados de outra conta.
 | Tabela | Ler | Escrever |
 |---|---|---|
 | `contas` | a própria | admin edita a própria |
-| `lojas` | todas da própria conta | admin cria/exclui; cada loja edita a si; admin edita qualquer uma da conta. **Só as colunas `nome`, `ativo`, `senha_hash` e `senha_alterada_em`** (privilégio por coluna, migration 0004) |
+| `lojas` | todas da própria conta | admin cria/exclui; cada loja edita a si; admin edita qualquer uma da conta. **Só as colunas `nome`, `ativo`, `senha_hash`, `senha_alterada_em` e `periodo_saidas_dias`** (privilégio por coluna, migrations 0004 e 0005) |
 | `configuracoes_conta` | a da própria conta | admin |
 | `produtos` | da própria conta | **admin** cria, edita e exclui. **Operador** só cria produto **pendente** (`pendente_cadastro = true`) e **com a própria loja como origem** |
 | `motivos`, `origens` | da própria conta | qualquer login da conta |
@@ -280,7 +281,7 @@ para o administrador (o operador recebe 403). Não houve mudança de schema.
 colunas: sem mais nada, um operador que conseguisse rodar um `UPDATE` na própria
 linha (por uma injeção de SQL numa rota, por exemplo) poderia trocar o próprio
 `role` para `admin`. Por isso `app_runtime` só tem `UPDATE` em `nome`, `ativo`,
-`senha_hash` e `senha_alterada_em`; `role`, `email` e `conta_id` não mudam depois
+`senha_hash`, `senha_alterada_em` e `periodo_saidas_dias`; `role`, `email` e `conta_id` não mudam depois
 de criados. Criar um login continua sendo um `INSERT`, que a política só deixa o
 admin fazer.
 
@@ -368,6 +369,7 @@ Rodar, na ordem, como a role dona:
 3. `backend/migrations/1700000000002_produtos_pendente_pelo_operador.sql`: política do operador pra produto pendente
 4. `backend/migrations/1700000000003_cadastro_e_recuperacao_de_senha.sql`: `tokens_email`, colunas novas em `lojas`, role `app_definer` e as quatro funções
 5. `backend/migrations/1700000000004_lojas_so_altera_colunas_seguras.sql`: `app_runtime` só atualiza `nome`, `ativo`, `senha_hash` e `senha_alterada_em` em `lojas`
+6. `backend/migrations/1700000000005_periodo_saidas_por_login.sql`: coluna `lojas.periodo_saidas_dias` (nula = padrão) e o `UPDATE` nela para `app_runtime`
 
 Depois, definir a senha das roles `app_runtime` e `app_auth` (nunca em arquivo
 versionado) e criar a primeira conta e a primeira loja `admin`.
