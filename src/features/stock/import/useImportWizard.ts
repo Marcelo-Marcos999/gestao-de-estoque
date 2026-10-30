@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { cellToText } from '@/shared/lib/cell'
 import { readSpreadsheet, SpreadsheetError, type SheetData } from '@/shared/lib/spreadsheet'
 import { bulkUpsertStock, getAllProducts } from '@/features/products'
-import { STOCK_FIELDS, detectMapping, type ColumnMapping, type StockField } from './columns'
+import { checkStockMapping, detectMapping, type ColumnMapping, type StockField } from './columns'
 import { buildImportPlan, rowsToImport, type ImportPlan } from './plan'
 
 export type Step = 'arquivo' | 'mapeamento' | 'revisao' | 'aplicando' | 'resumo'
@@ -78,10 +78,8 @@ export function useImportWizard(onImported: () => void) {
     setMapping((current) => (current ? { ...current, [field]: column } : current))
   }, [])
 
-  const missingRequired = useMemo(() => {
-    if (!mapping) return []
-    return STOCK_FIELDS.filter((f) => f.required && mapping[f.field] === -1).map((f) => f.label)
-  }, [mapping])
+  /** Por que ainda não dá para conferir a planilha (ou `null`): falta um jeito de achar o produto. */
+  const mappingProblem = useMemo(() => (mapping ? checkStockMapping(mapping) : null), [mapping])
 
   const buildPlan = useCallback(async () => {
     if (!sheet || !mapping) return
@@ -145,7 +143,7 @@ export function useImportWizard(onImported: () => void) {
     busy,
     progress,
     applied,
-    missingRequired,
+    mappingProblem,
     reset,
     selectFile,
     setFieldColumn,

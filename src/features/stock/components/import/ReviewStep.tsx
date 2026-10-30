@@ -15,7 +15,7 @@ const TILES: Array<{ status: RowStatus; caption: string }> = [
   { status: 'atualiza', caption: 'produtos já cadastrados, números atualizados' },
   { status: 'pendente', caption: 'SKU não cadastrado, entra como pendente' },
   { status: 'duplicado', caption: 'repetidos na planilha' },
-  { status: 'invalido', caption: 'sem código SKU' },
+  { status: 'invalido', caption: 'não identificam um produto' },
 ]
 
 /**
@@ -75,8 +75,8 @@ function PlanPreview({ plan }: { plan: ImportPlan }) {
         {rows.map((r) => (
           <div className={styles.row} key={r.lineNumber}>
             <span className={styles.line}>L{r.lineNumber}</span>
-            <span className={styles.sku} title={r.row.sku}>
-              {r.row.sku || <em>sem SKU</em>}
+            <span className={styles.sku} title={r.label}>
+              {r.label || <em>sem SKU nem código de barras</em>}
             </span>
             <Badge tone={r.status}>{r.reason ?? STATUS_LABEL[r.status]}</Badge>
           </div>
