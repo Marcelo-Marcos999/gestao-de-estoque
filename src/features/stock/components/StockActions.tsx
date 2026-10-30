@@ -7,7 +7,7 @@ import styles from './StockActions.module.css'
 
 interface StockActionsProps {
   rows: StockRow[]
-  /** Só o administrador vê "Excluir tudo": é a ação mais destrutiva da tela, e o servidor também recusa os outros. */
+  /** Falso só quando o administrador está em "Todas as lojas": "Excluir tudo" age sobre uma loja, nunca sobre a conta inteira. */
   canClear: boolean
   onImport: () => void
   onNew: () => void

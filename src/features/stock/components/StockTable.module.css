@@ -17,7 +17,7 @@
   padding: 0 var(--sp-4);
 }
 
-/* Com a coluna de marcação (só o administrador, que pode excluir). */
+/* Com a coluna de marcação (quem pode excluir estoque: operador e administrador). */
 .selectable {
   grid-template-columns: 24px 1fr 72px 72px 92px 92px 108px 108px 44px;
 }

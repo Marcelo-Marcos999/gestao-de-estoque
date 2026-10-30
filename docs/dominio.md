@@ -732,7 +732,7 @@ telas de **Estoque, Validades e Quebra** passam a mostrar isso:
 
 ## Excluir estoque
 
-O administrador exclui estoque de duas formas, na tela de Estoque:
+Operador e administrador excluem estoque de duas formas, na tela de Estoque:
 
 - **Alguns produtos:** marca as linhas (caixa à esquerda; "Selecionar todos" marca
   o que está na tela, com os filtros aplicados) e usa "Excluir" na barra de
@@ -748,8 +748,12 @@ vai sair antes de confirmar.
 - Saem saldo, saídas, custo e venda, e os **lotes de validade** junto (um lote só
   existe como filho de uma posição de estoque).
 - **Ficam** os produtos no Cadastro e os registros de quebra.
-- Só o administrador vê a coluna de marcação e os botões, e o servidor recusa os
-  outros: para o operador a tela não tem caixas que não fariam nada.
+- **Operador e administrador** veem a coluna de marcação e os botões, cada um
+  sobre **a sua loja**: o estoque é dado operacional da loja (o operador já o
+  corrige à mão e o importa), e quem o lançou errado precisa poder refazer sem
+  esperar o administrador. O operador não alcança outra loja — o servidor
+  responde 403 e a RLS barra de qualquer forma. O administrador, com várias
+  lojas, escolhe uma no filtro (ver "O administrador vê as lojas todas").
 
 **A tela de Estoque lista só quem tem estoque.** O cadastro tem todos os produtos,
 muitos sem estoque nenhum; listá-los aqui, com zeros, enchia a tela de "registros"
