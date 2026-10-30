@@ -54,7 +54,7 @@ Dois perfis, definidos em `features/auth/types.ts`:
 
 | Perfil | Pode |
 |---|---|
-| `admin` | tudo: alimentar o cadastro de produtos (importar planilha, criar, editar, excluir) e registrar quebras |
+| `admin` | tudo: alimentar o cadastro de produtos (importar planilha, criar, editar, excluir), registrar quebras e administrar os logins da empresa (criar, desativar, gerar nova senha) |
 | `operador` | registrar quebras e **consultar** produtos de dentro do registro — não altera a base |
 
 O cadastro de produtos é a base que todo registro de quebra consulta, então
@@ -151,7 +151,12 @@ Nem toda feature já fala com ele. `auth`, `products`, `expiry` (lotes),
 `breakage` (registros, motivos e origens) e a leitura de números em `stock` já
 chamam o back-end de verdade. Falta guardar os **arquivos** dos anexos de
 quebra, que dependem de um armazenamento de arquivos que ainda não existe: o
-registro persiste, a foto não. Em qualquer um dos dois
+registro persiste, a foto não.
+
+Criar conta, confirmar e-mail e "esqueci a senha" dependem de um provedor de
+e-mail (`EMAIL_PROVEDOR` em `backend/.env.example`) que ainda não está ligado em
+produção, e a tela de login esconde essas opções enquanto ele não existe. Até lá,
+o administrador cria os logins e as senhas provisórias em Configurações. Em qualquer um dos dois
 casos, cada feature isola o acesso a dados no próprio `api.ts` — migrar uma
 feature pro back-end real é mexer só nesse arquivo, nunca na tela.
 

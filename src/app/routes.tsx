@@ -9,6 +9,7 @@ import {
 import { BreakagePage } from '@/features/breakage'
 import { ExpiryPage } from '@/features/expiry'
 import { ProductsPage } from '@/features/products'
+import { SettingsPage } from '@/features/settings'
 import { StockPage } from '@/features/stock'
 import { AppShell } from './AppShell'
 import { RequireAuth } from './RequireAuth'
@@ -44,6 +45,7 @@ export function AppRoutes() {
           <Route path="/quebra" element={<BreakagePage />} />
           <Route path="/estoque" element={<StockPage />} />
           <Route path="/produtos" element={<ProductsPage />} />
+          <Route path="/configuracoes" element={<SettingsPage />} />
         </Route>
       </Route>
 

@@ -78,7 +78,7 @@ Uma loja **e** o seu login.
 | `nome`* | text | |
 | `email`* | text | **U no sistema inteiro**, não por conta: no login só se digita e-mail e senha, sem dizer de qual empresa é |
 | `senha_hash`* | text | bcrypt, custo 12. A senha nunca é guardada |
-| `role`* | `loja_role` | `admin` (enxerga e gerencia a conta inteira) ou `operador` (o padrão: só a própria loja) |
+| `role`* | `loja_role` | `admin` (enxerga e gerencia a conta inteira) ou `operador` (o padrão: só a própria loja). **Fixo depois de criado** (ver "Segurança"): trocar o papel de alguém é desativar o login e criar outro |
 | `ativo`* | boolean | Desativar bloqueia o login sem apagar o histórico |
 | `email_confirmado_em` | timestamptz | Nulo = e-mail ainda não confirmado, e o login é recusado. Conta nova nasce nula; quem existia antes do cadastro público foi preenchido na migration |
 | `senha_alterada_em`* | timestamptz | Quando a senha mudou pela última vez. Refresh token emitido antes disso deixa de valer: trocar a senha encerra as outras sessões |
@@ -260,7 +260,7 @@ um erro numa rota não consegue vazar dados de outra conta.
 | Tabela | Ler | Escrever |
 |---|---|---|
 | `contas` | a própria | admin edita a própria |
-| `lojas` | todas da própria conta | admin cria/exclui; cada loja edita a si; admin edita qualquer uma da conta |
+| `lojas` | todas da própria conta | admin cria/exclui; cada loja edita a si; admin edita qualquer uma da conta. **Só as colunas `nome`, `ativo`, `senha_hash` e `senha_alterada_em`** (privilégio por coluna, migration 0004) |
 | `configuracoes_conta` | a da própria conta | admin |
 | `produtos` | da própria conta | **admin** cria, edita e exclui. **Operador** só cria produto **pendente** (`pendente_cadastro = true`) e **com a própria loja como origem** |
 | `motivos`, `origens` | da própria conta | qualquer login da conta |
@@ -268,6 +268,14 @@ um erro numa rota não consegue vazar dados de outra conta.
 | `changelog` | todos (a troca por `texto_generico` é feita pelo back-end) | só a plataforma |
 | `administradores_plataforma` | só `app_auth` (login) | ninguém pelo app |
 | `tokens_email` | ninguém pelo app | só as funções de cadastro |
+
+**Privilégio por coluna em `lojas`.** A política de RLS enxerga linhas, não
+colunas: sem mais nada, um operador que conseguisse rodar um `UPDATE` na própria
+linha (por uma injeção de SQL numa rota, por exemplo) poderia trocar o próprio
+`role` para `admin`. Por isso `app_runtime` só tem `UPDATE` em `nome`, `ativo`,
+`senha_hash` e `senha_alterada_em`; `role`, `email` e `conta_id` não mudam depois
+de criados. Criar um login continua sendo um `INSERT`, que a política só deixa o
+admin fazer.
 
 O e-mail de login é único no sistema todo e o login busca por e-mail **antes**
 de saber a conta, por isso essa consulta usa a role `app_auth` à parte. Ela é
@@ -312,11 +320,15 @@ expõe todas as tabelas:
 
 | Já tem rotas | Ainda só no banco |
 |---|---|
-| `contas`/`lojas` (login, criar conta, confirmar e-mail, recuperar e trocar senha), `produtos`, `estoque`, `validades`, `quebras`, `motivos`, `origens` | `anexos`, `configuracoes_conta`, `changelog`, `administradores_plataforma` |
+| `contas`/`lojas` (login, criar conta, confirmar e-mail, recuperar e trocar senha), `produtos`, `estoque`, `validades`, `quebras`, `motivos`, `origens` | `anexos`, `changelog`, `administradores_plataforma` |
 
 Validades (`/validades`), Quebra (`/quebras`) e as listas de motivo e origem
 (`/motivos`, `/origens`) já gravam no banco. Não há base de exemplo: as listas
 começam vazias e só mostram o que a loja lançou.
+
+`/conta` (empresa e plano, troca de senha) e `/lojas` (logins da conta, só admin)
+leem e escrevem `contas`, `configuracoes_conta` e `lojas`. Plano e limites
+(`configuracoes_conta`) **só se lê** pela API: são da plataforma, não do cliente.
 
 Três escolhas de desenho que vale conhecer:
 
@@ -342,6 +354,7 @@ Rodar, na ordem, como a role dona:
 2. `backend/migrations/1700000000001_rls.sql`: roles, funções e políticas de RLS
 3. `backend/migrations/1700000000002_produtos_pendente_pelo_operador.sql`: política do operador pra produto pendente
 4. `backend/migrations/1700000000003_cadastro_e_recuperacao_de_senha.sql`: `tokens_email`, colunas novas em `lojas`, role `app_definer` e as quatro funções
+5. `backend/migrations/1700000000004_lojas_so_altera_colunas_seguras.sql`: `app_runtime` só atualiza `nome`, `ativo`, `senha_hash` e `senha_alterada_em` em `lojas`
 
 Depois, definir a senha das roles `app_runtime` e `app_auth` (nunca em arquivo
 versionado) e criar a primeira conta e a primeira loja `admin`.

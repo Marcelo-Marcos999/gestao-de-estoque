@@ -8,6 +8,7 @@ import { validateEmail, validateOnBlur, validateRequiredPassword } from '@/share
 import { AuthLayout } from '../components/AuthLayout'
 import { resendConfirmation } from '../api'
 import { useAuth } from '../AuthContext'
+import { useEmailAvailable } from '../hooks/useEmailAvailable'
 import styles from '../components/authForm.module.css'
 
 interface FieldErrors {
@@ -24,6 +25,7 @@ interface FieldErrors {
  */
 export function LoginPage() {
   const { user, signIn } = useAuth()
+  const emailAvailable = useEmailAvailable()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -152,9 +154,11 @@ export function LoginPage() {
             Manter conectado
           </label>
 
-          <Link className={styles.link} to="/esqueci-a-senha">
-            Esqueci minha senha
-          </Link>
+          {emailAvailable !== false && (
+            <Link className={styles.link} to="/esqueci-a-senha">
+              Esqueci minha senha
+            </Link>
+          )}
         </div>
 
         <Button type="submit" loading={submitting} fullWidth>
@@ -163,9 +167,17 @@ export function LoginPage() {
       </form>
 
       <div className={styles.center}>
-        <Link className={styles.link} to="/criar-conta">
-          Não tem conta? Criar conta
-        </Link>
+        {emailAvailable === false ? (
+          // Sem e-mail não há link para entregar: quem cuida de senha e de
+          // acesso é o administrador da empresa, pelo painel de logins.
+          <p className={styles.hint}>
+            Esqueceu a senha ou precisa de um acesso? Peça ao administrador da sua empresa.
+          </p>
+        ) : (
+          <Link className={styles.link} to="/criar-conta">
+            Não tem conta? Criar conta
+          </Link>
+        )}
       </div>
     </AuthLayout>
   )

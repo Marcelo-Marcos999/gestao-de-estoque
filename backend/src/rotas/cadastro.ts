@@ -31,6 +31,16 @@ import { assincrono } from '../lib/assincrono.js'
  */
 export const rotasCadastro = Router()
 
+/**
+ * O que o servidor consegue fazer hoje, para a tela esconder o que não
+ * funciona em vez de oferecer um botão que só descobre o erro depois do
+ * preenchimento: sem provedor de e-mail, "Criar conta" e "Esqueci a senha"
+ * não têm como entregar o link.
+ */
+rotasCadastro.get('/recursos', (_req, res) => {
+  res.json({ emailAtivo: envioDeEmailAtivo() })
+})
+
 const limitePorIp = (limite: number, janelaMinutos: number) =>
   rateLimit({
     windowMs: janelaMinutos * 60 * 1000,

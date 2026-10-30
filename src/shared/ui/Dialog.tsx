@@ -11,6 +11,12 @@ interface DialogProps {
   /** Ações do rodapé. Sem elas o rodapé não é desenhado. */
   footer?: ReactNode
   wide?: boolean
+  /**
+   * `false` ignora Esc e o clique no fundo; só o botão de fechar e o rodapé
+   * fecham. Para o que não pode se perder sem querer, como uma senha mostrada
+   * uma única vez.
+   */
+  dismissible?: boolean
   children: ReactNode
 }
 
@@ -18,7 +24,16 @@ interface DialogProps {
  * Usa o <dialog> nativo: foco preso dentro, Esc para fechar e inertização do
  * resto da página vêm do navegador, sem reimplementar acessibilidade à mão.
  */
-export function Dialog({ open, onClose, title, subtitle, footer, wide, children }: DialogProps) {
+export function Dialog({
+  open,
+  onClose,
+  title,
+  subtitle,
+  footer,
+  wide,
+  dismissible = true,
+  children,
+}: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
   // Todos os diálogos da tela existem no DOM ao mesmo tempo, apenas fechados.
   // Um id fixo se repetiria e deixaria o aria-labelledby ambíguo.
@@ -40,12 +55,12 @@ export function Dialog({ open, onClose, title, subtitle, footer, wide, children 
 
     const onCancel = (event: Event) => {
       event.preventDefault()
-      onClose()
+      if (dismissible) onClose()
     }
 
     dialog.addEventListener('cancel', onCancel)
     return () => dialog.removeEventListener('cancel', onCancel)
-  }, [onClose])
+  }, [onClose, dismissible])
 
   return (
     <dialog
@@ -54,7 +69,7 @@ export function Dialog({ open, onClose, title, subtitle, footer, wide, children 
       aria-labelledby={titleId}
       onClick={(event) => {
         // Clique no backdrop: o alvo é o próprio <dialog>, não seu conteúdo.
-        if (event.target === ref.current) onClose()
+        if (dismissible && event.target === ref.current) onClose()
       }}
     >
       <div className={styles.inner}>

@@ -42,7 +42,7 @@ const NAV = [
     to: '/configuracoes',
     label: 'Configurações',
     icon: SettingsIcon,
-    ready: false,
+    ready: true,
     adminOnly: false,
   },
 ]

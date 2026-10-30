@@ -54,6 +54,17 @@ export function updateAccessToken(accessToken: string): void {
   writeJson(KEY, { ...atual, accessToken }, kindAtual())
 }
 
+/**
+ * Troca os dois tokens, depois de uma troca de senha: a troca encerra as
+ * outras sessões (o refresh antigo deixa de valer), e a própria pessoa não pode
+ * ser a primeira a cair.
+ */
+export function updateTokens(accessToken: string, refreshToken: string): void {
+  const atual = readSession()
+  if (!atual) return
+  writeJson(KEY, { ...atual, accessToken, refreshToken }, kindAtual())
+}
+
 /** Logout explícito, decidido pelo usuário. */
 export function clearSession(): void {
   removeKey(KEY, 'local')

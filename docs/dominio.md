@@ -606,6 +606,43 @@ Estoque, os dois totais calculados (ver "De onde vêm saldo e saídas") entram
 na faixa numérica como qualquer outra coluna — filtrar por eles não precisa
 saber que são conta, não campo gravado.
 
+## Configurações e logins
+
+A tela de Configurações tem quatro abas; as duas últimas são só do administrador
+(a aba nem aparece para o operador, e o servidor recusa do mesmo jeito):
+
+| Aba | Quem | O que faz |
+|---|---|---|
+| Minha conta | todos | troca a própria senha (pede a atual) |
+| Aparência | todos | tema e cor de destaque, gravados no aparelho |
+| Lojas e logins | admin | cria login, desativa/reativa, gera nova senha |
+| Empresa | admin | renomeia a empresa; vê plano e limites (só leitura) |
+
+**Por que o administrador cuida das senhas.** Enquanto o sistema não envia
+e-mail, ninguém recupera a própria senha nem cria conta sozinho. O admin cria o
+login e recebe uma **senha provisória** de 12 caracteres, mostrada **uma única
+vez** (o banco guarda só o hash; o diálogo não fecha com Esc nem clicando fora,
+para não se perder sem querer). O mesmo vale para "Nova senha". A pessoa troca em
+*Minha conta* no primeiro acesso. A tela de login esconde "Criar conta" e "Esqueci
+minha senha" quando o servidor não tem e-mail configurado, e manda falar com o
+administrador.
+
+Regras que evitam travar a conta:
+
+- o admin **não desativa o próprio login** (a conta ficaria sem ninguém que a
+  administre) e **não redefine a própria senha por ali** (para isso existe a troca
+  com a senha atual);
+- desativar derruba as sessões do login (o refresh deixa de valer; o acesso já
+  emitido vale por até 15 minutos);
+- o **limite de logins do plano** conta só os ativos, vale também ao reativar, e é
+  conferido sob trava por conta: duas criações simultâneas não passam juntas do
+  limite;
+- o **perfil não muda depois de criado** (desativar e criar de novo): ver
+  `docs/modelo-de-dados.md`, "Segurança".
+
+O login criado pelo admin já nasce com o e-mail como confirmado: ele digitou o
+endereço e entregou a senha, e esperar um link que não chega travaria o acesso.
+
 ## O que veio do AppSheet e não se repete aqui
 
 O app anterior tinha tabelas que existiam para contornar limitações da

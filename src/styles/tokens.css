@@ -142,9 +142,14 @@
 /* ---- Acento -------------------------------------------------------------
  * Trocar a identidade do sistema é trocar o data-accent na raiz. Nenhum
  * componente sabe qual é a cor: todos leem --brand.
+ *
+ * `data-accent-preview` aplica as mesmas cores a UM elemento, para a tela de
+ * Configurações mostrar a amostra de cada acento sem escrever cor nenhuma no
+ * componente. A amostra usa os valores do tema escuro, que é o padrão.
  */
 :root,
-:root[data-accent='azul'] {
+:root[data-accent='azul'],
+[data-accent-preview='azul'] {
   --brand: #3b82f6;
   --brand-hover: #2f74e0;
   --brand-soft: rgb(59 130 246 / 0.14);
@@ -155,7 +160,8 @@
   --brand-text: #a7c8fb;
 }
 
-:root[data-accent='verde'] {
+:root[data-accent='verde'],
+[data-accent-preview='verde'] {
   --brand: #12a150;
   --brand-hover: #0e8843;
   --brand-soft: rgb(18 161 80 / 0.14);
@@ -164,7 +170,8 @@
   --brand-text: #7fdba8;
 }
 
-:root[data-accent='roxo'] {
+:root[data-accent='roxo'],
+[data-accent-preview='roxo'] {
   --brand: #7c5cf0;
   --brand-hover: #6a49dd;
   --brand-soft: rgb(124 92 240 / 0.14);
@@ -173,7 +180,8 @@
   --brand-text: #c3b1fb;
 }
 
-:root[data-accent='laranja'] {
+:root[data-accent='laranja'],
+[data-accent-preview='laranja'] {
   --brand: #e2620f;
   --brand-hover: #c8540b;
   --brand-soft: rgb(226 98 15 / 0.14);
@@ -182,7 +190,8 @@
   --brand-text: #f5b184;
 }
 
-:root[data-accent='grafite'] {
+:root[data-accent='grafite'],
+[data-accent-preview='grafite'] {
   --brand: #4b5563;
   --brand-hover: #3b4351;
   --brand-soft: rgb(75 85 99 / 0.16);
