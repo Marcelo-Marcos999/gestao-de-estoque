@@ -1,0 +1,176 @@
+// Gestão de Estoque — modelo pra dbdiagram.io
+// Cole este arquivo em https://dbdiagram.io (New Diagram > Import > DBML)
+
+enum loja_role {
+  admin
+  operador
+}
+
+enum anexo_tipo {
+  "foto-produto"
+  "foto-etiqueta"
+  documento
+}
+
+Table contas {
+  id uuid [pk]
+  nome text [not null]
+  criado_em timestamptz [not null]
+}
+
+Table administradores_plataforma {
+  id uuid [pk]
+  nome text [not null]
+  email text [not null, unique]
+  senha_hash text [not null]
+  ativo boolean [not null]
+  criado_em timestamptz [not null]
+
+  Note: 'Time interno (compras/normalização). Sem relação com o resto — acesso é por regra, não por FK.'
+}
+
+Table lojas {
+  id uuid [pk]
+  conta_id uuid [not null]
+  nome text [not null]
+  email text [not null, unique]
+  senha_hash text [not null]
+  role loja_role [not null, default: 'operador']
+  ativo boolean [not null]
+  criado_em timestamptz [not null]
+  atualizado_em timestamptz
+
+  Note: 'O login é a loja. role=admin enxerga a conta inteira. email único no sistema inteiro (login não pergunta qual empresa).'
+}
+
+Table configuracoes_conta {
+  conta_id uuid [pk]
+  limite_usuarios integer
+  limite_armazenamento_mb integer
+  plano text [not null, default: 'padrao']
+  atualizado_em timestamptz
+}
+
+Table changelog {
+  id uuid [pk]
+  versao text [not null]
+  titulo text [not null]
+  descricao text
+  restrito_admin boolean [not null, default: false]
+  texto_generico text
+  publicado_em timestamptz [not null]
+
+  Note: 'Público, sem conta_id — mesmo changelog pra todo cliente. Entrada restrita mostra texto_generico pra quem não é admin (check garante que toda restrita tem o texto preenchido).'
+}
+
+Table produtos {
+  id uuid [pk]
+  conta_id uuid [not null]
+  sku text [not null]
+  descricao text [not null]
+  codigo_barras text
+  pendente_cadastro boolean [not null]
+  loja_origem_id uuid
+  criado_em timestamptz [not null]
+  atualizado_em timestamptz
+
+  indexes {
+    (conta_id, sku) [unique]
+  }
+
+  Note: 'Catálogo compartilhado por toda a conta, não por loja.'
+}
+
+Table estoque {
+  id uuid [pk]
+  loja_id uuid [not null]
+  produto_id uuid [not null]
+  saldo integer [not null]
+  saidas integer [not null]
+  valor_custo decimal(12,2) [not null]
+  valor_venda decimal(12,2) [not null]
+  atualizado_em timestamptz
+
+  indexes {
+    (loja_id, produto_id) [unique]
+  }
+}
+
+Table validades {
+  id uuid [pk]
+  estoque_id uuid [not null]
+  data_validade date
+  criado_em timestamptz [not null]
+}
+
+Table motivos {
+  id uuid [pk]
+  conta_id uuid [not null]
+  label text [not null]
+  embutido boolean [not null]
+  criado_em timestamptz [not null]
+
+  indexes {
+    (conta_id, label) [unique]
+  }
+}
+
+Table origens {
+  id uuid [pk]
+  conta_id uuid [not null]
+  label text [not null]
+  embutido boolean [not null]
+  criado_em timestamptz [not null]
+
+  indexes {
+    (conta_id, label) [unique]
+  }
+}
+
+Table quebras {
+  id uuid [pk]
+  loja_id uuid [not null]
+  produto_id uuid
+  sku text
+  descricao text
+  codigo_barras text
+  pendente_produto boolean [not null]
+  data_validade date
+  quantidade integer [not null]
+  motivo_id uuid [not null]
+  origem_id uuid [not null]
+  origem_lote_id uuid
+  observacao text
+  criado_por_id uuid [not null]
+  criado_em timestamptz [not null]
+
+  Note: 'produto_id nulo só enquanto pendente. motivo e origem são obrigatórios.'
+}
+
+Table anexos {
+  id uuid [pk]
+  quebra_id uuid [not null]
+  tipo anexo_tipo [not null]
+  nome_arquivo text [not null]
+  mime_type text [not null]
+  tamanho_bytes int8 [not null]
+  storage_path text [not null]
+  criado_em timestamptz [not null]
+}
+
+Ref: lojas.conta_id > contas.id [delete: cascade]
+Ref: configuracoes_conta.conta_id - contas.id [delete: cascade]
+Ref: produtos.conta_id > contas.id [delete: cascade]
+Ref: produtos.loja_origem_id > lojas.id [delete: set null]
+Ref: estoque.loja_id > lojas.id [delete: cascade]
+Ref: estoque.produto_id > produtos.id [delete: restrict]
+Ref: validades.estoque_id > estoque.id [delete: cascade]
+Ref: motivos.conta_id > contas.id [delete: cascade]
+Ref: origens.conta_id > contas.id [delete: cascade]
+Ref: quebras.loja_id > lojas.id [delete: restrict]
+Ref: quebras.produto_id > produtos.id [delete: set null]
+Ref: quebras.motivo_id > motivos.id [delete: restrict]
+Ref: quebras.origem_id > origens.id [delete: restrict]
+Ref: quebras.origem_lote_id > validades.id [delete: set null]
+Ref: quebras.criado_por_id > lojas.id [delete: restrict]
+Ref: anexos.quebra_id > quebras.id [delete: cascade]
