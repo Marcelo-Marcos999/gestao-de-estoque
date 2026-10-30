@@ -15,3 +15,7 @@ dist-ssr
 .design/*.html
 !.design/*.dc.html
 dist-demo/
+
+# Cache e estado local do Wrangler (deploy no Cloudflare) — gerado a cada
+# execução, nunca faz sentido versionar.
+.wrangler/
