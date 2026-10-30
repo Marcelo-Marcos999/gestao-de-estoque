@@ -504,6 +504,28 @@ quebra" e CLAUDE.md): perguntar "tem certeza?" a cada exclusão de rotina
 treina a pessoa a confirmar sem ler. O desfazer aparece embaixo por ~8
 segundos e resolve o engano de verdade.
 
+### Produto com estoque no Cadastro: a exceção que pergunta
+
+Excluir um produto do cadastro leva embora o estoque dele (em todas as lojas da
+conta) e os lotes de validade que dependem desse estoque. Por isso o servidor
+**não exclui sozinho** o produto que tem estoque lançado — e isso não pode ser
+silencioso: houve uma versão em que esses produtos simplesmente continuavam na
+lista, sem nenhuma explicação, e a exclusão parecia não funcionar.
+
+Agora, depois da exclusão, os produtos com estoque que ficaram para trás geram
+uma pergunta: "Excluir também o estoque?", dizendo quantos são e o que sai junto.
+**Manter** não toca em nada; **Excluir com o estoque** apaga produto, estoque e
+lotes — e essa parte **não tem desfazer**, porque o estoque que sai junto não
+volta. Os produtos sem estoque saem como antes, com desfazer. Os registros de
+quebra ficam, só sem o vínculo com o produto.
+
+Pelo formulário de edição do produto vale a mesma regra: o aviso de confirmação
+diz que o estoque vai junto quando ele existe.
+
+O que **nunca** pode acontecer é a falha calada: erro de rede, exclusão em
+andamento e exclusão concluída aparecem na tela. Seleções grandes (milhares de
+produtos) vão em lotes de 2000, com "Excluindo N produtos…" visível.
+
 **Não é igual em toda tela**, de propósito:
 
 - **Cadastro de produtos**: só o administrador vê a caixa de marcação e a
