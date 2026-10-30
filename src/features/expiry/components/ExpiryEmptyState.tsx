@@ -1,3 +1,4 @@
+import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
 import styles from './ExpiryEmptyState.module.css'
@@ -35,6 +36,20 @@ export function ExpiryEmptyState({ filtered, onClear, onNew }: ExpiryEmptyStateP
           Novo lote
         </Button>
       )}
+    </div>
+  )
+}
+
+/** A lista não carregou: diz o que houve e oferece tentar de novo. */
+export function ExpiryErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className={styles.state}>
+      <Alert tone="danger">
+        Não foi possível carregar as validades. Verifique a conexão e tente novamente.
+      </Alert>
+      <Button variant="secondary" onClick={onRetry}>
+        Tentar de novo
+      </Button>
     </div>
   )
 }
