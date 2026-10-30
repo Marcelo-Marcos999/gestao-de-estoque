@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { comContextoDoUsuario } from '../db/contexto.js'
-import { exigirAdmin, exigirAutenticacao } from '../auth/middleware.js'
+import { exigirAutenticacao } from '../auth/middleware.js'
 import { assincrono } from '../lib/assincrono.js'
 import { lojaDaConsulta, lojaDaEscrita } from '../lib/lojas.js'
 
@@ -282,7 +282,7 @@ rotasEstoque.post('/importar', assincrono(async (req, res) => {
  * dependem delas. A tela mostra isto antes de pedir a confirmação — "apagar
  * tudo" sem dizer o tamanho do estrago não é uma confirmação de verdade.
  */
-rotasEstoque.get('/contagem', exigirAdmin, assincrono(async (req, res) => {
+rotasEstoque.get('/contagem', assincrono(async (req, res) => {
   const loja = lojaDaEscrita(req, res)
   if (!loja) return
 
@@ -307,9 +307,11 @@ rotasEstoque.get('/contagem', exigirAdmin, assincrono(async (req, res) => {
  * de estoque (`on delete cascade`), e mantê-lo sem ela deixaria uma validade sem
  * produto na loja. Quebras não são tocadas: guardam o produto, não a posição.
  *
- * Só o administrador: é a ação mais destrutiva da tela e não tem desfazer.
+ * Cada perfil apaga a SUA loja (o operador não alcança outra: `lojaDaEscrita`
+ * responde 403 e a RLS barraria de qualquer forma). É a ação mais destrutiva da
+ * tela e não tem desfazer — por isso a tela exige digitar uma palavra.
  */
-rotasEstoque.delete('/', exigirAdmin, assincrono(async (req, res) => {
+rotasEstoque.delete('/', assincrono(async (req, res) => {
   // Sempre UMA loja: a do login, ou a de `?loja=<id>`. "todas" cai na do login —
   // apagar o estoque de todas as lojas de uma vez nunca é pedido por engano.
   const loja = lojaDaEscrita(req, res)
@@ -330,7 +332,7 @@ rotasEstoque.delete('/', exigirAdmin, assincrono(async (req, res) => {
 const corpoLinhas = z.object({ produtoIds: z.array(z.string().uuid()).min(1).max(5000) })
 
 /** O que sairia se estas posições fossem apagadas: a tela mostra antes de confirmar. */
-rotasEstoque.post('/linhas/contagem', exigirAdmin, assincrono(async (req, res) => {
+rotasEstoque.post('/linhas/contagem', assincrono(async (req, res) => {
   const corpo = corpoLinhas.safeParse(req.body)
   const loja = lojaDaEscrita(req, res)
   if (!loja) return
@@ -354,9 +356,9 @@ rotasEstoque.post('/linhas/contagem', exigirAdmin, assincrono(async (req, res) =
 /**
  * Apaga a posição de estoque de alguns produtos (os selecionados na tela). Mesma
  * regra do "excluir tudo": os lotes de validade desses produtos saem junto, e os
- * produtos e as quebras ficam. Só o administrador.
+ * produtos e as quebras ficam. Operador e administrador, cada um na sua loja.
  */
-rotasEstoque.delete('/linhas', exigirAdmin, assincrono(async (req, res) => {
+rotasEstoque.delete('/linhas', assincrono(async (req, res) => {
   const corpo = corpoLinhas.safeParse(req.body)
   const loja = lojaDaEscrita(req, res)
   if (!loja) return

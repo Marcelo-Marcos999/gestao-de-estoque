@@ -49,8 +49,8 @@ function stockValueOf(row: StockRow, key: StockSortKey): string | number {
  * dois perfis (ver docs/dominio.md, "de onde vêm saldo e saídas").
  *
  * Diferente do cadastro de produtos, aqui não há "criar" nem "excluir" um
- * produto — só importar a planilha, corrigir os quatro números à mão e, para o
- * administrador, apagar todo o estoque para reimportar do zero. Identidade do
+ * produto — só importar a planilha, corrigir os quatro números à mão e apagar
+ * estoque (linhas marcadas ou tudo) para reimportar do zero. Identidade do
  * produto (descrição, código de barras) é só leitura, vinda do cadastro.
  */
 export function StockPage() {
@@ -73,7 +73,7 @@ export function StockPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [novoAberto, setNovoAberto] = useState(false)
 
-  // Só o administrador exclui: a seleção (e a coluna de marcação) nem existe para o operador.
+  // Cada perfil seleciona e exclui na sua loja; o servidor recusa outra loja (403).
   const visibleKeys = sort.sortedRows.map(rowKey)
   const selectionState = useSelection(visibleKeys)
 
@@ -92,7 +92,8 @@ export function StockPage() {
   // "Excluir tudo" age sobre UMA loja. Com várias lojas à vista é a escolhida no
   // filtro; em "todas as lojas" o botão some, para ninguém apagar a loja errada.
   const clearStore = scope.stores.find((store) => store.id === scope.filter)
-  const canClearAll = isAdmin && (!scope.multi || clearStore !== undefined)
+  // Operador e administrador apagam a sua loja; `multi` só existe para o administrador.
+  const canClearAll = !scope.multi || clearStore !== undefined
 
   // Trocar de filtro limpa a seleção: uma linha marcada e depois escondida por
   // um filtro novo não pode ser excluída sem a pessoa vê-la mais.
@@ -154,22 +155,20 @@ export function StockPage() {
 
       <StoreFilter scope={scope} />
 
-      {isAdmin && (
-        <SelectionBar
-          selected={selectionState.selection.size}
-          total={visibleKeys.length}
-          onSelectAll={selectionState.selectAll}
-          onClear={selectionState.clear}
-          onDelete={() =>
-            askDelete({
-              kind: 'rows',
-              rows: sort.sortedRows
-                .filter((row) => selectionState.selection.has(rowKey(row)))
-                .map((row) => ({ storeId: row.storeId, productId: row.productId })),
-            })
-          }
-        />
-      )}
+      <SelectionBar
+        selected={selectionState.selection.size}
+        total={visibleKeys.length}
+        onSelectAll={selectionState.selectAll}
+        onClear={selectionState.clear}
+        onDelete={() =>
+          askDelete({
+            kind: 'rows',
+            rows: sort.sortedRows
+              .filter((row) => selectionState.selection.has(rowKey(row)))
+              .map((row) => ({ storeId: row.storeId, productId: row.productId })),
+          })
+        }
+      />
 
       {list.status === 'loading' && <ProductsSkeleton rowHeight={rowHeight} />}
 
@@ -190,8 +189,8 @@ export function StockPage() {
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
           onEdit={editor.open}
-          selection={isAdmin ? selectionState.selection : undefined}
-          onToggleSelect={isAdmin ? selectionState.toggle : undefined}
+          selection={selectionState.selection}
+          onToggleSelect={selectionState.toggle}
           showStore={scope.multi}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
