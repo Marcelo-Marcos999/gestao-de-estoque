@@ -195,10 +195,12 @@ const corpoImportarEstoque = z.object({
         sku: z.string().trim().min(1),
         /** Só usado ao criar o produto pendente de um SKU novo. */
         codigoBarras: z.string().trim().max(64).optional(),
-        saldo: z.number().min(0).optional(),
-        saidas: z.number().min(0).optional(),
-        valorCusto: z.number().min(0).optional(),
-        valorVenda: z.number().min(0).optional(),
+        // Os tetos são os das colunas (integer e numeric(12,2)): passar deles seria
+        // erro 500 do banco; assim é uma recusa que diz qual campo está errado.
+        saldo: z.number().min(0).max(2_147_483_647).optional(),
+        saidas: z.number().min(0).max(2_147_483_647).optional(),
+        valorCusto: z.number().min(0).max(9_999_999_999.99).optional(),
+        valorVenda: z.number().min(0).max(9_999_999_999.99).optional(),
       }),
     )
     .min(1)
@@ -222,7 +224,11 @@ const corpoImportarEstoque = z.object({
 rotasEstoque.post('/importar', assincrono(async (req, res) => {
   const corpo = corpoImportarEstoque.safeParse(req.body)
   if (!corpo.success) {
-    res.status(400).json({ erro: 'Linhas de importação inválidas.' })
+    // Diz qual campo de qual linha do lote o servidor recusou: sem isso, uma
+    // planilha de milhares de linhas falhava sem ninguém saber onde olhar.
+    const [, linha, campo] = corpo.error.issues[0]?.path ?? []
+    const onde = typeof linha === 'number' ? ` (${String(campo ?? 'linha')} da linha ${linha + 1} do lote)` : ''
+    res.status(400).json({ erro: `Linhas de importação inválidas${onde}.` })
     return
   }
 

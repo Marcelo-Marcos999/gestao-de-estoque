@@ -15,7 +15,7 @@ const TILES: Array<{ status: RowStatus; caption: string }> = [
   { status: 'atualiza', caption: 'produtos já cadastrados, números atualizados' },
   { status: 'pendente', caption: 'SKU não cadastrado, entra como pendente' },
   { status: 'duplicado', caption: 'repetidos na planilha' },
-  { status: 'invalido', caption: 'não identificam um produto' },
+  { status: 'invalido', caption: 'não serão importadas (veja o motivo abaixo)' },
 ]
 
 /**

@@ -8,6 +8,11 @@
  * O produto é achado pelo SKU e, não achando, pelo código de barras — a mesma
  * ordem de Validades. Uma linha só com código de barras desconhecido não vira
  * produto pendente: o produto precisa de um SKU para existir.
+ *
+ * Cada linha é conferida AQUI, antes de gravar: o servidor recusa o lote inteiro
+ * (500 linhas) se uma só tiver número que o banco não aceita, e um relatório do
+ * ERP tem saída negativa (devolução maior que a venda). Barrada na revisão, essa
+ * linha fica de fora com o motivo à vista e as outras 499 entram.
  */
 import { cellToNumber, cellToText, digitsOnly } from '@/shared/lib/cell'
 import type { CellValue } from '@/shared/lib/spreadsheet'
@@ -46,10 +51,44 @@ function readNumber(row: CellValue[], column: number): number | undefined {
   return numero ?? undefined
 }
 
+export interface PlanOptions {
+  /**
+   * SKU fora do cadastro vira produto pendente (o padrão). Desligado, a importação
+   * só atualiza o que já existe — o que se quer ao reimportar só as saídas de um
+   * relatório que traz linhas de total e produtos que ninguém cadastrou.
+   */
+  createPending: boolean
+}
+
+export const DEFAULT_PLAN_OPTIONS: PlanOptions = { createPending: true }
+
+// Limites das colunas do banco (integer e numeric(12,2)): passar deles dá erro no servidor.
+const MAX_COUNT = 2_147_483_647
+const MAX_MONEY = 9_999_999_999.99
+
+const NUMBER_FIELDS: Array<{ key: 'stock' | 'outflow' | 'costPrice' | 'salePrice'; label: string; max: number }> = [
+  { key: 'stock', label: 'Saldo', max: MAX_COUNT },
+  { key: 'outflow', label: 'Saídas', max: MAX_COUNT },
+  { key: 'costPrice', label: 'Valor de custo', max: MAX_MONEY },
+  { key: 'salePrice', label: 'Valor de venda', max: MAX_MONEY },
+]
+
+/** O que impede a linha de ser gravada, ou `undefined` se os números servem. */
+function numberProblem(row: StockImportRow): string | undefined {
+  for (const { key, label, max } of NUMBER_FIELDS) {
+    const value = row[key]
+    if (value === undefined) continue
+    if (value < 0) return `${label} negativo (${value.toLocaleString('pt-BR')})`
+    if (value > max) return `${label} grande demais`
+  }
+  return undefined
+}
+
 export function buildImportPlan(
   rows: CellValue[][],
   mapping: ColumnMapping,
   existing: Product[],
+  options: PlanOptions = DEFAULT_PLAN_OPTIONS,
 ): ImportPlan {
   const bySku = new Map(existing.map((p) => [p.sku, p]))
   const byBarcode = new Map(existing.filter((p) => p.barcode).map((p) => [p.barcode, p]))
@@ -83,6 +122,9 @@ export function buildImportPlan(
 
     if (!label) return plan('invalido', 'Sem SKU nem código de barras')
 
+    const problem = numberProblem(draft)
+    if (problem) return plan('invalido', problem)
+
     const product = (sku ? bySku.get(sku) : undefined) ?? (barcode ? byBarcode.get(barcode) : undefined)
 
     if (product) {
@@ -93,6 +135,10 @@ export function buildImportPlan(
       // Só vale avisar quando a linha trazia um SKU que não casou: numa planilha só de
       // códigos de barras, dizer isso em toda linha seria ruído.
       return plan('atualiza', sku && sku !== product.sku ? 'Casado pelo código de barras' : undefined)
+    }
+
+    if (!options.createPending) {
+      return plan('invalido', 'Fora do cadastro; esta importação só atualiza o que já existe')
     }
 
     // Produto desconhecido: só o SKU permite criá-lo como pendente.
