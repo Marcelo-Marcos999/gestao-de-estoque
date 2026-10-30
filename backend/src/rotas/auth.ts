@@ -50,8 +50,9 @@ rotasAuth.post('/login', limiteLogin, assincrono(async (req, res) => {
     senha_hash: string
     role: 'admin' | 'operador'
     ativo: boolean
+    email_confirmado_em: Date | null
   }>(
-    'select id, conta_id, senha_hash, role, ativo from lojas where email = $1',
+    'select id, conta_id, senha_hash, role, ativo, email_confirmado_em from lojas where email = $1',
     [email],
   )
 
@@ -66,6 +67,17 @@ rotasAuth.post('/login', limiteLogin, assincrono(async (req, res) => {
 
   if (!login || !senhaConfere || !login.ativo) {
     res.status(401).json({ erro: 'E-mail ou senha incorretos.' })
+    return
+  }
+
+  // Depois de conferir a senha, não antes: dizer "confirme seu e-mail" pra
+  // quem errou a senha mostraria que o e-mail existe. Quem chega aqui provou
+  // que é dono da conta, então a explicação é segura.
+  if (!login.email_confirmado_em) {
+    res.status(403).json({
+      codigo: 'email_nao_confirmado',
+      erro: 'Confirme seu e-mail para entrar. Procure o link na sua caixa de entrada.',
+    })
     return
   }
 
@@ -116,11 +128,27 @@ rotasAuth.post('/refresh', limiteRefresh, assincrono(async (req, res) => {
     conta_id: string
     role: 'admin' | 'operador'
     ativo: boolean
-  }>('select id, conta_id, role, ativo from lojas where id = $1', [payload.sub])
+    senha_alterada_em: Date
+  }>('select id, conta_id, role, ativo, senha_alterada_em from lojas where id = $1', [
+    payload.sub,
+  ])
 
   const login = rows[0]
   if (!login || !login.ativo) {
     res.status(401).json({ erro: 'Login não encontrado ou desativado.' })
+    return
+  }
+
+  // Trocar a senha encerra as sessões abertas: um refresh token emitido ANTES
+  // da troca não vale mais. É o que faz "esqueci minha senha" servir também
+  // pra expulsar quem tinha roubado a sessão. A folga existe porque o relógio
+  // do banco (que grava a data) e o do servidor (que grava o `iat` do token)
+  // não são o mesmo — sem ela, um token emitido logo depois da troca podia ser
+  // recusado por alguns segundos de diferença.
+  const FOLGA_DE_RELOGIO_EM_SEGUNDOS = 10
+  const trocouEm = Math.floor(login.senha_alterada_em.getTime() / 1000)
+  if ((payload.iat ?? 0) < trocouEm - FOLGA_DE_RELOGIO_EM_SEGUNDOS) {
+    res.status(401).json({ erro: 'Sessão encerrada: a senha foi alterada. Entre de novo.' })
     return
   }
 

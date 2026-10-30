@@ -1,5 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { ForgotPasswordPage, LoginPage, ResetPasswordPage } from '@/features/auth'
+import {
+  ConfirmEmailPage,
+  ForgotPasswordPage,
+  LoginPage,
+  ResetPasswordPage,
+  SignUpPage,
+} from '@/features/auth'
 import { BreakagePage } from '@/features/breakage'
 import { ExpiryPage } from '@/features/expiry'
 import { ProductsPage } from '@/features/products'
@@ -26,6 +32,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/entrar" element={<LoginPage />} />
+      <Route path="/criar-conta" element={<SignUpPage />} />
+      <Route path="/confirmar-email" element={<ConfirmEmailPage />} />
       <Route path="/esqueci-a-senha" element={<ForgotPasswordPage />} />
       <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
 

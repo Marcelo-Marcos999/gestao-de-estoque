@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { TextField } from '@/shared/ui/TextField'
 import { ArrowLeftIcon, MailIcon } from '@/shared/ui/icons'
@@ -14,6 +15,7 @@ export function ForgotPasswordPage() {
   const [fieldError, setFieldError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -22,9 +24,18 @@ export function ForgotPasswordPage() {
     setFieldError(error)
     if (error) return
 
+    setFormError(null)
     setSubmitting(true)
-    await requestPasswordReset(email)
+    const result = await requestPasswordReset(email.trim())
     setSubmitting(false)
+
+    // Só chega erro que vale pra qualquer e-mail (envio desligado no servidor,
+    // limite de tentativas, sem rede): avisar não revela se a conta existe.
+    if (result.error) {
+      setFormError(result.error.message)
+      return
+    }
+
     setSentTo(email.trim())
   }
 
@@ -68,6 +79,8 @@ export function ForgotPasswordPage() {
       subtitle="Informe o e-mail da sua conta e enviaremos um link para criar uma nova senha."
     >
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
+        {formError && <Alert tone="danger">{formError}</Alert>}
+
         <TextField
           label="E-mail"
           type="email"

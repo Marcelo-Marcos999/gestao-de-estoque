@@ -135,6 +135,11 @@ O que o sistema precisa fazer, e por quê, está em [`docs/dominio.md`](docs/dom
 alcance (quebra de estoque, não só validade), produto pendente de cadastro,
 registro repetido e o que veio do AppSheet como contorno e não se repete aqui.
 
+O modelo de dados (tabelas, relações, o que acontece ao apagar, RLS e índices)
+está em [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md), com o diagrama
+editável em [`docs/schema.dbml`](docs/schema.dbml). A fonte da verdade continua
+sendo `backend/migrations/`: mexeu no banco, atualize os dois.
+
 ## Estado do back-end
 
 Existe, em `backend/`: Express + Postgres (Neon), autenticação por JWT

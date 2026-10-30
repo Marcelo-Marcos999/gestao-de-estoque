@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/Button'
 import { TextField } from '@/shared/ui/TextField'
 import { validateEmail, validateOnBlur, validateRequiredPassword } from '@/shared/lib/validation'
 import { AuthLayout } from '../components/AuthLayout'
+import { resendConfirmation } from '../api'
 import { useAuth } from '../AuthContext'
 import styles from '../components/authForm.module.css'
 
@@ -35,6 +36,11 @@ export function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Só depois de acertar a senha é que o servidor diz que falta confirmar o
+  // e-mail (dizer antes revelaria que o e-mail existe) — e aí vale oferecer o
+  // reenvio, porque o link vale 24 horas e é fácil perder.
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [resendNote, setResendNote] = useState<string | null>(null)
 
   if (user) {
     const from = (location.state as { from?: string } | null)?.from ?? '/validades'
@@ -56,6 +62,8 @@ export function LoginPage() {
     if (errors.email || errors.password) return
 
     setFormError(null)
+    setNeedsConfirmation(false)
+    setResendNote(null)
     setSubmitting(true)
 
     const { error } = await signIn({ email, password }, remember)
@@ -66,11 +74,18 @@ export function LoginPage() {
     // é a fricção mais irritante para quem usa o sistema o dia inteiro.
     if (error) {
       setFormError(error.message)
+      setNeedsConfirmation(error.code === 'email_not_confirmed')
       return
     }
 
     const from = (location.state as { from?: string } | null)?.from ?? '/validades'
     navigate(from, { replace: true })
+  }
+
+  async function handleResend() {
+    setResendNote(null)
+    const { error } = await resendConfirmation(email.trim())
+    setResendNote(error ? error.message : 'Enviamos um novo link. Confira sua caixa de entrada.')
   }
 
   return (
@@ -80,6 +95,15 @@ export function LoginPage() {
           tema. A validação daqui fica ao lado do campo e permanece na tela. */}
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
         {formError && <Alert tone="danger">{formError}</Alert>}
+
+        {needsConfirmation && (
+          <>
+            {resendNote && <Alert>{resendNote}</Alert>}
+            <Button variant="secondary" onClick={handleResend} fullWidth>
+              Reenviar e-mail de confirmação
+            </Button>
+          </>
+        )}
 
         <TextField
           label="E-mail"
@@ -138,14 +162,11 @@ export function LoginPage() {
         </Button>
       </form>
 
-      <p className={styles.demo}>
-        <span className={styles.demoTitle}>Contas de teste (enquanto não há servidor)</span>
-        Administrador: <code>admin@exemplo.com.br</code>
-        <br />
-        Operador: <code>operador@exemplo.com.br</code>
-        <br />
-        Senha: <code>senha123</code>
-      </p>
+      <div className={styles.center}>
+        <Link className={styles.link} to="/criar-conta">
+          Não tem conta? Criar conta
+        </Link>
+      </div>
     </AuthLayout>
   )
 }
