@@ -1,0 +1,18 @@
+// Publicação do front-end no Cloudflare (Workers com assets estáticos).
+//
+// Não há código de Worker aqui — só os arquivos que o `vite build` gera em
+// dist/. O back-end mora no Render (ver backend/), não neste Worker.
+{
+  // Precisa ser igual ao nome do projeto no painel do Cloudflare: o Workers
+  // Builds recusa o deploy quando os dois divergem.
+  "name": "gestao-de-estoque",
+  "compatibility_date": "2026-10-29",
+  "assets": {
+    "directory": "./dist",
+    // O app usa BrowserRouter: /estoque, /produtos etc. não existem como
+    // arquivo em dist/. Sem isto, recarregar a página numa dessas rotas
+    // daria 404 — com isto, o Cloudflare devolve o index.html e o próprio
+    // React Router decide o que mostrar.
+    "not_found_handling": "single-page-application"
+  }
+}
