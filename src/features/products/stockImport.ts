@@ -1,11 +1,14 @@
 /**
  * Aplica a planilha de estoque ao cadastro.
  *
- * Separado de `api.ts` só para não passar de ~200 linhas ali — continua
- * mexendo no mesmo `store`, através de `getStoreSnapshot`/`replaceStore`.
+ * Separado de `api.ts` só para não passar de ~200 linhas ali. Chama
+ * `POST /estoque/importar`, que já faz no servidor exatamente a mesma regra
+ * que esta função fazia em memória: SKU conhecido atualiza os números, SKU
+ * desconhecido cria o produto como pendente de cadastro (ver
+ * backend/src/rotas/estoque.ts).
  */
-import { getStoreSnapshot, replaceStore } from './api'
-import type { Product } from './types'
+import { apiFetch } from '@/shared/lib/http'
+import { invalidateStore } from './api'
 
 /** Uma linha da planilha de estoque, já com o SKU casado ou não. */
 export interface StockImportRow {
@@ -25,67 +28,40 @@ export interface StockImportResult {
 }
 
 /**
- * Aplica a planilha de estoque: atualiza quem já está no cadastro e cria como
- * pendente quem não está.
- *
- * Não bloquear pelo SKU desconhecido é a mesma decisão da quebra: a
- * importação normalmente é a única fonte desses números, e recusar a linha
- * até o administrador cadastrar o produto perderia o dado (ver
- * docs/dominio.md).
+ * Aplica a planilha de estoque, em lotes de 500 — o limite que
+ * `POST /estoque/importar` aceita por chamada — devolvendo o controle ao
+ * navegador entre eles pra barra de progresso acompanhar uma planilha de
+ * milhares de linhas.
  */
 export async function bulkUpsertStock(
   rows: StockImportRow[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<StockImportResult> {
   const BATCH = 500
-  const now = new Date().toISOString()
-  const store = getStoreSnapshot()
-  const bySku = new Map(store.map((p) => [p.sku, p]))
-
   let updated = 0
-  const pending: Product[] = []
+  let pendingCreated = 0
 
   for (let i = 0; i < rows.length; i += BATCH) {
-    for (const row of rows.slice(i, i + BATCH)) {
-      const existing = bySku.get(row.sku)
-
-      if (existing) {
-        const patched: Product = {
-          ...existing,
-          stock: row.stock !== undefined ? Math.max(0, Math.round(row.stock)) : existing.stock,
-          outflow:
-            row.outflow !== undefined ? Math.max(0, Math.round(row.outflow)) : existing.outflow,
-          costPrice:
-            row.costPrice !== undefined ? Math.max(0, row.costPrice) : existing.costPrice,
-          salePrice:
-            row.salePrice !== undefined ? Math.max(0, row.salePrice) : existing.salePrice,
-          updatedAt: now,
-        }
-        bySku.set(row.sku, patched)
-        updated++
-      } else {
-        const created: Product = {
-          id: `p${row.sku}-${now}-${pending.length}`,
+    const lote = rows.slice(i, i + BATCH)
+    const resultado = await apiFetch<StockImportResult>('/estoque/importar', {
+      method: 'POST',
+      body: {
+        linhas: lote.map((row) => ({
           sku: row.sku,
-          description: '',
-          barcode: '',
-          stock: Math.max(0, Math.round(row.stock ?? 0)),
-          outflow: Math.max(0, Math.round(row.outflow ?? 0)),
-          costPrice: Math.max(0, row.costPrice ?? 0),
-          salePrice: Math.max(0, row.salePrice ?? 0),
-          pendingCadastro: true,
-          createdAt: now,
-          updatedAt: now,
-        }
-        bySku.set(row.sku, created)
-        pending.push(created)
-      }
-    }
+          saldo: row.stock,
+          saidas: row.outflow,
+          valorCusto: row.costPrice,
+          valorVenda: row.salePrice,
+        })),
+      },
+    })
+    updated += resultado.updated
+    pendingCreated += resultado.pendingCreated
 
     onProgress?.(Math.min(i + BATCH, rows.length), rows.length)
     await new Promise((resolve) => setTimeout(resolve, 0))
   }
 
-  replaceStore([...pending, ...store.map((p) => bySku.get(p.sku) ?? p)])
-  return { updated, pendingCreated: pending.length }
+  invalidateStore()
+  return { updated, pendingCreated }
 }

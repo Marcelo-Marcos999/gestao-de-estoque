@@ -1,11 +1,9 @@
+import type { SessionUser } from '@/shared/lib/session'
+
 export type UserRole = 'admin' | 'operador'
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  role: UserRole
-}
+/** Mesmo formato que `shared/lib/session.ts` usa — reexportado aqui pras telas não precisarem saber que a sessão mora em `shared/`. */
+export type User = SessionUser
 
 export interface Credentials {
   email: string

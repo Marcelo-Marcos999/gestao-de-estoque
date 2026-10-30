@@ -66,8 +66,9 @@ Uma tela que oferece uma ação que o perfil não pode executar é pior que não
 oferecer: o usuário só descobre no erro. Esconda a ação, não a bloqueie no
 clique.
 
-Enquanto não há servidor isso é só interface. Quando ele existir, a permissão
-tem que ser verificada no servidor também — esconder o botão não é segurança.
+A permissão também é verificada no servidor (`backend/src/auth/middleware.ts`
+e Row Level Security no Postgres, ver `backend/migrations/`) — esconder o
+botão aqui é experiência, não segurança; quem garante a regra é o back-end.
 
 ## Filtros e buscas são lembrados
 
@@ -107,6 +108,9 @@ src/
   features/   auth/, products/ ...
   shared/     ui/ (design system), lib/ (helpers puros)
   styles/     tokens.css, global.css
+backend/      API (Express + Postgres) — projeto Node separado, com seu
+              próprio package.json; não entra no lint/typecheck do front-end
+              (ver eslint.config.js) nem compartilha dependências com ele
 ```
 
 ## Tamanho de arquivo e modularização
@@ -133,9 +137,16 @@ registro repetido e o que veio do AppSheet como contorno e não se repete aqui.
 
 ## Estado do back-end
 
-Ainda não existe. Cada feature isola o acesso a dados em seu `api.ts`, hoje
-resolvido em memória. Quando o servidor existir, só esses arquivos mudam — as
-telas não.
+Existe, em `backend/`: Express + Postgres (Neon), autenticação por JWT
+(acesso curto + refresh) e Row Level Security no banco — toda query roda sob
+uma role sem privilégio de dono, e as políticas de RLS são o filtro real
+entre contas e lojas, não o código da rota (ver `backend/migrations/`).
+
+Nem toda feature já fala com ele. `auth`, `products` e a leitura de números
+em `stock` já chamam o back-end de verdade; `expiry`, `breakage`, `motivos` e
+`origens` ainda resolvem em memória, como antes. Em qualquer um dos dois
+casos, cada feature isola o acesso a dados no próprio `api.ts` — migrar uma
+feature pro back-end real é mexer só nesse arquivo, nunca na tela.
 
 ## Checagem automática dos padrões
 
@@ -159,10 +170,14 @@ Para pular a checagem numa emergência: `git commit --no-verify`.
 ## Comandos
 
 ```bash
-npm run dev         # desenvolvimento
+npm run dev         # desenvolvimento (front-end)
 npm run build       # build de produção
 npm run lint        # tipos + código + CSS (o que o hook roda)
 npm run lint:types  # só TypeScript
 npm run lint:code   # só ESLint
 npm run lint:css    # só Stylelint
 ```
+
+O back-end é outro projeto, dentro de `backend/`, com seu próprio
+`package.json` (`cd backend && npm install`). Variáveis de ambiente em
+`backend/.env.example` — nunca em `backend/.env`, que não entra no git.

@@ -18,12 +18,6 @@ import { matchesRange } from '@/shared/lib/numberRange'
 import { rowCostTotal, rowSaleTotal } from './totals'
 import type { StockQuery, StockRow } from './types'
 
-const LATENCY_MS = 180
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 function toRow(product: Product): StockRow {
   return {
     productId: product.id,
@@ -63,8 +57,6 @@ export interface StockPage {
 }
 
 export async function listStockRows(query: StockQuery): Promise<StockPage> {
-  await delay(LATENCY_MS)
-
   const products = await getAllProducts()
   const rows = products.map(toRow).filter((row) => matches(row, query))
   return { items: rows, total: rows.length }

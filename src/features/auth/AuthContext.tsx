@@ -1,33 +1,31 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { readJson, removeKey, storageKey, writeJson } from '@/shared/lib/storage'
+import { aoExpirarSessao, clearSession, readSession, writeSession } from '@/shared/lib/session'
 import * as authApi from './api'
-import type { Credentials, Result, User } from './types'
-
-const STORAGE_KEY = storageKey('session')
+import type { AuthError, Credentials, User } from './types'
 
 interface AuthContextValue {
   user: User | null
-  signIn: (credentials: Credentials, remember: boolean) => Promise<Result<User>>
+  signIn: (credentials: Credentials, remember: boolean) => Promise<{ error: AuthError | null }>
   signOut: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
-
-/** Lê a sessão de onde ela tiver sido gravada, em qualquer um dos dois storages. */
-function readStoredUser(): User | null {
-  return (
-    readJson<User | null>(STORAGE_KEY, null, 'local') ??
-    readJson<User | null>(STORAGE_KEY, null, 'session')
-  )
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Lida na inicialização do estado, não em efeito: o storage responde na
   // hora, então já sabemos se há sessão no primeiro render. Ler depois
   // custaria um render a mais e uma janela em que a rota seria decidida sem
   // saber quem está logado.
-  const [user, setUser] = useState<User | null>(readStoredUser)
+  const [user, setUser] = useState<User | null>(() => readSession()?.user ?? null)
+
+  // O cliente HTTP (`shared/lib/http.ts`) pode decidir, no meio de qualquer
+  // chamada, que o refresh token também expirou — isso avisa este contexto
+  // pra tirar o usuário da tela sem precisar recarregar a página.
+  useEffect(() => {
+    aoExpirarSessao(() => setUser(null))
+    return () => aoExpirarSessao(null)
+  }, [])
 
   const signIn = useCallback(async (credentials: Credentials, remember: boolean) => {
     const result = await authApi.signIn(credentials)
@@ -35,16 +33,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.data) {
       // "Manter conectado" decide apenas onde a sessão vive: localStorage
       // sobrevive ao fechar o navegador, sessionStorage não.
-      writeJson(STORAGE_KEY, result.data, remember ? 'local' : 'session')
-      setUser(result.data)
+      writeSession(result.data, remember)
+      setUser(result.data.user)
     }
 
-    return result
+    return { error: result.error }
   }, [])
 
   const signOut = useCallback(() => {
-    removeKey(STORAGE_KEY, 'local')
-    removeKey(STORAGE_KEY, 'session')
+    clearSession()
     setUser(null)
   }, [])
 
