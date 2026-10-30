@@ -94,14 +94,26 @@ export function useImportWizard(onImported: () => void) {
     if (!plan) return
 
     const drafts = draftsToImport(plan)
+    setError(null)
     setStep('aplicando')
     setProgress({ done: 0, total: drafts.length })
 
-    const count = await bulkCreate(drafts, (done, total) => setProgress({ done, total }))
+    try {
+      const count = await bulkCreate(drafts, (done, total) => setProgress({ done, total }))
 
-    setImported(count)
-    setStep('resumo')
-    onImported()
+      setImported(count)
+      setStep('resumo')
+      onImported()
+    } catch {
+      // Sem isto a tela ficava parada em "0 de N" para sempre quando o
+      // servidor falhava. Voltar para a revisão deixa tentar de novo: o
+      // servidor ignora SKU e código de barras que já existem, então
+      // reenviar o que já foi gravado não duplica nada.
+      setError(
+        'Não foi possível concluir a importação. Parte dos produtos pode já ter sido gravada; tentar de novo é seguro, o que já existe é ignorado.',
+      )
+      setStep('revisao')
+    }
   }, [plan, onImported])
 
   /** Primeiro valor não vazio de uma coluna, para conferir o mapeamento. */

@@ -201,25 +201,30 @@ export async function bulkCreate(
   const BATCH = 500
   let total = 0
 
-  for (let i = 0; i < drafts.length; i += BATCH) {
-    const lote = drafts.slice(i, i + BATCH)
-    const { criados } = await apiFetch<{ criados: number }>('/produtos/importar-lote', {
-      method: 'POST',
-      body: {
-        produtos: lote.map((d) => ({
-          sku: d.sku,
-          descricao: d.description,
-          codigoBarras: d.barcode || undefined,
-        })),
-      },
-    })
-    total += criados
+  try {
+    for (let i = 0; i < drafts.length; i += BATCH) {
+      const lote = drafts.slice(i, i + BATCH)
+      const { criados } = await apiFetch<{ criados: number }>('/produtos/importar-lote', {
+        method: 'POST',
+        body: {
+          produtos: lote.map((d) => ({
+            sku: d.sku,
+            descricao: d.description,
+            codigoBarras: d.barcode || undefined,
+          })),
+        },
+      })
+      total += criados
 
-    onProgress?.(Math.min(i + BATCH, drafts.length), drafts.length)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+      onProgress?.(Math.min(i + BATCH, drafts.length), drafts.length)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+  } finally {
+    // Também quando falha no meio: os lotes anteriores já foram gravados, e a
+    // lista em cache não os conhece.
+    invalidar()
   }
 
-  invalidar()
   return total
 }
 

@@ -220,9 +220,14 @@ const corpoImportarProdutos = z.object({
 
 /**
  * Importação em lote do cadastro (planilha de produtos). A tela de revisão
- * já filtra SKU duplicado antes de chegar aqui (ver import/plan.ts no
- * front) — se algum colar mesmo assim, a constraint única do banco rejeita
- * a linha e o laço segue pras próximas, sem travar o lote inteiro.
+ * já filtra SKU e código de barras duplicados antes de chegar aqui (ver
+ * import/plan.ts no front); se algum passar mesmo assim, `on conflict do
+ * nothing` ignora só aquela linha, sem derrubar o lote.
+ *
+ * Um único INSERT com arrays (`unnest`), não um comando por linha. Cada
+ * ida ao banco custa ~150 ms entre o Render (EUA) e o Neon (São Paulo): com
+ * um comando por linha, 25 mil produtos levavam mais de uma hora e cada
+ * requisição estourava o tempo limite do Render. Assim é uma ida por lote.
  */
 rotasProdutos.post('/importar-lote', exigirAdmin, assincrono(async (req, res) => {
   const corpo = corpoImportarProdutos.safeParse(req.body)
@@ -231,28 +236,22 @@ rotasProdutos.post('/importar-lote', exigirAdmin, assincrono(async (req, res) =>
     return
   }
 
+  const { produtos } = corpo.data
+
   const criados = await comContextoDoUsuario(req.sessao!, async (client) => {
-    let total = 0
-    for (const produto of corpo.data.produtos) {
-      // SAVEPOINT isola cada tentativa: sem ele, um erro de uma linha
-      // deixaria a transação inteira "abortada" no Postgres, e toda
-      // query seguinte falharia mesmo sem ter nada de errado — não é o
-      // catch do JavaScript que decide isso, é o próprio banco.
-      await client.query('savepoint tentativa_linha')
-      try {
-        await client.query(
-          `insert into produtos (conta_id, sku, descricao, codigo_barras)
-           values ($1, $2, $3, $4)`,
-          [req.sessao!.contaId, produto.sku, produto.descricao, produto.codigoBarras ?? null],
-        )
-        await client.query('release savepoint tentativa_linha')
-        total++
-      } catch (erro) {
-        await client.query('rollback to savepoint tentativa_linha')
-        if ((erro as { code?: string }).code !== '23505') throw erro
-      }
-    }
-    return total
+    const { rowCount } = await client.query(
+      `insert into produtos (conta_id, sku, descricao, codigo_barras)
+       select $1, t.sku, t.descricao, nullif(t.codigo_barras, '')
+       from unnest($2::text[], $3::text[], $4::text[]) as t(sku, descricao, codigo_barras)
+       on conflict do nothing`,
+      [
+        req.sessao!.contaId,
+        produtos.map((p) => p.sku),
+        produtos.map((p) => p.descricao),
+        produtos.map((p) => p.codigoBarras ?? null),
+      ],
+    )
+    return rowCount ?? 0
   })
 
   res.status(201).json({ criados })

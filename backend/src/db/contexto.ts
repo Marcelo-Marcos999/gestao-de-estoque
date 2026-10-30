@@ -26,9 +26,15 @@ export async function comContextoDoUsuario<T>(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    await client.query(`select set_config('app.conta_id', $1, true)`, [sessao.contaId])
-    await client.query(`select set_config('app.loja_id', $1, true)`, [sessao.lojaId ?? ''])
-    await client.query(`select set_config('app.role', $1, true)`, [sessao.role])
+    // Os três valores numa só ida ao banco: o Render (EUA) fica a ~150 ms do
+    // Neon (São Paulo), então cada comando separado custava isso em toda
+    // requisição, antes mesmo da consulta de verdade.
+    await client.query(
+      `select set_config('app.conta_id', $1, true),
+              set_config('app.loja_id', $2, true),
+              set_config('app.role', $3, true)`,
+      [sessao.contaId, sessao.lojaId ?? '', sessao.role],
+    )
 
     const resultado = await executar(client)
 

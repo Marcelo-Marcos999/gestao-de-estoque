@@ -41,27 +41,31 @@ export async function bulkUpsertStock(
   let updated = 0
   let pendingCreated = 0
 
-  for (let i = 0; i < rows.length; i += BATCH) {
-    const lote = rows.slice(i, i + BATCH)
-    const resultado = await apiFetch<StockImportResult>('/estoque/importar', {
-      method: 'POST',
-      body: {
-        linhas: lote.map((row) => ({
-          sku: row.sku,
-          saldo: row.stock,
-          saidas: row.outflow,
-          valorCusto: row.costPrice,
-          valorVenda: row.salePrice,
-        })),
-      },
-    })
-    updated += resultado.updated
-    pendingCreated += resultado.pendingCreated
+  try {
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const lote = rows.slice(i, i + BATCH)
+      const resultado = await apiFetch<StockImportResult>('/estoque/importar', {
+        method: 'POST',
+        body: {
+          linhas: lote.map((row) => ({
+            sku: row.sku,
+            saldo: row.stock,
+            saidas: row.outflow,
+            valorCusto: row.costPrice,
+            valorVenda: row.salePrice,
+          })),
+        },
+      })
+      updated += resultado.updated
+      pendingCreated += resultado.pendingCreated
 
-    onProgress?.(Math.min(i + BATCH, rows.length), rows.length)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+      onProgress?.(Math.min(i + BATCH, rows.length), rows.length)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+  } finally {
+    // Também quando falha no meio: os lotes anteriores já foram gravados.
+    invalidateStore()
   }
 
-  invalidateStore()
   return { updated, pendingCreated }
 }

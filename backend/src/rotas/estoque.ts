@@ -201,11 +201,16 @@ const corpoImportarEstoque = z.object({
 /**
  * Importação em lote da planilha de estoque — mesma regra do `POST /`
  * acima (SKU desconhecido cria produto pendente), só que pra muitas linhas
- * de uma vez. Um laço dentro de uma única transação, não um comando SQL só:
- * mais simples de entender e de manter correto, ao custo de ser mais lento
- * que um upsert em massa de verdade — pra o volume de uma planilha de loja
- * (milhares de linhas, não milhões) isso ainda termina em segundos. Vira
- * próximo passo se um catálogo muito maior tornar isso sensível.
+ * de uma vez.
+ *
+ * Três comandos SQL por lote, não três por linha: cada ida ao banco custa
+ * ~150 ms entre o Render (EUA) e o Neon (São Paulo), então um laço linha a
+ * linha levava mais de uma hora numa planilha de 25 mil produtos e cada
+ * requisição estourava o tempo limite do Render.
+ *   1. cria como pendentes os SKUs que o catálogo ainda não conhece;
+ *   2. atualiza as posições de estoque que já existem (só os campos
+ *      enviados — `coalesce` preserva o resto);
+ *   3. cria as posições que faltam, com zero nos campos não enviados.
  */
 rotasEstoque.post('/importar', assincrono(async (req, res) => {
   const corpo = corpoImportarEstoque.safeParse(req.body)
@@ -214,59 +219,54 @@ rotasEstoque.post('/importar', assincrono(async (req, res) => {
     return
   }
 
+  const { linhas } = corpo.data
+  // null (e não undefined) é o que vira NULL dentro do array do Postgres.
+  const skus = linhas.map((l) => l.sku)
+  const saldos = linhas.map((l) => arredondarSeDefinido(l.saldo) ?? null)
+  const saidas = linhas.map((l) => arredondarSeDefinido(l.saidas) ?? null)
+  const custos = linhas.map((l) => l.valorCusto ?? null)
+  const vendas = linhas.map((l) => l.valorVenda ?? null)
+
+  // Os casts `::integer[]`/`::numeric[]` pelo mesmo motivo do PATCH acima:
+  // sem eles o Postgres chuta o tipo dos parâmetros e rejeita centavos.
+  const valores = `unnest($2::text[], $3::integer[], $4::integer[], $5::numeric[], $6::numeric[])
+                   as x(sku, saldo, saidas, valor_custo, valor_venda)`
+
   const resultado = await comContextoDoUsuario(req.sessao!, async (client) => {
-    let atualizados = 0
-    let pendentesCriados = 0
+    const { rowCount: pendentesCriados } = await client.query(
+      `insert into produtos (conta_id, sku, pendente_cadastro, loja_origem_id)
+       select $1, s.sku, true, $2
+       from (select distinct sku from unnest($3::text[]) as sku) s
+       where not exists (select 1 from produtos p where p.sku = s.sku)
+       on conflict (conta_id, sku) do nothing`,
+      [req.sessao!.contaId, req.loginId, skus],
+    )
 
-    for (const linha of corpo.data.linhas) {
-      const { rows: existentes } = await client.query<{ id: string }>(
-        'select id from produtos where sku = $1',
-        [linha.sku],
-      )
+    await client.query(
+      `update estoque e
+       set saldo = coalesce(x.saldo, e.saldo),
+           saidas = coalesce(x.saidas, e.saidas),
+           valor_custo = coalesce(x.valor_custo, e.valor_custo),
+           valor_venda = coalesce(x.valor_venda, e.valor_venda)
+       from ${valores}
+       join produtos p on p.sku = x.sku
+       where e.produto_id = p.id and e.loja_id = $1`,
+      [req.loginId, skus, saldos, saidas, custos, vendas],
+    )
 
-      let produtoId = existentes[0]?.id
-      const eraDesconhecido = !produtoId
+    await client.query(
+      `insert into estoque (loja_id, produto_id, saldo, saidas, valor_custo, valor_venda)
+       select $1, p.id,
+              coalesce(x.saldo, 0), coalesce(x.saidas, 0),
+              coalesce(x.valor_custo, 0), coalesce(x.valor_venda, 0)
+       from ${valores}
+       join produtos p on p.sku = x.sku
+       on conflict (loja_id, produto_id) do nothing`,
+      [req.loginId, skus, saldos, saidas, custos, vendas],
+    )
 
-      if (!produtoId) {
-        const { rows: criado } = await client.query<{ id: string }>(
-          `insert into produtos (conta_id, sku, pendente_cadastro, loja_origem_id)
-           values ($1, $2, true, $3)
-           returning id`,
-          [req.sessao!.contaId, linha.sku, req.loginId],
-        )
-        produtoId = criado[0]!.id
-      }
-
-      // Mesmo `::numeric` do PATCH acima, pelo mesmo motivo: sem ele, um
-      // valor de custo/venda com centavos derruba a conexão inteira (ver
-      // comentário lá em cima).
-      await client.query(
-        `insert into estoque (loja_id, produto_id, saldo, saidas, valor_custo, valor_venda)
-         values (
-           $1, $2,
-           coalesce($3, 0), coalesce($4, 0),
-           coalesce($5::numeric, 0), coalesce($6::numeric, 0)
-         )
-         on conflict (loja_id, produto_id) do update
-           set saldo = coalesce($3, estoque.saldo),
-               saidas = coalesce($4, estoque.saidas),
-               valor_custo = coalesce($5::numeric, estoque.valor_custo),
-               valor_venda = coalesce($6::numeric, estoque.valor_venda)`,
-        [
-          req.loginId,
-          produtoId,
-          arredondarSeDefinido(linha.saldo),
-          arredondarSeDefinido(linha.saidas),
-          linha.valorCusto,
-          linha.valorVenda,
-        ],
-      )
-
-      if (eraDesconhecido) pendentesCriados++
-      else atualizados++
-    }
-
-    return { updated: atualizados, pendingCreated: pendentesCriados }
+    const criados = pendentesCriados ?? 0
+    return { updated: linhas.length - criados, pendingCreated: criados }
   })
 
   res.json(resultado)
