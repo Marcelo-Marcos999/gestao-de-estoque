@@ -1,21 +1,21 @@
 import { useCallback, useState } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
-import { ExportButton } from '@/shared/ui/ExportButton'
 import { UndoBar } from '@/shared/ui/UndoBar'
-import { PlusIcon, SearchIcon } from '@/shared/ui/icons'
+import { SearchIcon } from '@/shared/ui/icons'
 import { SelectionBar } from '@/shared/ui/SelectionBar'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { useSort } from '@/shared/hooks/useSort'
+import { BreakageActions } from '../components/BreakageActions'
+import { BreakageImportDialog } from '../components/BreakageImportDialog'
 import { BreakageToolbar } from '../components/BreakageToolbar'
 import { AttachmentViewer } from '../components/AttachmentViewer'
 import { LossRecordCard } from '../components/LossRecordCard'
 import { LossRecordDialog } from '../components/LossRecordDialog'
 import { LossRecordTable, type LossRecordSortKey } from '../components/LossRecordTable'
 
-import { exportLossRecords } from '../export'
 import { recordLabel } from '../label'
 import { useLossRecordList } from '../hooks/useLossRecordList'
 import { useTagLists } from '../hooks/useTagLists'
@@ -44,6 +44,7 @@ export function BreakagePage() {
 
   /** Anexo aberto no visualizador. */
   const [viewing, setViewing] = useState<Attachment | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   function openAttachment(record: LossRecord, attachmentId: string) {
     setViewing(record.attachments.find((a) => a.id === attachmentId) ?? null)
@@ -61,28 +62,14 @@ export function BreakagePage() {
 
   const vazio = list.status === 'ready' && list.records.length === 0
 
-  /**
-   * As ações acompanham o cabeçalho quando ele existe e migram para a barra de
-   * busca no modo foco. Registrar é o que se vem fazer nesta tela: escondê-la
-   * junto com o título transformaria o modo foco num beco.
-   */
   const acoes = (
-    <>
-      {/* Exporta o que está na tela, com os filtros aplicados: quem filtrou por
-          um motivo quer levar aquele recorte, não a base. */}
-      <ExportButton
-        count={list.records.length}
-        onExport={() => exportLossRecords(list.records, reasons, origins)}
-      />
-
-      <Button onClick={() => setDialog({ open: true })}>
-        <PlusIcon width={18} height={18} />
-        {/* Só "quebra" sai no celular: um "+" sozinho não diz o que faz. */}
-        <span>
-          Registrar<span className={styles.labelExtra}> quebra</span>
-        </span>
-      </Button>
-    </>
+    <BreakageActions
+      records={list.records}
+      reasons={reasons}
+      origins={origins}
+      onImport={() => setImportOpen(true)}
+      onNew={() => setDialog({ open: true })}
+    />
   )
 
   return (
@@ -216,6 +203,12 @@ export function BreakagePage() {
         plural="registros"
         onUndo={() => void list.undo()}
         onDismiss={list.dismissUndo}
+      />
+
+      <BreakageImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={list.reload}
       />
 
       <LossRecordDialog

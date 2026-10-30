@@ -326,6 +326,11 @@ Validades (`/validades`), Quebra (`/quebras`) e as listas de motivo e origem
 (`/motivos`, `/origens`) já gravam no banco. Não há base de exemplo: as listas
 começam vazias e só mostram o que a loja lançou.
 
+Rotas em lote, para importação e limpeza: `POST /validades/lote` (até 1000 lotes,
+ignora os que já existem), `POST /quebras` com motivo e origem **por item** (ou um
+par para o pedido inteiro) e `DELETE /estoque` + `GET /estoque/contagem` (só admin;
+apagar o estoque leva os lotes junto, por `on delete cascade`).
+
 `/conta` (empresa e plano, troca de senha) e `/lojas` (logins da conta, só admin)
 leem e escrevem `contas`, `configuracoes_conta` e `lojas`. Plano e limites
 (`configuracoes_conta`) **só se lê** pela API: são da plataforma, não do cliente.

@@ -1,0 +1,11 @@
+/* No celular só o ícone sobra: o resto do rótulo continua para o leitor de tela. */
+@media (max-width: 599px) {
+  .labelExtra {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}

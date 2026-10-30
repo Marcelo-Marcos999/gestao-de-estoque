@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { comContextoDoUsuario } from '../db/contexto.js'
-import { exigirAutenticacao } from '../auth/middleware.js'
+import { exigirAdmin, exigirAutenticacao } from '../auth/middleware.js'
 import { assincrono } from '../lib/assincrono.js'
 
 export const rotasEstoque = Router()
@@ -269,5 +269,47 @@ rotasEstoque.post('/importar', assincrono(async (req, res) => {
     return { updated: linhas.length - criados, pendingCreated: criados }
   })
 
+  res.json(resultado)
+}))
+
+/**
+ * Quanto existe para apagar: as posições de estoque e os lotes de validade que
+ * dependem delas. A tela mostra isto antes de pedir a confirmação — "apagar
+ * tudo" sem dizer o tamanho do estrago não é uma confirmação de verdade.
+ */
+rotasEstoque.get('/contagem', exigirAdmin, assincrono(async (req, res) => {
+  const linha = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rows } = await client.query(
+      `select (select count(*) from estoque where loja_id = $1)::int as linhas,
+              (select count(*) from validades v join estoque e on e.id = v.estoque_id
+                where e.loja_id = $1)::int as lotes`,
+      [req.loginId],
+    )
+    return rows[0]
+  })
+  res.json(linha)
+}))
+
+/**
+ * Apaga TODAS as posições de estoque da loja — para quem vai reimportar a base
+ * do zero. Os produtos continuam no cadastro: só saldo, saídas, custo e venda
+ * saem.
+ *
+ * Os lotes de validade saem junto: um lote só existe como filho de uma posição
+ * de estoque (`on delete cascade`), e mantê-lo sem ela deixaria uma validade sem
+ * produto na loja. Quebras não são tocadas: guardam o produto, não a posição.
+ *
+ * Só o administrador: é a ação mais destrutiva da tela e não tem desfazer.
+ */
+rotasEstoque.delete('/', exigirAdmin, assincrono(async (req, res) => {
+  const resultado = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rows: lotes } = await client.query(
+      `select count(*)::int as n from validades v join estoque e on e.id = v.estoque_id
+        where e.loja_id = $1`,
+      [req.loginId],
+    )
+    const { rowCount } = await client.query('delete from estoque where loja_id = $1', [req.loginId])
+    return { linhas: rowCount ?? 0, lotes: lotes[0].n as number }
+  })
   res.json(resultado)
 }))

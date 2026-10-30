@@ -73,7 +73,8 @@ function paraCorpo(draft: LossRecordDraft) {
   }
 }
 
-async function loadRecords(): Promise<LossRecord[]> {
+/** Todos os registros da loja, crus — para quem precisa saber o que já existe (importação). */
+export async function loadRecords(): Promise<LossRecord[]> {
   const registros = await apiFetch<QuebraApi[]>('/quebras')
   return registros.map(paraLossRecord)
 }

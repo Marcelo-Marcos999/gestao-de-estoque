@@ -56,9 +56,18 @@ export interface StockPage {
   total: number
 }
 
+/**
+ * Só os produtos que têm posição de estoque nesta loja. O cadastro tem todos —
+ * muitos nunca entraram no estoque, e listá-los aqui, com zeros, enchia a tela
+ * de "registros" que ninguém lançou (e fazia "Excluir tudo" parecer não ter
+ * feito nada).
+ */
 export async function listStockRows(query: StockQuery): Promise<StockPage> {
   const products = await getAllProducts()
-  const rows = products.map(toRow).filter((row) => matches(row, query))
+  const rows = products
+    .filter((product) => product.inStock)
+    .map(toRow)
+    .filter((row) => matches(row, query))
   return { items: rows, total: rows.length }
 }
 

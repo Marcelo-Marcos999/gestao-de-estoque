@@ -198,3 +198,59 @@ rotasValidades.post('/restaurar', assincrono(async (req, res) => {
   })
   res.status(204).end()
 }))
+
+const corpoLote = z.object({
+  itens: z
+    .array(z.object({ produtoId: z.string().uuid(), dataValidade }))
+    .min(1)
+    .max(1000),
+})
+
+/**
+ * Cria vários lotes de uma vez (importação de planilha), ignorando os que já
+ * existem. Mesmas regras de `POST /`, sem uma ida ao banco por linha: com
+ * milhares de lotes, 150 ms cada (Render → Neon) viraria minutos.
+ *
+ * Devolve só os números. Produto que não é da conta simplesmente não aparece
+ * (a RLS esconde) e cai em `ignorados`, como o lote que já existia.
+ */
+rotasValidades.post('/lote', assincrono(async (req, res) => {
+  const corpo = corpoLote.safeParse(req.body)
+  if (!corpo.success) {
+    res.status(400).json({ erro: 'Lotes inválidos.' })
+    return
+  }
+  const { itens } = corpo.data
+  const produtos = itens.map((i) => i.produtoId)
+  const datas = itens.map((i) => i.dataValidade)
+
+  const criados = await comContextoDoUsuario(req.sessao!, async (client) => {
+    // Mesma trava de `POST /`, por loja: dois envios simultâneos do mesmo lote
+    // passariam juntos pelo "ainda não existe".
+    await client.query('select pg_advisory_xact_lock(hashtext($1))', [`validades:${req.loginId}`])
+
+    // Um lote precisa de uma posição de estoque; produto sem uma ganha a posição zerada.
+    await client.query(
+      `insert into estoque (loja_id, produto_id)
+       select $1, p.id from produtos p where p.id = any($2::uuid[])
+       on conflict (loja_id, produto_id) do nothing`,
+      [req.loginId, produtos],
+    )
+
+    const { rowCount } = await client.query(
+      `insert into validades (estoque_id, data_validade)
+       select e.id, i.data_validade
+       from (select distinct produto_id, data_validade
+             from unnest($2::uuid[], $3::date[]) as t(produto_id, data_validade)) i
+       join estoque e on e.produto_id = i.produto_id and e.loja_id = $1
+       where not exists (
+         select 1 from validades v where v.estoque_id = e.id and v.data_validade = i.data_validade
+       )`,
+      [req.loginId, produtos, datas],
+    )
+    return rowCount ?? 0
+  })
+
+  const distintos = new Set(itens.map((i) => `${i.produtoId}|${i.dataValidade}`)).size
+  res.json({ criados, ignorados: distintos - criados })
+}))

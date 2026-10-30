@@ -100,13 +100,17 @@ export async function updateProduct(id: string, draft: ProductDraft): Promise<Sa
     // Preserva os números de estoque que essa loja já tinha pra esse
     // produto — PATCH /produtos só devolve o lado do catálogo.
     const anterior = (await carregar()).find((p) => p.id === id)
-    const estoqueAnterior: EstoqueApi | undefined = anterior && {
-      produto_id: id,
-      saldo: anterior.stock,
-      saidas: anterior.outflow,
-      valor_custo: String(anterior.costPrice),
-      valor_venda: String(anterior.salePrice),
-    }
+    // Só se já tinha posição de estoque: sem isto, editar a descrição de um
+    // produto que nunca entrou no estoque o faria aparecer lá com zeros.
+    const estoqueAnterior: EstoqueApi | undefined = anterior?.inStock
+      ? {
+          produto_id: id,
+          saldo: anterior.stock,
+          saidas: anterior.outflow,
+          valor_custo: String(anterior.costPrice),
+          valor_venda: String(anterior.salePrice),
+        }
+      : undefined
     return { data: paraProduct(produto, estoqueAnterior), error: null }
   } catch (erro) {
     const saveError = comoSaveError(erro)

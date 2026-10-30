@@ -1,20 +1,19 @@
 import { useMemo, useState } from 'react'
-import { Button } from '@/shared/ui/Button'
-import { ExportButton } from '@/shared/ui/ExportButton'
-import { PlusIcon, UploadIcon } from '@/shared/ui/icons'
+import { useAuth } from '@/features/auth'
 import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
 import { useSort } from '@/shared/hooks/useSort'
+import { DeleteAllStockDialog } from '../components/DeleteAllStockDialog'
 import { ImportWizard } from '../components/ImportWizard'
 import { NewStockDialog } from '../components/NewStockDialog'
+import { StockActions } from '../components/StockActions'
 import { StockEmptyState, StockErrorState } from '../components/StockEmptyState'
 import { StockRowDialog } from '../components/StockRowDialog'
 import { StockTable, type StockSortKey } from '../components/StockTable'
 import { StockToolbar } from '../components/StockToolbar'
 import { StockTotalsSummary } from '../components/StockTotalsSummary'
-import { exportStockRows } from '../export'
 import { useStockEditor } from '../hooks/useStockEditor'
 import { useStockList } from '../hooks/useStockList'
 import { rowCostTotal, rowSaleTotal, sumStockTotals } from '../totals'
@@ -45,8 +44,9 @@ function stockValueOf(row: StockRow, key: StockSortKey): string | number {
  * Tela de Estoque: saldo, saídas, custo e venda dos produtos, acessível aos
  * dois perfis (ver docs/dominio.md, "de onde vêm saldo e saídas").
  *
- * Diferente do cadastro de produtos, aqui não há "criar" nem "excluir" — só
- * importar a planilha e corrigir os quatro números à mão. Identidade do
+ * Diferente do cadastro de produtos, aqui não há "criar" nem "excluir" um
+ * produto — só importar a planilha, corrigir os quatro números à mão e, para o
+ * administrador, apagar todo o estoque para reimportar do zero. Identidade do
  * produto (descrição, código de barras) é só leitura, vinda do cadastro.
  */
 export function StockPage() {
@@ -64,28 +64,22 @@ export function StockPage() {
 
   const [importOpen, setImportOpen] = useState(false)
   const [novoAberto, setNovoAberto] = useState(false)
+  // `clearKey` muda a cada abertura: remonta o diálogo e esvazia a palavra digitada.
+  const [clearOpen, setClearOpen] = useState(false)
+  const [clearKey, setClearKey] = useState(0)
+  const { user } = useAuth()
 
   const acoes = (
-    <>
-      <ExportButton count={list.rows.length} onExport={() => exportStockRows(list.rows)} />
-
-      <Button variant="secondary" onClick={() => setImportOpen(true)}>
-        <UploadIcon width={18} height={18} />
-        <span>
-          Importar<span className={styles.labelExtra}> planilha</span>
-        </span>
-      </Button>
-
-      {/* A planilha é o caminho de todo dia, mas um produto solto não vale um
-          arquivo só para ele — e sem esta porta a única saída seria montar uma
-          planilha de uma linha. */}
-      <Button onClick={() => setNovoAberto(true)}>
-        <PlusIcon width={18} height={18} />
-        <span>
-          Adicionar<span className={styles.labelExtra}> produto</span>
-        </span>
-      </Button>
-    </>
+    <StockActions
+      rows={list.rows}
+      canClear={user?.role === 'admin'}
+      onImport={() => setImportOpen(true)}
+      onNew={() => setNovoAberto(true)}
+      onClear={() => {
+        setClearKey((n) => n + 1)
+        setClearOpen(true)
+      }}
+    />
   )
 
   return (
@@ -163,6 +157,13 @@ export function StockPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={list.reload}
+      />
+
+      <DeleteAllStockDialog
+        key={clearKey}
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        onDeleted={list.reload}
       />
 
       <NewStockDialog

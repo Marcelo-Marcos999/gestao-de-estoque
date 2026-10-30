@@ -44,15 +44,6 @@
   /* Palavra que só cabe em tela larga; o ícone já diz do que se trata. Fica
      escondida da vista, mas continua no nome acessível — com display:none o
      leitor de tela anunciaria apenas "Importar". */
-  .labelExtra {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-
   .header {
     flex-direction: column;
   }

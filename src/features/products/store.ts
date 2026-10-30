@@ -41,6 +41,7 @@ export function paraProduct(p: ProdutoApi, e?: EstoqueApi): Product {
     costPrice: e ? Number(e.valor_custo) : 0,
     salePrice: e ? Number(e.valor_venda) : 0,
     pendingCadastro: p.pendente_cadastro,
+    inStock: e !== undefined,
     createdAt: p.criado_em,
     updatedAt: p.atualizado_em ?? p.criado_em,
   }

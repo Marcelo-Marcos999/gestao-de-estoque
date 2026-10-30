@@ -38,7 +38,8 @@ function paraExpiryItem(lote: LoteApi): ExpiryItem {
   }
 }
 
-async function loadItems(): Promise<ExpiryItem[]> {
+/** Todos os lotes da loja, crus — para quem precisa saber o que já existe (importação). */
+export async function loadItems(): Promise<ExpiryItem[]> {
   const lotes = await apiFetch<LoteApi[]>('/validades')
   return lotes.map(paraExpiryItem)
 }
