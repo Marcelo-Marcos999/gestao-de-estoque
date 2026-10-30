@@ -269,6 +269,13 @@ um erro numa rota não consegue vazar dados de outra conta.
 | `administradores_plataforma` | só `app_auth` (login) | ninguém pelo app |
 | `tokens_email` | ninguém pelo app | só as funções de cadastro |
 
+**Como a API expõe isso.** As rotas de leitura de `estoque`, `validades` e
+`quebras` aceitam `?loja=`: ausente = a loja do login (o padrão de sempre);
+`todas` = sem filtro de loja; `<uuid>` = aquela loja. O parâmetro só escolhe o
+recorte — **quem decide o que cada perfil enxerga é a RLS**, então um operador que
+peça `todas` continua vendo só a própria loja. As escritas aceitam `?loja=<id>` só
+para o administrador (o operador recebe 403). Não houve mudança de schema.
+
 **Privilégio por coluna em `lojas`.** A política de RLS enxerga linhas, não
 colunas: sem mais nada, um operador que conseguisse rodar um `UPDATE` na própria
 linha (por uma injeção de SQL numa rota, por exemplo) poderia trocar o próprio
@@ -328,8 +335,9 @@ começam vazias e só mostram o que a loja lançou.
 
 Rotas em lote, para importação e limpeza: `POST /validades/lote` (até 1000 lotes,
 ignora os que já existem), `POST /quebras` com motivo e origem **por item** (ou um
-par para o pedido inteiro) e `DELETE /estoque` + `GET /estoque/contagem` (só admin;
-apagar o estoque leva os lotes junto, por `on delete cascade`).
+par para o pedido inteiro) e `DELETE /estoque` + `GET /estoque/contagem` e, para uma seleção, `DELETE
+/estoque/linhas` + `POST /estoque/linhas/contagem` (só admin; apagar o estoque leva
+os lotes junto, por `on delete cascade`).
 
 `/conta` (empresa e plano, troca de senha) e `/lojas` (logins da conta, só admin)
 leem e escrevem `contas`, `configuracoes_conta` e `lojas`. Plano e limites

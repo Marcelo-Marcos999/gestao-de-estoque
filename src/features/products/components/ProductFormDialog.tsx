@@ -111,8 +111,22 @@ function ProductForm({ product, onClose, onSaved }: ProductFormProps) {
   async function handleDelete() {
     if (!product) return
     setSaving(true)
-    await deleteProducts([product.id])
-    setSaving(false)
+    setFormError(null)
+
+    try {
+      // A pessoa já confirmou, e o aviso abaixo diz que o estoque vai junto.
+      const { removed } = await deleteProducts([product.id], product.inStock)
+      if (removed.length === 0) {
+        setFormError('Não foi possível excluir este produto. Tente de novo.')
+        return
+      }
+    } catch {
+      setFormError('Não foi possível excluir. Verifique a conexão e tente de novo.')
+      return
+    } finally {
+      setSaving(false)
+    }
+
     onSaved()
     onClose()
   }
@@ -153,8 +167,9 @@ function ProductForm({ product, onClose, onSaved }: ProductFormProps) {
       {confirmingDelete && (
         <div className={styles.notice}>
           <Alert tone="danger">
-            Excluir <strong>{product?.description}</strong> remove o produto do cadastro. Esta
-            ação não pode ser desfeita.
+            Excluir <strong>{product?.description}</strong> remove o produto do cadastro.
+            {product?.inStock && ' Ele tem estoque: o estoque e os lotes de validade dele também são apagados.'}{' '}
+            Esta ação não pode ser desfeita.
           </Alert>
         </div>
       )}

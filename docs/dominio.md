@@ -504,6 +504,28 @@ quebra" e CLAUDE.md): perguntar "tem certeza?" a cada exclusão de rotina
 treina a pessoa a confirmar sem ler. O desfazer aparece embaixo por ~8
 segundos e resolve o engano de verdade.
 
+### Produto com estoque no Cadastro: a exceção que pergunta
+
+Excluir um produto do cadastro leva embora o estoque dele (em todas as lojas da
+conta) e os lotes de validade que dependem desse estoque. Por isso o servidor
+**não exclui sozinho** o produto que tem estoque lançado — e isso não pode ser
+silencioso: houve uma versão em que esses produtos simplesmente continuavam na
+lista, sem nenhuma explicação, e a exclusão parecia não funcionar.
+
+Agora, depois da exclusão, os produtos com estoque que ficaram para trás geram
+uma pergunta: "Excluir também o estoque?", dizendo quantos são e o que sai junto.
+**Manter** não toca em nada; **Excluir com o estoque** apaga produto, estoque e
+lotes — e essa parte **não tem desfazer**, porque o estoque que sai junto não
+volta. Os produtos sem estoque saem como antes, com desfazer. Os registros de
+quebra ficam, só sem o vínculo com o produto.
+
+Pelo formulário de edição do produto vale a mesma regra: o aviso de confirmação
+diz que o estoque vai junto quando ele existe.
+
+O que **nunca** pode acontecer é a falha calada: erro de rede, exclusão em
+andamento e exclusão concluída aparecem na tela. Seleções grandes (milhares de
+produtos) vão em lotes de 2000, com "Excluindo N produtos…" visível.
+
 **Não é igual em toda tela**, de propósito:
 
 - **Cadastro de produtos**: só o administrador vê a caixa de marcação e a
@@ -682,17 +704,52 @@ sem estoque nesta loja entra com saldo zerado.
 - A data do registro e quem registrou **não são importados** (ficam o momento da
   importação e quem importou).
 
-## Excluir todo o estoque
+## O administrador vê as lojas todas
 
-O administrador pode apagar **todo o estoque da loja** (botão "Excluir tudo" na
-tela de Estoque), para reimportar uma base do zero. É a ação mais destrutiva do
-sistema e **não tem desfazer**, então a confirmação é forte: mostra quantos
-produtos e quantos lotes de validade saem e exige digitar `EXCLUIR`.
+O login **é** a loja (ver `docs/modelo-de-dados.md`), então "os registros de todos
+os usuários" são os registros de todas as lojas da conta. O banco já definia isso
+(RLS: o administrador enxerga a conta inteira, o operador só a própria loja); as
+telas de **Estoque, Validades e Quebra** passam a mostrar isso:
+
+- **Administrador com mais de uma loja:** aparece o filtro **Loja** ("Todas as
+  lojas" ou uma só) e cada registro traz o nome da loja. O filtro é lembrado por
+  tela, como todo filtro, e fica sempre à vista — uma lista de uma loja só que
+  parece a da conta inteira seria o engano a evitar.
+- **Operador, ou administrador com uma loja só:** nada muda; sem filtro, sem rótulo.
+- **Os números são os da loja do registro.** O mesmo produto tem saldo e custo
+  diferentes em cada loja; a coluna de custo de um lote, ou o teto da quantidade
+  de uma quebra, vêm do estoque **daquela** loja, nunca do login de quem olha.
+- **O administrador age por outra loja.** Corrigir o saldo de uma linha, gerar a
+  quebra de um lote vencido ou desfazer uma exclusão acontece **na loja do
+  registro**, não na do administrador (a quebra gerada fica com a loja do lote, e
+  o administrador como autor). O operador não consegue: o servidor responde 403 e
+  a RLS barra de qualquer forma.
+- **"Excluir tudo" age sobre uma loja.** Em "Todas as lojas" o botão some; com uma
+  loja escolhida, o diálogo diz o nome dela. Apagar o estoque da conta inteira
+  por um clique seria a pior forma de errar a loja.
+- **Importar** planilha continua gravando na loja de quem importa (o
+  administrador); importar por outra loja fica para depois.
+
+## Excluir estoque
+
+O administrador exclui estoque de duas formas, na tela de Estoque:
+
+- **Alguns produtos:** marca as linhas (caixa à esquerda; "Selecionar todos" marca
+  o que está na tela, com os filtros aplicados) e usa "Excluir" na barra de
+  seleção. A confirmação mostra quantos produtos e quantos lotes saem.
+- **Tudo:** botão "Excluir tudo", para reimportar uma base do zero. É a ação mais
+  destrutiva do sistema, então a confirmação também exige digitar `EXCLUIR`.
+
+Nenhuma das duas tem **desfazer** — diferente da exclusão de registros nas outras
+telas —, porque apagar uma posição leva os lotes de validade junto, e restaurá-los
+exigiria guardar tudo o que saiu. Em compensação, o diálogo diz o tamanho do que
+vai sair antes de confirmar.
 
 - Saem saldo, saídas, custo e venda, e os **lotes de validade** junto (um lote só
   existe como filho de uma posição de estoque).
 - **Ficam** os produtos no Cadastro e os registros de quebra.
-- Só o administrador vê o botão, e o servidor recusa os outros.
+- Só o administrador vê a coluna de marcação e os botões, e o servidor recusa os
+  outros: para o operador a tela não tem caixas que não fariam nada.
 
 **A tela de Estoque lista só quem tem estoque.** O cadastro tem todos os produtos,
 muitos sem estoque nenhum; listá-los aqui, com zeros, enchia a tela de "registros"

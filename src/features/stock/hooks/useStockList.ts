@@ -36,11 +36,14 @@ function isStockQuery(value: unknown): value is StockQuery {
  * Estado da tela de Estoque: filtros lembrados entre sessões (ver CLAUDE.md) e
  * a busca dos dados que eles produzem.
  */
-export function useStockList() {
+export function useStockList(
+  /** `?loja=…` do escopo de loja da tela (vazio para o operador). Entra na chave da busca. */
+  storeParam = '',
+) {
   const [filters, setFilters] = usePersistedState<StockQuery>(FILTERS_KEY, NO_FILTERS, isStockQuery)
 
   const debouncedSearch = useDebouncedValue(filters.search, 250)
-  const queryKey = `${debouncedSearch}|${filters.onlyPending}|${rangesKey(filters.numberRanges)}`
+  const queryKey = `${debouncedSearch}|${filters.onlyPending}|${rangesKey(filters.numberRanges)}|${storeParam}`
 
   const [result, setResult] = useState<{ key: string; items: StockRow[]; total: number } | null>(
     null,
@@ -51,11 +54,14 @@ export function useStockList() {
   useEffect(() => {
     let cancelled = false
 
-    listStockRows({
-      search: debouncedSearch,
-      onlyPending: filters.onlyPending,
-      numberRanges: filters.numberRanges,
-    })
+    listStockRows(
+      {
+        search: debouncedSearch,
+        onlyPending: filters.onlyPending,
+        numberRanges: filters.numberRanges,
+      },
+      storeParam,
+    )
       .then((page) => {
         if (cancelled) return
         setFailedKey(null)
@@ -68,7 +74,7 @@ export function useStockList() {
     return () => {
       cancelled = true
     }
-  }, [queryKey, debouncedSearch, filters.onlyPending, filters.numberRanges, reloadKey])
+  }, [queryKey, storeParam, debouncedSearch, filters.onlyPending, filters.numberRanges, reloadKey])
 
   const status: ListStatus =
     failedKey === queryKey ? 'error' : result === null ? 'loading' : 'ready'

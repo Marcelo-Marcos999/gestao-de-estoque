@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/features/auth'
 import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
+import { useSelection } from '@/shared/hooks/useSelection'
+import { useStoreScope } from '@/shared/hooks/useStoreScope'
+import { StoreFilter } from '@/shared/ui/StoreFilter'
 import { useSort } from '@/shared/hooks/useSort'
-import { DeleteAllStockDialog } from '../components/DeleteAllStockDialog'
+import { SelectionBar } from '@/shared/ui/SelectionBar'
+import { DeleteStockDialog, type DeleteTarget } from '../components/DeleteStockDialog'
 import { ImportWizard } from '../components/ImportWizard'
 import { NewStockDialog } from '../components/NewStockDialog'
 import { StockActions } from '../components/StockActions'
@@ -17,7 +21,7 @@ import { StockTotalsSummary } from '../components/StockTotalsSummary'
 import { useStockEditor } from '../hooks/useStockEditor'
 import { useStockList } from '../hooks/useStockList'
 import { rowCostTotal, rowSaleTotal, sumStockTotals } from '../totals'
-import type { StockRow } from '../types'
+import { rowKey, type StockRow } from '../types'
 import styles from './StockPage.module.css'
 
 /** O que cada coluna ordenável compara. */
@@ -50,7 +54,11 @@ function stockValueOf(row: StockRow, key: StockSortKey): string | number {
  * produto (descrição, código de barras) é só leitura, vinda do cadastro.
  */
 export function StockPage() {
-  const list = useStockList()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  // O administrador vê as lojas todas da conta (e filtra por uma); o operador, só a própria.
+  const scope = useStoreScope('estoque', isAdmin)
+  const list = useStockList(scope.param)
   const isNarrow = useMediaQuery('(max-width: 719px)')
   const focus = useFocusMode()
   const editor = useStockEditor(list.reload)
@@ -64,21 +72,44 @@ export function StockPage() {
 
   const [importOpen, setImportOpen] = useState(false)
   const [novoAberto, setNovoAberto] = useState(false)
-  // `clearKey` muda a cada abertura: remonta o diálogo e esvazia a palavra digitada.
-  const [clearOpen, setClearOpen] = useState(false)
-  const [clearKey, setClearKey] = useState(0)
-  const { user } = useAuth()
+
+  // Só o administrador exclui: a seleção (e a coluna de marcação) nem existe para o operador.
+  const visibleKeys = sort.sortedRows.map(rowKey)
+  const selectionState = useSelection(visibleKeys)
+
+  // `key` muda a cada abertura: remonta o diálogo e esvazia a palavra digitada.
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ target: DeleteTarget; key: number }>({
+    target: { kind: 'all' },
+    key: 0,
+  })
+
+  function askDelete(target: DeleteTarget) {
+    setDeleteTarget((current) => ({ target, key: current.key + 1 }))
+    setDeleteOpen(true)
+  }
+
+  // "Excluir tudo" age sobre UMA loja. Com várias lojas à vista é a escolhida no
+  // filtro; em "todas as lojas" o botão some, para ninguém apagar a loja errada.
+  const clearStore = scope.stores.find((store) => store.id === scope.filter)
+  const canClearAll = isAdmin && (!scope.multi || clearStore !== undefined)
+
+  // Trocar de filtro limpa a seleção: uma linha marcada e depois escondida por
+  // um filtro novo não pode ser excluída sem a pessoa vê-la mais.
+  useEffect(() => {
+    selectionState.clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.filters])
 
   const acoes = (
     <StockActions
       rows={list.rows}
-      canClear={user?.role === 'admin'}
+      canClear={canClearAll}
       onImport={() => setImportOpen(true)}
       onNew={() => setNovoAberto(true)}
-      onClear={() => {
-        setClearKey((n) => n + 1)
-        setClearOpen(true)
-      }}
+      onClear={() =>
+        askDelete({ kind: 'all', storeId: scope.multi ? clearStore?.id : undefined, storeName: scope.multi ? clearStore?.name : undefined })
+      }
     />
   )
 
@@ -121,6 +152,25 @@ export function StockPage() {
         onToggleFocus={focus.toggle}
       />
 
+      <StoreFilter scope={scope} />
+
+      {isAdmin && (
+        <SelectionBar
+          selected={selectionState.selection.size}
+          total={visibleKeys.length}
+          onSelectAll={selectionState.selectAll}
+          onClear={selectionState.clear}
+          onDelete={() =>
+            askDelete({
+              kind: 'rows',
+              rows: sort.sortedRows
+                .filter((row) => selectionState.selection.has(rowKey(row)))
+                .map((row) => ({ storeId: row.storeId, productId: row.productId })),
+            })
+          }
+        />
+      )}
+
       {list.status === 'loading' && <ProductsSkeleton rowHeight={rowHeight} />}
 
       {list.status === 'error' && <StockErrorState onRetry={list.reload} />}
@@ -140,6 +190,9 @@ export function StockPage() {
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
           onEdit={editor.open}
+          selection={isAdmin ? selectionState.selection : undefined}
+          onToggleSelect={isAdmin ? selectionState.toggle : undefined}
+          showStore={scope.multi}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
           onSort={sort.cycleSort}
@@ -159,11 +212,15 @@ export function StockPage() {
         onImported={list.reload}
       />
 
-      <DeleteAllStockDialog
-        key={clearKey}
-        open={clearOpen}
-        onClose={() => setClearOpen(false)}
-        onDeleted={list.reload}
+      <DeleteStockDialog
+        key={deleteTarget.key}
+        open={deleteOpen}
+        target={deleteTarget.target}
+        onClose={() => setDeleteOpen(false)}
+        onDeleted={() => {
+          selectionState.clear()
+          list.reload()
+        }}
       />
 
       <NewStockDialog

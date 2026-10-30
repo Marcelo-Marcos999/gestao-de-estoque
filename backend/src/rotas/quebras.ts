@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { comContextoDoUsuario } from '../db/contexto.js'
 import { exigirAutenticacao } from '../auth/middleware.js'
 import { assincrono } from '../lib/assincrono.js'
+import { lojaDaConsulta } from '../lib/lojas.js'
 
 export const rotasQuebras = Router()
 
@@ -29,17 +30,25 @@ const COLUNAS = `q.id, q.produto_id,
                  to_char(q.data_validade, 'YYYY-MM-DD') as data_validade,
                  q.quantidade, q.motivo_id, q.origem_id,
                  coalesce(q.observacao, '') as observacao,
-                 q.criado_em, q.criado_por_id, l.nome as criado_por`
+                 q.criado_em, q.criado_por_id, l.nome as criado_por,
+                 q.loja_id, lo.nome as loja_nome, e.saldo, e.valor_custo`
 
+/**
+ * `e`: o estoque DA LOJA DO REGISTRO. O saldo limita a quantidade e o custo
+ * dá o total da perda; quando o administrador vê as lojas todas, usar o estoque
+ * do próprio login trocaria os números de uma loja pelos de outra.
+ */
 const DESDE = `from quebras q
                left join produtos p on p.id = q.produto_id
-               join lojas l on l.id = q.criado_por_id`
+               join lojas l on l.id = q.criado_por_id
+               join lojas lo on lo.id = q.loja_id
+               left join estoque e on e.loja_id = q.loja_id and e.produto_id = q.produto_id`
 
 rotasQuebras.get('/', assincrono(async (req, res) => {
   const linhas = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows } = await client.query(
-      `select ${COLUNAS} ${DESDE} where q.loja_id = $1 order by q.criado_em desc`,
-      [req.loginId],
+      `select ${COLUNAS} ${DESDE} where ($1::uuid is null or q.loja_id = $1) order by q.criado_em desc`,
+      [lojaDaConsulta(req)],
     )
     return rows
   })
@@ -64,6 +73,8 @@ const corpoCriar = z
     /** Valem para os itens que não trazem o próprio (envio em massa: um só para todos). */
     motivoId: z.string().uuid().optional(),
     origemId: z.string().uuid().optional(),
+    /** Só o administrador: registrar a perda em NOME de outra loja (`criado_por` continua sendo ele). */
+    lojaId: z.string().uuid().optional(),
     // Importação de planilha: cada linha traz o seu motivo e a sua origem.
     itens: z
       .array(
@@ -96,13 +107,18 @@ rotasQuebras.post('/', assincrono(async (req, res) => {
     return
   }
   const { itens } = corpo.data
+  const loja = corpo.data.lojaId ?? req.loginId!
+  if (loja !== req.loginId && req.sessao?.role !== 'admin') {
+    res.status(403).json({ erro: 'Só o administrador pode registrar a quebra de outra loja.' })
+    return
+  }
 
   try {
     const ids = await comContextoDoUsuario(req.sessao!, async (client) => {
       const { rows } = await client.query(
         `insert into quebras (loja_id, produto_id, sku, descricao, codigo_barras, pendente_produto,
                               data_validade, quantidade, motivo_id, origem_id, observacao, criado_por_id)
-         select $1, p.id, nullif(i.sku, ''), nullif(i.descricao, ''), nullif(i.codigo_barras, ''),
+         select $14::uuid, p.id, nullif(i.sku, ''), nullif(i.descricao, ''), nullif(i.codigo_barras, ''),
                 i.pendente, i.data_validade, i.quantidade, m.id, o.id, nullif(i.observacao, ''), $1
          from unnest($4::uuid[], $5::text[], $6::text[], $7::text[], $8::boolean[],
                      $9::date[], $10::int[], $11::text[], $12::uuid[], $13::uuid[])
@@ -125,6 +141,7 @@ rotasQuebras.post('/', assincrono(async (req, res) => {
           itens.map((i) => i.observacao),
           itens.map((i) => i.motivoId ?? null),
           itens.map((i) => i.origemId ?? null),
+          loja,
         ],
       )
       if (rows.length !== itens.length) throw new EntradaInvalida()
@@ -216,13 +233,12 @@ rotasQuebras.delete('/', assincrono(async (req, res) => {
     // Lê antes de apagar: depois do DELETE o produto e o autor ainda existem,
     // mas assim a leitura é a mesma da lista, sem montar o formato duas vezes.
     const { rows } = await client.query(
-      `select ${COLUNAS} ${DESDE} where q.loja_id = $1 and q.id = any($2::uuid[])`,
-      [req.loginId, corpo.data.ids],
+      `select ${COLUNAS} ${DESDE} where q.id = any($1::uuid[])`,
+      [corpo.data.ids],
     )
-    await client.query('delete from quebras where loja_id = $1 and id = any($2::uuid[])', [
-      req.loginId,
-      corpo.data.ids,
-    ])
+    // Sem filtro de loja: a RLS já limita o operador à própria e deixa o
+    // administrador apagar o registro de qualquer loja da conta.
+    await client.query('delete from quebras where id = any($1::uuid[])', [corpo.data.ids])
     return rows
   })
   res.json(removidos)
@@ -237,6 +253,7 @@ const corpoRestaurar = z.object({
         origemId: z.string().uuid(),
         criadoPorId: z.string().uuid(),
         criadoEm: z.string(),
+        lojaId: z.string().uuid().optional(),
       }),
     )
     .min(1)
@@ -257,13 +274,14 @@ rotasQuebras.post('/restaurar', assincrono(async (req, res) => {
       `insert into quebras (id, loja_id, produto_id, sku, descricao, codigo_barras, pendente_produto,
                             data_validade, quantidade, motivo_id, origem_id, observacao,
                             criado_por_id, criado_em)
-       select i.id, $1, p.id, nullif(i.sku, ''), nullif(i.descricao, ''), nullif(i.codigo_barras, ''),
+       select i.id, coalesce(i.loja_id, $1::uuid), p.id, nullif(i.sku, ''), nullif(i.descricao, ''), nullif(i.codigo_barras, ''),
               i.pendente, i.data_validade, i.quantidade, m.id, o.id, nullif(i.observacao, ''),
               l.id, i.criado_em::timestamptz
        from unnest($2::uuid[], $3::uuid[], $4::text[], $5::text[], $6::text[], $7::boolean[],
-                   $8::date[], $9::int[], $10::uuid[], $11::uuid[], $12::text[], $13::uuid[], $14::text[])
+                   $8::date[], $9::int[], $10::uuid[], $11::uuid[], $12::text[], $13::uuid[], $14::text[],
+                   $15::uuid[])
             as i(id, produto_id, sku, descricao, codigo_barras, pendente, data_validade, quantidade,
-                 motivo_id, origem_id, observacao, criado_por_id, criado_em)
+                 motivo_id, origem_id, observacao, criado_por_id, criado_em, loja_id)
        join motivos m on m.id = i.motivo_id
        join origens o on o.id = i.origem_id
        join lojas l on l.id = i.criado_por_id
@@ -285,6 +303,7 @@ rotasQuebras.post('/restaurar', assincrono(async (req, res) => {
         r.map((x) => x.observacao),
         r.map((x) => x.criadoPorId),
         r.map((x) => x.criadoEm),
+        r.map((x) => x.lojaId ?? null),
       ],
     )
   })

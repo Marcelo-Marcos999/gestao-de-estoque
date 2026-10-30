@@ -5,7 +5,7 @@ import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import type { SortDir } from '@/shared/hooks/useSort'
 import { formatMoney } from '@/shared/lib/money'
 import { rowCostTotal, rowSaleTotal } from '../totals'
-import type { StockRow } from '../types'
+import { rowKey, type StockRow } from '../types'
 import styles from './StockTable.module.css'
 
 export type StockSortKey =
@@ -23,6 +23,15 @@ interface StockTableProps {
   /** Tela estreita: quem rola é a página, e a lista se ancora nela. */
   narrow: boolean
   onEdit: (row: StockRow) => void
+  /**
+   * Seleção para excluir. Sem `onToggleSelect` a tabela não tem a coluna de
+   * marcação: quem não pode excluir (o operador) não vê uma caixa que não faz nada.
+   */
+  selection?: ReadonlySet<string>
+  /** Recebe a chave da linha (`rowKey`): produto **e** loja. */
+  onToggleSelect?: (key: string) => void
+  /** O administrador, com mais de uma loja: mostra a loja de cada posição. */
+  showStore?: boolean
   sortKey: StockSortKey | null
   sortDir: SortDir | null
   onSort: (key: StockSortKey) => void
@@ -40,6 +49,9 @@ export function StockTable({
   estimatedRowHeight,
   narrow,
   onEdit,
+  selection,
+  onToggleSelect,
+  showStore = false,
   sortKey,
   sortDir,
   onSort,
@@ -51,10 +63,12 @@ export function StockTable({
   })
 
   const sortProps = { activeKey: sortKey, activeDir: sortDir, onSort }
+  const selectable = onToggleSelect !== undefined
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.head} role="presentation">
+      <div className={`${styles.head} ${selectable ? styles.selectable : ''}`} role="presentation">
+        {selectable && <span aria-hidden="true" />}
         <SortButton label="Produto" sortKey="description" {...sortProps} />
         <SortButton label="Estoque" sortKey="stock" {...sortProps} />
         <SortButton label="Saídas" sortKey="outflow" {...sortProps} />
@@ -73,21 +87,44 @@ export function StockTable({
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const row = rows[virtualRow.index]
+            const key = rowKey(row)
+            const selected = selection?.has(key) ?? false
 
             return (
               <div
-                key={row.productId}
+                key={key}
                 className={styles.item}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
                 style={{ transform: `translateY(${virtualRow.start - scrollMargin}px)` }}
               >
-                <div className={styles.itemInner}>
+                <div
+                  className={`${styles.itemInner} ${selectable ? styles.selectable : ''} ${
+                    selected ? styles.selected : ''
+                  }`}
+                >
+                  {selectable && (
+                    <label className={styles.select}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={selected}
+                        onChange={() => onToggleSelect(key)}
+                      />
+                      <span className={styles.srOnly}>
+                        Selecionar {row.description || `SKU ${row.sku}`}
+                      </span>
+                    </label>
+                  )}
+
                   <span className={styles.product}>
                     {row.pendingCadastro ? (
                       <span className={styles.pendingLine}>
                         <Badge tone="pendente">pendente</Badge>
-                        <span className={styles.codes}>SKU {row.sku}</span>
+                        <span className={styles.codes}>
+                          SKU {row.sku}
+                          {showStore && ` · ${row.storeName}`}
+                        </span>
                       </span>
                     ) : (
                       <>
@@ -97,6 +134,7 @@ export function StockTable({
                         <span className={styles.codes}>
                           SKU {row.sku}
                           {row.barcode && ` · ${row.barcode}`}
+                          {showStore && ` · ${row.storeName}`}
                         </span>
                       </>
                     )}

@@ -6,29 +6,41 @@
  * descrição, código de barras). Esta tela só olha esses quatro números de um
  * ângulo diferente e sabe importá-los em massa.
  */
-import {
-  bulkUpsertStock,
-  getAllProducts,
-  updateProductStock,
-  type Product,
-  type StockImportRow,
-  type StockValues,
-} from '@/features/products'
+import { bulkUpsertStock, updateProductStock, type StockImportRow, type StockValues } from '@/features/products'
+import { apiFetch } from '@/shared/lib/http'
 import { matchesRange } from '@/shared/lib/numberRange'
 import { rowCostTotal, rowSaleTotal } from './totals'
 import type { StockQuery, StockRow } from './types'
 
-function toRow(product: Product): StockRow {
+/** Uma posição de estoque como o servidor a entrega, já com a identidade do produto e a loja. */
+interface PosicaoApi {
+  produto_id: string
+  sku: string
+  descricao: string
+  codigo_barras: string | null
+  pendente_cadastro: boolean
+  saldo: number
+  saidas: number
+  valor_custo: string
+  valor_venda: string
+  loja_id: string
+  loja_nome: string
+}
+
+function toRow(p: PosicaoApi): StockRow {
   return {
-    productId: product.id,
-    sku: product.sku,
-    description: product.description,
-    barcode: product.barcode,
-    stock: product.stock,
-    outflow: product.outflow,
-    costPrice: product.costPrice,
-    salePrice: product.salePrice,
-    pendingCadastro: product.pendingCadastro,
+    productId: p.produto_id,
+    storeId: p.loja_id,
+    storeName: p.loja_nome,
+    sku: p.sku,
+    description: p.descricao,
+    barcode: p.codigo_barras ?? '',
+    stock: p.saldo,
+    outflow: p.saidas,
+    // numeric do Postgres chega como string em JSON.
+    costPrice: Number(p.valor_custo),
+    salePrice: Number(p.valor_venda),
+    pendingCadastro: p.pendente_cadastro,
   }
 }
 
@@ -57,23 +69,27 @@ export interface StockPage {
 }
 
 /**
- * Só os produtos que têm posição de estoque nesta loja. O cadastro tem todos —
- * muitos nunca entraram no estoque, e listá-los aqui, com zeros, enchia a tela
- * de "registros" que ninguém lançou (e fazia "Excluir tudo" parecer não ter
- * feito nada).
+ * Só as posições de estoque que existem — não o cadastro inteiro. O cadastro
+ * tem todos os produtos, muitos nunca entraram no estoque, e listá-los aqui,
+ * com zeros, enchia a tela de "registros" que ninguém lançou (e fazia "Excluir
+ * tudo" parecer não ter feito nada).
+ *
+ * `storeParam` é o `?loja=…` do escopo de loja da tela: o administrador vê uma
+ * linha por produto e loja; vazio é só a loja do próprio login.
  */
-export async function listStockRows(query: StockQuery): Promise<StockPage> {
-  const products = await getAllProducts()
-  const rows = products
-    .filter((product) => product.inStock)
-    .map(toRow)
-    .filter((row) => matches(row, query))
+export async function listStockRows(query: StockQuery, storeParam = ''): Promise<StockPage> {
+  const posicoes = await apiFetch<PosicaoApi[]>(`/estoque${storeParam}`)
+  const rows = posicoes.map(toRow).filter((row) => matches(row, query))
   return { items: rows, total: rows.length }
 }
 
-/** Corrige os quatro números de um produto, um de cada vez. */
-export async function updateStockRow(productId: string, values: StockValues): Promise<void> {
-  await updateProductStock(productId, values)
+/** Corrige os quatro números de um produto numa loja (a do login, ou — administrador — a da linha). */
+export async function updateStockRow(
+  productId: string,
+  values: StockValues,
+  storeId?: string,
+): Promise<void> {
+  await updateProductStock(productId, values, storeId)
 }
 
 /**

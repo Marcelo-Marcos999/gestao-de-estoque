@@ -27,6 +27,12 @@ interface LoteApi {
   produto_id: string
   data_validade: IsoDate | null
   criado_em: string
+  loja_id: string
+  /** Só na listagem; a resposta de excluir traz o lote sem estes campos. */
+  loja_nome?: string
+  saldo?: number
+  saidas?: number
+  valor_custo?: string
 }
 
 function paraExpiryItem(lote: LoteApi): ExpiryItem {
@@ -35,36 +41,52 @@ function paraExpiryItem(lote: LoteApi): ExpiryItem {
     productId: lote.produto_id,
     expiryDate: lote.data_validade,
     createdAt: lote.criado_em,
+    storeId: lote.loja_id,
+    storeName: lote.loja_nome ?? '',
+    stock: lote.saldo ?? 0,
+    outflow: lote.saidas ?? 0,
+    costPrice: Number(lote.valor_custo ?? 0),
   }
 }
 
-/** Todos os lotes da loja, crus — para quem precisa saber o que já existe (importação). */
-export async function loadItems(): Promise<ExpiryItem[]> {
-  const lotes = await apiFetch<LoteApi[]>('/validades')
+/**
+ * Todos os lotes da loja, crus — para quem precisa saber o que já existe
+ * (importação). `storeParam` é o `?loja=…` do escopo de loja da tela; vazio é a
+ * loja do próprio login.
+ */
+export async function loadItems(storeParam = ''): Promise<ExpiryItem[]> {
+  const lotes = await apiFetch<LoteApi[]>(`/validades${storeParam}`)
   return lotes.map(paraExpiryItem)
 }
 
 /* ---- Consulta ------------------------------------------------------------ */
 
+/**
+ * Saldo, saídas e custo vêm do LOTE (do estoque da loja dele), não do produto
+ * do próprio login: com lotes de lojas diferentes na mesma lista, o saldo de uma
+ * não vale para a outra.
+ */
 function toRow(item: ExpiryItem, product: Product, periodDays: number): ExpiryRow {
   const { situation, daysToExpiry, daysToZero } = classify({
     expiryDate: item.expiryDate,
-    stock: product.stock,
-    outflow: product.outflow,
+    stock: item.stock,
+    outflow: item.outflow,
     periodDays,
   })
 
   return {
     id: item.id,
     productId: product.id,
+    storeId: item.storeId,
+    storeName: item.storeName,
     sku: product.sku,
     description: product.description,
     barcode: product.barcode,
     expiryDate: item.expiryDate,
-    stock: product.stock,
-    outflow: product.outflow,
-    costPrice: product.costPrice,
-    totalCost: lineTotal(product.stock, product.costPrice),
+    stock: item.stock,
+    outflow: item.outflow,
+    costPrice: item.costPrice,
+    totalCost: lineTotal(item.stock, item.costPrice),
     situation,
     daysToExpiry,
     daysToZero,
@@ -102,8 +124,10 @@ export interface ExpiryPage {
 export async function listExpiryItems(
   query: ExpiryQuery,
   periodDays: number,
+  /** `?loja=…` do escopo de loja da tela; vazio para o operador. */
+  storeParam = '',
 ): Promise<ExpiryPage> {
-  const [items, products] = await Promise.all([loadItems(), getAllProducts()])
+  const [items, products] = await Promise.all([loadItems(storeParam), getAllProducts()])
   const byId = new Map(products.map((p) => [p.id, p]))
 
   const rows: ExpiryRow[] = []
@@ -171,10 +195,12 @@ export async function updateExpiryItem(id: string, expiryDate: IsoDate | null): 
 export async function ensureExpiryItem(
   productId: string,
   expiryDate: IsoDate | null,
+  /** A loja onde o lote existe, quando não é a do próprio login (o administrador agindo por outra loja). */
+  storeId?: string,
 ): Promise<boolean> {
   if (!productId || !expiryDate) return false
 
-  const { criado } = await apiFetch<{ id: string; criado: boolean }>('/validades', {
+  const { criado } = await apiFetch<{ id: string; criado: boolean }>(`/validades${storeId ? `?loja=${storeId}` : ''}`, {
     method: 'POST',
     body: { produtoId: productId, dataValidade: expiryDate },
   })
@@ -201,6 +227,7 @@ export async function restoreExpiryItems(voltando: ExpiryItem[]): Promise<void> 
         produtoId: item.productId,
         dataValidade: item.expiryDate,
         criadoEm: item.createdAt,
+        lojaId: item.storeId,
       })),
     },
   })

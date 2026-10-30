@@ -3,6 +3,9 @@ import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { UndoBar } from '@/shared/ui/UndoBar'
 import { SearchIcon } from '@/shared/ui/icons'
+import { StoreFilter } from '@/shared/ui/StoreFilter'
+import { useStoreScope } from '@/shared/hooks/useStoreScope'
+import { useAuth } from '@/features/auth'
 import { SelectionBar } from '@/shared/ui/SelectionBar'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
@@ -34,7 +37,10 @@ type DialogState = { open: false } | { open: true; record?: LossRecord }
  * que tem na mão.
  */
 export function BreakagePage() {
-  const list = useLossRecordList()
+  const { user } = useAuth()
+  // O administrador vê as lojas todas da conta (e filtra por uma); o operador, só a própria.
+  const scope = useStoreScope('quebra', user?.role === 'admin')
+  const list = useLossRecordList(scope.param)
   const [dialog, setDialog] = useState<DialogState>({ open: false })
 
   // Mesmo corte da tela de validades: abaixo disso nenhuma tabela cabe, e a
@@ -112,6 +118,8 @@ export function BreakagePage() {
         onToggleFocus={focus.toggle}
       />
 
+      <StoreFilter scope={scope} />
+
       <SelectionBar
         selected={list.selection.size}
         total={list.records.length}
@@ -176,6 +184,7 @@ export function BreakagePage() {
                 onToggleSelect={list.toggleSelected}
                 onEdit={(alvo) => setDialog({ open: true, record: alvo })}
                 onOpenAttachment={openAttachment}
+                showStore={scope.multi}
               />
             ))}
           </div>
@@ -189,6 +198,7 @@ export function BreakagePage() {
             onEdit={(alvo) => setDialog({ open: true, record: alvo })}
             onDelete={(alvo) => void list.remove([alvo.id])}
             onOpenAttachment={openAttachment}
+            showStore={scope.multi}
             sortKey={sort.sortKey}
             sortDir={sort.sortDir}
             onSort={sort.cycleSort}

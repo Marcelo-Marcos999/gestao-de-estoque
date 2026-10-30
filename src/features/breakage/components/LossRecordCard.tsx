@@ -4,7 +4,7 @@ import { Badge } from '@/shared/ui/Badge'
 import { CalendarIcon, ChevronRightIcon } from '@/shared/ui/icons'
 import { formatDate } from '@/shared/lib/date'
 import { deadline } from '../deadline'
-import { recordLabel } from '../label'
+import { ownerLabel, recordLabel } from '../label'
 import { labelOf } from '../tags'
 import type { LossRecord, Tag } from '../types'
 import { AttachmentChips } from './AttachmentChips'
@@ -18,6 +18,8 @@ interface LossRecordCardProps {
   onToggleSelect: (id: string) => void
   onEdit: (record: LossRecord) => void
   onOpenAttachment: (record: LossRecord, attachmentId: string) => void
+  /** O administrador, com mais de uma loja: mostra a loja do registro. */
+  showStore?: boolean
 }
 
 /**
@@ -42,6 +44,7 @@ export function LossRecordCard({
   onToggleSelect,
   onEdit,
   onOpenAttachment,
+  showStore = false,
 }: LossRecordCardProps) {
   // O cartão só existe no celular, onde a largura é o recurso escasso.
   const prazo = deadline(record, true)
@@ -103,7 +106,7 @@ export function LossRecordCard({
               própria: era a linha mais barata de cortar, e cada uma cortada é
               meio registro a mais visível na lista. */}
           <span className={styles.author}>
-            {record.createdBy} · {formatDate(record.createdAt.slice(0, 10))}
+            {ownerLabel(record, showStore)} · {formatDate(record.createdAt.slice(0, 10))}
           </span>
         </div>
 

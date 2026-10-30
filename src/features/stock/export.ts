@@ -11,6 +11,7 @@ import { rowCostTotal, rowSaleTotal } from './totals'
 import type { StockRow } from './types'
 
 const HEADER = [
+  'Loja',
   'SKU',
   'Descrição',
   'Código de barras',
@@ -25,6 +26,7 @@ const HEADER = [
 
 function toRow(row: StockRow): ExportValue[] {
   return [
+    row.storeName,
     row.sku,
     row.description,
     // Como texto: em número, o Excel come o zero à esquerda do código de barras.

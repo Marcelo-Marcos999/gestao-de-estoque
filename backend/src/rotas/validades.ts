@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { comContextoDoUsuario } from '../db/contexto.js'
 import { exigirAutenticacao } from '../auth/middleware.js'
 import { assincrono } from '../lib/assincrono.js'
+import { lojaDaConsulta, lojaDaEscrita } from '../lib/lojas.js'
 
 export const rotasValidades = Router()
 
@@ -24,7 +25,13 @@ rotasValidades.use(exigirAutenticacao)
  * o dia pode virar o anterior ao chegar no navegador. Texto `AAAA-MM-DD` não
  * sofre isso.
  */
-const COLUNAS_DO_LOTE = `v.id, e.produto_id, to_char(v.data_validade, 'YYYY-MM-DD') as data_validade, v.criado_em`
+/**
+ * O lote traz também a loja e os números DO ESTOQUE DESSA LOJA. Quando o
+ * administrador vê as lojas todas, o saldo e o custo de cada lote são os da loja
+ * dele — somar ou usar os do próprio login mostraria o estoque errado.
+ */
+const COLUNAS_DO_LOTE = `v.id, e.produto_id, to_char(v.data_validade, 'YYYY-MM-DD') as data_validade, v.criado_em,
+       l.id as loja_id, l.nome as loja_nome, e.saldo, e.saidas, e.valor_custo, e.valor_venda`
 
 const dataValidade = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
@@ -34,9 +41,10 @@ rotasValidades.get('/', assincrono(async (req, res) => {
       `select ${COLUNAS_DO_LOTE}
        from validades v
        join estoque e on e.id = v.estoque_id
-       where e.loja_id = $1
+       join lojas l on l.id = e.loja_id
+       where ($1::uuid is null or e.loja_id = $1)
        order by v.criado_em desc`,
-      [req.loginId],
+      [lojaDaConsulta(req)],
     )
     return rows
   })
@@ -65,6 +73,11 @@ rotasValidades.post('/', assincrono(async (req, res) => {
     return
   }
 
+  // O administrador pode lançar o lote na loja de outro (`?loja=<id>`), como ao
+  // registrar a quebra de um lote vencido em nome daquela loja.
+  const loja = lojaDaEscrita(req, res)
+  if (!loja) return
+
   const resultado = await comContextoDoUsuario(req.sessao!, async (client) => {
     // O `select` em `produtos` passa pela RLS: um id de produto de outra
     // conta simplesmente não aparece, e o lote não é criado.
@@ -72,11 +85,11 @@ rotasValidades.post('/', assincrono(async (req, res) => {
       `insert into estoque (loja_id, produto_id)
        select $1, p.id from produtos p where p.id = $2
        on conflict (loja_id, produto_id) do nothing`,
-      [req.loginId, corpo.data.produtoId],
+      [loja, corpo.data.produtoId],
     )
     const { rows: posicao } = await client.query(
       'select id from estoque where loja_id = $1 and produto_id = $2',
-      [req.loginId, corpo.data.produtoId],
+      [loja, corpo.data.produtoId],
     )
     if (posicao.length === 0) return null
 
@@ -147,7 +160,8 @@ rotasValidades.delete('/', assincrono(async (req, res) => {
          delete from validades where id = any($1::uuid[])
          returning id, estoque_id, data_validade, criado_em
        )
-       select x.id, e.produto_id, to_char(x.data_validade, 'YYYY-MM-DD') as data_validade, x.criado_em
+       select x.id, e.produto_id, to_char(x.data_validade, 'YYYY-MM-DD') as data_validade, x.criado_em,
+              e.loja_id
        from excluidos x join estoque e on e.id = x.estoque_id`,
       [corpo.data.ids],
     )
@@ -164,6 +178,8 @@ const corpoRestaurar = z.object({
         produtoId: z.string().uuid(),
         dataValidade: dataValidade.nullable(),
         criadoEm: z.string(),
+        /** A loja do lote excluído: o administrador pode estar desfazendo a exclusão de um lote de outra loja. */
+        lojaId: z.string().uuid().optional(),
       }),
     )
     .min(1)
@@ -183,9 +199,9 @@ rotasValidades.post('/restaurar', assincrono(async (req, res) => {
     await client.query(
       `insert into validades (id, estoque_id, data_validade, criado_em)
        select l.id, e.id, l.data_validade, l.criado_em::timestamptz
-       from unnest($2::uuid[], $3::uuid[], $4::date[], $5::text[])
-            as l(id, produto_id, data_validade, criado_em)
-       join estoque e on e.produto_id = l.produto_id and e.loja_id = $1
+       from unnest($2::uuid[], $3::uuid[], $4::date[], $5::text[], $6::uuid[])
+            as l(id, produto_id, data_validade, criado_em, loja_id)
+       join estoque e on e.produto_id = l.produto_id and e.loja_id = coalesce(l.loja_id, $1::uuid)
        on conflict (id) do nothing`,
       [
         req.loginId,
@@ -193,6 +209,7 @@ rotasValidades.post('/restaurar', assincrono(async (req, res) => {
         lotes.map((l) => l.produtoId),
         lotes.map((l) => l.dataValidade),
         lotes.map((l) => l.criadoEm),
+        lotes.map((l) => l.lojaId ?? null),
       ],
     )
   })

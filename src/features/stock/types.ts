@@ -11,6 +11,9 @@ import { EMPTY_RANGE, type NumberRange } from '@/shared/lib/numberRange'
  */
 export interface StockRow {
   productId: string
+  /** A loja desta posição: o mesmo produto tem uma linha por loja (administrador, "todas as lojas"). */
+  storeId: string
+  storeName: string
   sku: string
   description: string
   barcode: string
@@ -50,4 +53,9 @@ export interface StockQuery {
   onlyPending: boolean
   /** Um intervalo por número da linha, do painel "Filtro" (ver docs/dominio.md). */
   numberRanges: Record<StockRangeKey, NumberRange>
+}
+
+/** Identidade de uma linha: produto **e** loja — o mesmo produto aparece uma vez por loja. */
+export function rowKey(row: Pick<StockRow, 'productId' | 'storeId'>): string {
+  return `${row.storeId}:${row.productId}`
 }

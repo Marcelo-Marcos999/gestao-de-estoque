@@ -23,6 +23,8 @@ interface ExpiryTableProps {
   onDelete: (row: ExpiryRow) => void
   /** Só existe em lotes vencidos: gera a quebra da quantidade que sobrou. */
   onGenerateBreakage: (row: ExpiryRow) => void
+  /** O administrador, com mais de uma loja: mostra a loja do lote. */
+  showStore?: boolean
   selection: ReadonlySet<string>
   onToggleSelect: (id: string) => void
   sortKey: ExpirySortKey | null
@@ -44,6 +46,7 @@ export function ExpiryTable({
   onEdit,
   onDelete,
   onGenerateBreakage,
+  showStore = false,
   selection,
   onToggleSelect,
   sortKey,
@@ -141,6 +144,7 @@ export function ExpiryTable({
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onGenerateBreakage={onGenerateBreakage}
+                  showStore={showStore}
                 />
               </div>
             )

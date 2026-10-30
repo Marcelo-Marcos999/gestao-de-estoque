@@ -117,17 +117,25 @@ rotasProdutos.patch('/:id', exigirAdmin, assincrono(async (req, res) => {
 }))
 
 const corpoExcluirProdutos = z.object({
-  ids: z.array(z.string().uuid()).min(1),
+  // 5000 por chamada: a tela envia em lotes de 2000, e o corpo precisa caber no limite de 1 MB.
+  ids: z.array(z.string().uuid()).min(1).max(5000),
+  /** Apaga junto o estoque (em todas as lojas da conta) e, por cascata, os lotes de validade. */
+  comEstoque: z.boolean().default(false),
 })
 
 /**
  * Exclui em lote, devolvendo só o que saiu de verdade.
  *
- * Um produto com saldo em alguma loja (linha em `estoque`) nunca é excluído
- * — a condição `not exists` tira esses ids do UPDATE/DELETE num só comando,
- * em vez de um laço linha a linha: assim o SKU com estoque simplesmente
- * continua na lista depois, sem quebrar o restante do lote nem precisar de
- * um formato de erro parcial.
+ * Por padrão, um produto com estoque em alguma loja (linha em `estoque`) NÃO é
+ * excluído — a condição `not exists` tira esses ids do DELETE num só comando,
+ * em vez de um laço linha a linha, sem quebrar o restante do lote. Quem chama
+ * descobre quais ficaram comparando com o que pediu, e a tela explica e
+ * pergunta (ver `useProductDeletion`).
+ *
+ * Com `comEstoque`, a pessoa confirmou que quer apagar também o estoque desses
+ * produtos: as posições saem primeiro (e os lotes de validade junto, por
+ * cascata) e então os produtos. As quebras ficam, com o produto zerado
+ * (`on delete set null`).
  */
 rotasProdutos.delete('/', exigirAdmin, assincrono(async (req, res) => {
   const corpo = corpoExcluirProdutos.safeParse(req.body)
@@ -137,6 +145,10 @@ rotasProdutos.delete('/', exigirAdmin, assincrono(async (req, res) => {
   }
 
   const removidos = await comContextoDoUsuario(req.sessao!, async (client) => {
+    if (corpo.data.comEstoque) {
+      await client.query('delete from estoque where produto_id = any($1::uuid[])', [corpo.data.ids])
+    }
+
     const { rows } = await client.query(
       `delete from produtos
        where id = any($1)

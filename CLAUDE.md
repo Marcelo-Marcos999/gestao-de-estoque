@@ -66,6 +66,10 @@ Uma tela que oferece uma ação que o perfil não pode executar é pior que não
 oferecer: o usuário só descobre no erro. Esconda a ação, não a bloqueie no
 clique.
 
+O administrador enxerga as **lojas todas** da conta em Estoque, Validades e
+Quebra (filtro "Loja" + nome da loja em cada registro, via `useStoreScope` e
+`StoreFilter` em `shared/`); o operador, só a própria. Ver `docs/dominio.md`.
+
 A permissão também é verificada no servidor (`backend/src/auth/middleware.ts`
 e Row Level Security no Postgres, ver `backend/migrations/`) — esconder o
 botão aqui é experiência, não segurança; quem garante a regra é o back-end.

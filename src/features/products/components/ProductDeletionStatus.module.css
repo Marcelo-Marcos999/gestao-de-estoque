@@ -1,0 +1,23 @@
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.status > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.body p {
+  margin: 0;
+  line-height: 1.5;
+}

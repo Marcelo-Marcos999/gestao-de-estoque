@@ -11,7 +11,6 @@
  * vêm do estoque na hora de ler (`withCurrentStock`), e filtrar por eles no
  * servidor exigiria repetir lá a mesma conta.
  */
-import { getAllProducts } from '@/features/products'
 import { ensureExpiryItem } from '@/features/expiry'
 import { apiFetch } from '@/shared/lib/http'
 import { lineTotal } from '@/shared/lib/money'
@@ -34,6 +33,11 @@ interface QuebraApi {
   criado_em: string
   criado_por_id: string
   criado_por: string
+  loja_id: string
+  loja_nome: string
+  /** Estoque da loja do registro (a posição pode não existir). */
+  saldo: number | null
+  valor_custo: string | null
 }
 
 function paraLossRecord(q: QuebraApi): LossRecord {
@@ -51,8 +55,11 @@ function paraLossRecord(q: QuebraApi): LossRecord {
     note: q.observacao,
     // Os arquivos ainda não têm onde morar no servidor: só o registro persiste.
     attachments: [],
-    costPrice: null,
+    costPrice: q.valor_custo === null ? null : Number(q.valor_custo),
+    availableStock: q.saldo,
     totalCost: null,
+    storeId: q.loja_id,
+    storeName: q.loja_nome,
     createdAt: q.criado_em,
     createdBy: q.criado_por,
     createdById: q.criado_por_id,
@@ -74,41 +81,41 @@ function paraCorpo(draft: LossRecordDraft) {
 }
 
 /** Todos os registros da loja, crus — para quem precisa saber o que já existe (importação). */
-export async function loadRecords(): Promise<LossRecord[]> {
-  const registros = await apiFetch<QuebraApi[]>('/quebras')
+export async function loadRecords(storeParam = ''): Promise<LossRecord[]> {
+  const registros = await apiFetch<QuebraApi[]>(`/quebras${storeParam}`)
   return registros.map(paraLossRecord)
 }
 
 /**
- * Um registro com a quantidade limitada ao saldo atual do produto, e com o
- * custo do estoque.
+ * O registro com a quantidade limitada ao saldo atual do produto, e com o custo
+ * do estoque.
  *
  * O saldo é do produto e as duas telas leem o mesmo número: se a importação
- * trouxe saldo 3 e o registro apontava 5, o que existe são 3. Saldo zerado
- * zera o registro. O custo segue a mesma regra — vem do estoque na hora de
- * ler —, então corrigir o custo na tela de Estoque corrige o total da perda.
+ * trouxe saldo 3 e o registro apontava 5, o que existe são 3. Saldo zerado zera
+ * o registro. O custo segue a mesma regra — vem do estoque na hora de ler —,
+ * então corrigir o custo na tela de Estoque corrige o total da perda.
+ *
+ * Os números são os do estoque DA LOJA do registro (o servidor os entrega junto):
+ * o administrador vê registros de lojas diferentes, e o saldo e o custo de uma
+ * não valem para a outra.
  */
-async function withCurrentStock(records: LossRecord[]): Promise<LossRecord[]> {
-  const products = await getAllProducts()
-  const byId = new Map(products.map((p) => [p.id, p]))
-
+function withCurrentStock(records: LossRecord[]): LossRecord[] {
   return records.map((record) => {
     // Produto pendente ainda não tem cadastro, então não tem saldo nem custo.
-    const product = record.productId ? byId.get(record.productId) : undefined
-    if (!product) return { ...record, costPrice: null, totalCost: null }
+    if (!record.productId) return { ...record, costPrice: null, totalCost: null }
 
-    const quantity = Math.min(record.quantity, product.stock)
-    return {
-      ...record,
-      quantity,
-      costPrice: product.costPrice,
-      totalCost: lineTotal(quantity, product.costPrice),
-    }
+    const quantity = Math.min(record.quantity, record.availableStock ?? 0)
+    const cost = record.costPrice ?? 0
+    return { ...record, quantity, costPrice: cost, totalCost: lineTotal(quantity, cost) }
   })
 }
 
-export async function listLossRecords(query: LossRecordQuery): Promise<LossRecord[]> {
-  const records = await withCurrentStock(await loadRecords())
+export async function listLossRecords(
+  query: LossRecordQuery,
+  /** `?loja=…` do escopo de loja da tela; vazio para o operador. */
+  storeParam = '',
+): Promise<LossRecord[]> {
+  const records = withCurrentStock(await loadRecords(storeParam))
   const term = query.search.trim().toLowerCase()
 
   return records
@@ -132,8 +139,8 @@ export async function listLossRecords(query: LossRecordQuery): Promise<LossRecor
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
-export async function countLossRecords(): Promise<{ total: number; inStock: number }> {
-  const records = await withCurrentStock(await loadRecords())
+export async function countLossRecords(storeParam = ''): Promise<{ total: number; inStock: number }> {
+  const records = withCurrentStock(await loadRecords(storeParam))
   return {
     total: records.length,
     inStock: records.filter((r) => r.quantity > 0).length,
@@ -151,7 +158,8 @@ export async function findSameRecord(
   /** Registro em edição: ele não pode se encontrar como duplicata de si mesmo. */
   ignoreId?: string,
 ): Promise<LossRecord | null> {
-  const records = await withCurrentStock(await loadRecords())
+  // Só procura entre os registros da loja onde este será gravado.
+  const records = withCurrentStock(await loadRecords(draft.storeId ? `?loja=${draft.storeId}` : ''))
   const identity = draft.productId || draft.barcode
 
   return (
@@ -165,22 +173,32 @@ export async function findSameRecord(
   )
 }
 
-/** Cria vários registros com o mesmo motivo e a mesma origem, de uma vez e tudo ou nada. */
-async function createMany(drafts: LossRecordDraft[], reasonId: string, originId: string) {
+/**
+ * Cria vários registros com o mesmo motivo e a mesma origem, de uma vez e tudo
+ * ou nada. Todos na MESMA loja (`storeId`, ou a do login): o administrador que
+ * registra em nome de outra loja manda `lojaId`, e o servidor grava o registro
+ * nela, com ele como autor.
+ */
+async function createMany(
+  drafts: LossRecordDraft[],
+  reasonId: string,
+  originId: string,
+  storeId?: string,
+) {
   await apiFetch('/quebras', {
     method: 'POST',
-    body: { motivoId: reasonId, origemId: originId, itens: drafts.map(paraCorpo) },
+    body: { motivoId: reasonId, origemId: originId, lojaId: storeId, itens: drafts.map(paraCorpo) },
   })
 
   // Apontar a perda de um lote é dizer que ele existe na loja: o
   // acompanhamento de validade passa a conhecê-lo, em vez de o produto sumir
-  // da tela onde se vai conferir o saldo dele.
-  for (const draft of drafts) await ensureExpiryItem(draft.productId, draft.expiryDate)
+  // da tela onde se vai conferir o saldo dele. Na loja do registro.
+  for (const draft of drafts) await ensureExpiryItem(draft.productId, draft.expiryDate, storeId)
 }
 
 /** Quem registrou é o login da sessão: o servidor não aceita autoria dita pelo cliente. */
 export async function createLossRecord(draft: LossRecordDraft): Promise<void> {
-  await createMany([draft], draft.reasonId, draft.originId)
+  await createMany([draft], draft.reasonId, draft.originId, draft.storeId)
 }
 
 /**
@@ -209,13 +227,17 @@ export async function createLossRecordsByReasonLabel(
   }
 
   // A origem é uma só para o envio: o back-end aceita um par motivo+origem por
-  // chamada, e quem chama aqui escolheu uma para o grupo inteiro.
+  // chamada, e quem chama aqui escolheu uma para o grupo inteiro. Já a loja pode
+  // variar (o administrador envia lotes de várias lojas de uma vez): uma
+  // chamada por loja.
   const originId = drafts[0].originId
-  await createMany(
-    drafts.map((draft) => ({ ...draft, reasonId })),
-    reasonId,
-    originId,
-  )
+  const byStore = new Map<string | undefined, LossRecordDraft[]>()
+  for (const draft of drafts) {
+    const group = byStore.get(draft.storeId) ?? []
+    group.push({ ...draft, reasonId })
+    byStore.set(draft.storeId, group)
+  }
+  for (const [storeId, group] of byStore) await createMany(group, reasonId, originId, storeId)
 }
 
 /** Soma a quantidade a um registro que já existe, em vez de criar outro. */
@@ -230,7 +252,7 @@ export async function updateLossRecord(id: string, draft: LossRecordDraft): Prom
   })
 
   // A validade pode ter mudado na edição; o lote novo também precisa existir.
-  await ensureExpiryItem(draft.productId, draft.expiryDate)
+  await ensureExpiryItem(draft.productId, draft.expiryDate, draft.storeId)
 }
 
 /**
@@ -258,6 +280,8 @@ export async function restoreLossRecords(records: LossRecord[]): Promise<void> {
         origemId: r.originId,
         criadoPorId: r.createdById,
         criadoEm: r.createdAt,
+        // O desfazer devolve o registro à loja de origem, não à do administrador.
+        lojaId: r.storeId,
       })),
     },
   })

@@ -138,8 +138,10 @@ export interface StockValues {
 export async function updateProductStock(
   id: string,
   values: Partial<StockValues>,
+  /** A loja a corrigir, quando não é a do próprio login (só o administrador). */
+  storeId?: string,
 ): Promise<void> {
-  await apiFetch(`/estoque/${id}`, {
+  await apiFetch(`/estoque/${id}${storeId ? `?loja=${storeId}` : ''}`, {
     method: 'PATCH',
     body: {
       saldo: values.stock,
@@ -151,24 +153,48 @@ export async function updateProductStock(
   invalidar()
 }
 
-/**
- * Exclui um ou vários produtos de uma vez, devolvendo o que saiu de
- * verdade.
- *
- * Um produto com saldo em alguma loja nunca é excluído (ver `DELETE
- * /produtos` no back-end) — por isso a resposta pode trazer menos ids do
- * que foi pedido, e são só esses que saem da tela.
- */
-export async function deleteProducts(ids: string[]): Promise<Product[]> {
-  const antes = await carregar()
-  const removidos = await apiFetch<Array<{ id: string }>>('/produtos', {
-    method: 'DELETE',
-    body: { ids },
-  })
-  invalidar()
+/** O que o servidor aceita por chamada; 2000 ids mantêm o corpo bem abaixo do limite de 1 MB. */
+const DELETE_BATCH = 2000
 
-  const idsRemovidos = new Set(removidos.map((p) => p.id))
-  return antes.filter((p) => idsRemovidos.has(p.id))
+export interface DeleteProductsResult {
+  /** Os que saíram de verdade, inteiros, para o "desfazer". */
+  removed: Product[]
+  /** Pedidos que ficaram: produtos com estoque, quando `withStock` é falso. */
+  keptIds: string[]
+}
+
+/**
+ * Exclui um ou vários produtos, em lotes, devolvendo o que saiu e o que ficou.
+ *
+ * Um produto com estoque em alguma loja não é excluído a menos que `withStock`
+ * seja verdadeiro (ver `DELETE /produtos` no back-end). Antes isso era
+ * silencioso — a resposta só vinha com menos itens — e a tela parecia ignorar o
+ * clique; agora quem chama recebe `keptIds` e pode explicar e perguntar.
+ */
+export async function deleteProducts(
+  ids: string[],
+  withStock = false,
+): Promise<DeleteProductsResult> {
+  const antes = await carregar()
+  const removedIds = new Set<string>()
+
+  try {
+    for (let i = 0; i < ids.length; i += DELETE_BATCH) {
+      const removidos = await apiFetch<Array<{ id: string }>>('/produtos', {
+        method: 'DELETE',
+        body: { ids: ids.slice(i, i + DELETE_BATCH), comEstoque: withStock },
+      })
+      for (const p of removidos) removedIds.add(p.id)
+    }
+  } finally {
+    // Também quando falha no meio: os lotes anteriores já saíram.
+    invalidar()
+  }
+
+  return {
+    removed: antes.filter((p) => removedIds.has(p.id)),
+    keptIds: ids.filter((id) => !removedIds.has(id)),
+  }
 }
 
 /** Devolve produtos excluídos ao seu lugar — o "desfazer" da tela. */

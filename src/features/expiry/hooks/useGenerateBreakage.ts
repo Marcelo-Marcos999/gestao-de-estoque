@@ -35,6 +35,8 @@ export function useGenerateBreakage(removeItems: (ids: string[]) => Promise<void
         expiryDate: row.expiryDate,
         quantity: Math.max(1, row.stock),
         reasonLabel: 'Vencido',
+        // A quebra é da loja do lote, mesmo quando quem a gera é o administrador de outra.
+        storeId: row.storeId,
       }
     : undefined
 

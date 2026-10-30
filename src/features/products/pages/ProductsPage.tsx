@@ -11,6 +11,7 @@ import { useSelection } from '@/shared/hooks/useSelection'
 import { useSort } from '@/shared/hooks/useSort'
 import { useAuth } from '@/features/auth'
 import { ImportWizard } from '../components/ImportWizard'
+import { ProductDeletionStatus } from '../components/ProductDeletionStatus'
 import { ProductFormDialog } from '../components/ProductFormDialog'
 import { ProductsEmptyState, ProductsErrorState } from '../components/ProductsEmptyState'
 import { ProductsSkeleton } from '../components/ProductsSkeleton'
@@ -152,6 +153,8 @@ export function ProductsPage() {
         onClear={list.clearFilters}
         onToggleFocus={focus.toggle}
       />
+
+      <ProductDeletionStatus deletion={deletion} />
 
       {podeEditar && (
         <SelectionBar

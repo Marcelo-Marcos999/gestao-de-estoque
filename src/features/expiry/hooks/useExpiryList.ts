@@ -55,7 +55,10 @@ const EMPTY_COUNTS: ExpiryPage['counts'] = {
  * Estado da tela de validades: filtros lembrados entre sessões e a busca dos
  * dados que eles produzem.
  */
-export function useExpiryList() {
+export function useExpiryList(
+  /** `?loja=…` do escopo de loja da tela (vazio para o operador). Entra na chave da busca. */
+  storeParam = '',
+) {
   const [filters, setFilters] = usePersistedState<ExpiryQuery>(
     FILTERS_KEY,
     NO_FILTERS,
@@ -70,7 +73,7 @@ export function useExpiryList() {
   const debouncedSearch = useDebouncedValue(filters.search, 250)
   const [periodDays, setPeriodDays] = usePeriodDays()
 
-  const queryKey = `${debouncedSearch}|${filters.situations.join(',')}|${periodDays}|${rangesKey(filters.numberRanges)}|${dateRangeKey(filters.expiryRange)}`
+  const queryKey = `${debouncedSearch}|${filters.situations.join(',')}|${periodDays}|${rangesKey(filters.numberRanges)}|${dateRangeKey(filters.expiryRange)}|${storeParam}`
 
   useEffect(() => {
     let cancelled = false
@@ -83,6 +86,7 @@ export function useExpiryList() {
         expiryRange: filters.expiryRange,
       },
       periodDays,
+      storeParam,
     )
       .then((page) => {
         if (cancelled) return
@@ -98,6 +102,7 @@ export function useExpiryList() {
     }
   }, [
     queryKey,
+    storeParam,
     debouncedSearch,
     filters.situations,
     filters.numberRanges,
