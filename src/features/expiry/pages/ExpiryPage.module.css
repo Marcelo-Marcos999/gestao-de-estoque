@@ -39,20 +39,6 @@
   gap: var(--sp-2);
 }
 
-.state {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-4);
-  padding: var(--sp-12) var(--sp-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  text-align: center;
-}
-
 @media (max-width: 599px) {
   .header {
     flex-direction: column;

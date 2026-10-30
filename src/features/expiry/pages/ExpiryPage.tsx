@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Alert } from '@/shared/ui/Alert'
-import { Button } from '@/shared/ui/Button'
 import { SelectionBar } from '@/shared/ui/SelectionBar'
 import { UndoBar } from '@/shared/ui/UndoBar'
 import { LossRecordDialog, OriginChoiceDialog } from '@/features/breakage'
@@ -15,9 +13,10 @@ import { useStoreScope } from '@/shared/hooks/useStoreScope'
 import { useAuth } from '@/features/auth'
 import { useSort } from '@/shared/hooks/useSort'
 import { ExpiryActions } from '../components/ExpiryActions'
-import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
+import { ExpiryEmptyState, ExpiryErrorState } from '../components/ExpiryEmptyState'
 import { ExpiryTable, type ExpirySortKey } from '../components/ExpiryTable'
 import { ExpiryToolbar } from '../components/ExpiryToolbar'
+import { ExpiryTotals } from '../components/ExpiryTotals'
 import { ExpiryImportDialog } from '../components/ExpiryImportDialog'
 import { NewExpiryDialog } from '../components/NewExpiryDialog'
 import { SituationTiles } from '../components/SituationTiles'
@@ -105,11 +104,14 @@ export function ExpiryPage() {
           visível na faixa abaixo, com o botão de limpar — senão a lista
           filtrada pareceria a lista inteira (ver CLAUDE.md). */}
       {!focus.focused && (
-        <SituationTiles
-          counts={list.counts}
-          selected={list.filters.situations}
-          onToggle={list.toggleSituation}
-        />
+        <>
+          <SituationTiles
+            counts={list.counts}
+            selected={list.filters.situations}
+            onToggle={list.toggleSituation}
+          />
+          <ExpiryTotals rows={list.rows} />
+        </>
       )}
 
       <ExpiryToolbar
@@ -151,16 +153,7 @@ export function ExpiryPage() {
 
       {list.status === 'loading' && <ProductsSkeleton rowHeight={rowHeight} />}
 
-      {list.status === 'error' && (
-        <div className={styles.state}>
-          <Alert tone="danger">
-            Não foi possível carregar as validades. Verifique a conexão e tente novamente.
-          </Alert>
-          <Button variant="secondary" onClick={list.reload}>
-            Tentar de novo
-          </Button>
-        </div>
-      )}
+      {list.status === 'error' && <ExpiryErrorState onRetry={list.reload} />}
 
       {list.status === 'ready' && list.rows.length === 0 && (
         <ExpiryEmptyState
