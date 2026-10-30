@@ -4,9 +4,8 @@ import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
 import { SelectionBar } from '@/shared/ui/SelectionBar'
 import { UndoBar } from '@/shared/ui/UndoBar'
-import { LossRecordDialog } from '@/features/breakage'
+import { LossRecordDialog, OriginChoiceDialog } from '@/features/breakage'
 import { ProductsSkeleton } from '@/features/products'
-import { useAuth } from '@/features/auth'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
@@ -45,11 +44,9 @@ export function ExpiryPage() {
   const sort = useSort<ExpiryRow, ExpirySortKey>(list.rows, expiryValueOf)
   const rowHeight = isNarrow ? 128 : 62
 
-  const { user } = useAuth()
-  const bulkBreakage = useBulkGenerateBreakage(editor.removeItems, user?.name ?? 'Sistema')
-
   const visibleIds = sort.sortedRows.map((row) => row.id)
   const selectionState = useSelection(visibleIds)
+  const bulkBreakage = useBulkGenerateBreakage(editor.removeItems, selectionState.clear)
   const selectedRows = sort.sortedRows.filter((row) => selectionState.selection.has(row.id))
   // Só faz sentido quando NENHUMA revisão de motivo é necessária: todo
   // selecionado precisa estar na faixa "venceu", senão o botão nem aparece
@@ -69,12 +66,6 @@ export function ExpiryPage() {
     const ids = [...selectionState.selection]
     selectionState.clear()
     void editor.removeItems(ids)
-  }
-
-  function sendSelectedToBreakage() {
-    const rows = selectedRows
-    selectionState.clear()
-    void bulkBreakage.send(rows)
   }
 
   /**
@@ -161,7 +152,7 @@ export function ExpiryPage() {
             ? {
                 label: 'Gerar quebra',
                 icon: <BoltIcon width={16} height={16} />,
-                onClick: sendSelectedToBreakage,
+                onClick: () => bulkBreakage.ask(selectedRows),
               }
             : undefined
         }
@@ -226,6 +217,16 @@ export function ExpiryPage() {
         initial={breakage.draft}
         onClose={breakage.close}
         onSaved={breakage.saved}
+      />
+
+      {/* Envio em massa: o motivo é "Vencido" por definição, mas a origem não
+          se adivinha — pergunta uma vez para o grupo todo. */}
+      <OriginChoiceDialog
+        key={bulkBreakage.waiting ? 'aberto' : 'fechado'}
+        open={bulkBreakage.waiting !== null}
+        count={bulkBreakage.waiting?.length ?? 0}
+        onClose={bulkBreakage.cancel}
+        onConfirm={bulkBreakage.confirm}
       />
 
       <UndoBar

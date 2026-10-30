@@ -7,16 +7,44 @@
   border-radius: var(--radius);
   background: var(--surface);
   overflow: hidden;
+  /* Mesma ideia da tela de validades: a grade segue a largura da tabela. */
+  container-type: inline-size;
 }
 
 /* A grade é definida uma vez e reusada pelo cabeçalho e pelas linhas. Mesma
    ordem da tela de validades: faixa, produto, validade, número. */
 .row {
   display: grid;
-  grid-template-columns: 3px 44px 1fr 150px 64px 220px 116px 96px;
+  grid-template-columns: 3px 40px 1fr 120px 56px 108px 180px 92px 84px;
   align-items: center;
   gap: var(--sp-3);
   padding: 0 var(--sp-4) 0 0;
+}
+
+/* Sem o custo unitário na versão compacta: ele se deduz de quantidade e total. */
+.unitCost {
+  display: none;
+}
+
+@container (min-width: 1180px) {
+  .row {
+    grid-template-columns: 3px 44px 1fr 140px 64px 96px 112px 220px 116px 96px;
+  }
+
+  .unitCost {
+    display: block;
+  }
+}
+
+@media (min-width: 720px) {
+  .wrap {
+    overflow-x: auto;
+  }
+
+  .head,
+  .scroller {
+    min-width: 960px;
+  }
 }
 
 .head {
@@ -159,8 +187,12 @@
   font-style: italic;
 }
 
+/* Quebra de linha em vez de cortar: "Centro de distribuição" cortado no meio
+   deixa de dizer qual é a origem, e a origem é obrigatória justamente para
+   poder ser lida. */
 .tags {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-1);
   overflow: hidden;

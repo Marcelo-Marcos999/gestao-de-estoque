@@ -16,6 +16,11 @@ export function recordValueOf(record: LossRecord, key: LossRecordSortKey, reason
       return record.expiryDate ?? ''
     case 'quantity':
       return record.quantity
+    // Sem custo (produto pendente) vai para o fim ao ordenar do menor para o maior.
+    case 'costPrice':
+      return record.costPrice ?? Number.POSITIVE_INFINITY
+    case 'totalCost':
+      return record.totalCost ?? Number.POSITIVE_INFINITY
     case 'reason':
       return labelOf(reasons, record.reasonId)
   }

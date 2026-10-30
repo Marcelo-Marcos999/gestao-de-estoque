@@ -3,6 +3,7 @@ import { useListVirtualizer } from '@/shared/hooks/useListVirtualizer'
 import { EditIcon, TrashIcon } from '@/shared/ui/icons'
 import { SortButton } from '@/shared/ui/SortButton'
 import { formatDate } from '@/shared/lib/date'
+import { formatMoney } from '@/shared/lib/money'
 import type { SortDir } from '@/shared/hooks/useSort'
 import { deadline } from '../deadline'
 import { recordLabel } from '../label'
@@ -11,7 +12,13 @@ import type { LossRecord, Tag } from '../types'
 import { AttachmentChips } from './AttachmentChips'
 import styles from './LossRecordTable.module.css'
 
-export type LossRecordSortKey = 'description' | 'expiryDate' | 'quantity' | 'reason'
+export type LossRecordSortKey =
+  | 'description'
+  | 'expiryDate'
+  | 'quantity'
+  | 'costPrice'
+  | 'totalCost'
+  | 'reason'
 
 interface LossRecordTableProps {
   records: LossRecord[]
@@ -68,6 +75,10 @@ export function LossRecordTable({
         <SortButton label="Produto" sortKey="description" {...sortProps} />
         <SortButton label="Validade" sortKey="expiryDate" {...sortProps} />
         <SortButton label="Qtd" sortKey="quantity" {...sortProps} />
+        <span className={styles.unitCost}>
+          <SortButton label="Custo" sortKey="costPrice" {...sortProps} />
+        </span>
+        <SortButton label="Total custo" sortKey="totalCost" {...sortProps} />
         <SortButton label="Motivo e origem" sortKey="reason" {...sortProps} />
         <span>Anexos</span>
         <span></span>
@@ -135,6 +146,12 @@ export function LossRecordTable({
                   )}
 
                   <span className={styles.number}>{record.quantity}</span>
+                  <span className={`${styles.number} ${styles.unitCost}`}>
+                    {record.costPrice === null ? '—' : formatMoney(record.costPrice)}
+                  </span>
+                  <span className={styles.number}>
+                    {record.totalCost === null ? '—' : formatMoney(record.totalCost)}
+                  </span>
 
                   <span className={styles.tags}>
                     {motivo && <Badge tone="marca">{motivo}</Badge>}

@@ -147,9 +147,11 @@ Existe, em `backend/`: Express + Postgres (Neon), autenticação por JWT
 uma role sem privilégio de dono, e as políticas de RLS são o filtro real
 entre contas e lojas, não o código da rota (ver `backend/migrations/`).
 
-Nem toda feature já fala com ele. `auth`, `products` e a leitura de números
-em `stock` já chamam o back-end de verdade; `expiry`, `breakage`, `motivos` e
-`origens` ainda resolvem em memória, como antes. Em qualquer um dos dois
+Nem toda feature já fala com ele. `auth`, `products`, `expiry` (lotes),
+`breakage` (registros, motivos e origens) e a leitura de números em `stock` já
+chamam o back-end de verdade. Falta guardar os **arquivos** dos anexos de
+quebra, que dependem de um armazenamento de arquivos que ainda não existe: o
+registro persiste, a foto não. Em qualquer um dos dois
 casos, cada feature isola o acesso a dados no próprio `api.ts` — migrar uma
 feature pro back-end real é mexer só nesse arquivo, nunca na tela.
 

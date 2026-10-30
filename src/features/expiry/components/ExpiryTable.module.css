@@ -7,15 +7,47 @@
   border-radius: var(--radius);
   background: var(--surface);
   overflow: hidden;
+  /* As colunas se ajustam à largura da TABELA, não da janela: com o menu
+     lateral aberto, a mesma janela deixa bem menos espaço para a lista. */
+  container-type: inline-size;
 }
 
-/* A grade é definida uma vez e reusada pelo cabeçalho e pelas linhas. */
+/* A grade é definida uma vez e reusada pelo cabeçalho e pelas linhas.
+   Versão compacta: sem o custo unitário, que se deduz de saldo e total. */
 .row {
   display: grid;
-  grid-template-columns: 3px 44px 1fr 150px 92px 108px 210px 90px;
+  grid-template-columns: 3px 40px 1fr 120px 64px 108px 92px 176px 84px;
   align-items: center;
-  gap: var(--sp-4);
+  gap: var(--sp-3);
   padding: 0 var(--sp-4) 0 0;
+}
+
+.unitCost {
+  display: none;
+}
+
+/* Tabela larga o bastante: volta o custo unitário. */
+@container (min-width: 1140px) {
+  .row {
+    grid-template-columns: 3px 44px 1fr 140px 70px 96px 112px 100px 190px 90px;
+  }
+
+  .unitCost {
+    display: block;
+  }
+}
+
+/* Abaixo disto o Produto ficaria sem espaço para o nome: a tabela rola de
+   lado, por dentro, em vez de espremer ou cortar colunas. */
+@media (min-width: 720px) {
+  .wrap {
+    overflow-x: auto;
+  }
+
+  .head,
+  .scroller {
+    min-width: 960px;
+  }
 }
 
 .head {
@@ -147,7 +179,7 @@
   justify-self: start;
 }
 
-/* ---- Celular: a grade de 6 colunas não cabe; a linha vira um cartão ----- */
+/* ---- Celular: a grade de 8 colunas não cabe; a linha vira um cartão ----- */
 @media (max-width: 719px) {
   .head {
     display: none;

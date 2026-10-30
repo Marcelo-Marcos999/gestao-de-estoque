@@ -1,75 +1,67 @@
 import { useCallback, useEffect, useState } from 'react'
-import { countTagUsage } from '../api'
-import { readOrigins, readReasons, writeOrigins, writeReasons } from '../tags'
+import {
+  createTag,
+  deleteTag as deleteRemoteTag,
+  loadTags,
+  isTagConflict,
+  renameTag as renameRemoteTag,
+  type TagKind,
+  type TagLists,
+  type TagUsage,
+} from '../tags'
 import type { Tag } from '../types'
 
-export type TagKind = 'reason' | 'origin'
+export type { TagKind, TagUsage }
 
-/** Quantos registros usam cada etiqueta, por id. */
-export type TagUsage = Record<string, number>
+const EMPTY: TagLists = { reasons: [], origins: [], usage: { reasons: {}, origins: {} } }
 
 /**
  * As listas de motivo e origem, prontas para o formulário.
  *
- * Ficam em estado porque mudam quando alguém cria ou corrige uma etiqueta
- * durante o preenchimento; reler o storage a cada render não deixaria a tela
- * mais em dia e custaria uma leitura por tecla digitada.
+ * A lista é uma só, da conta: se cada pessoa mantivesse a própria,
+ * "danificado", "danificada" e "avaria" virariam três motivos e a soma por
+ * motivo deixaria de fechar (ver docs/dominio.md).
  *
- * A lista é uma só, da loja: se cada pessoa mantivesse a própria, "danificado",
- * "danificada" e "avaria" virariam três motivos e a soma por motivo deixaria de
- * fechar (ver docs/dominio.md).
+ * Toda alteração vai ao servidor primeiro e só depois muda a tela, e uma falha
+ * recarrega a lista: mostrar uma etiqueta que o servidor recusou faria o
+ * registro apontar, ao salvar, para um id que não existe.
  */
 export function useTagLists() {
-  const [reasons, setReasons] = useState<Tag[]>(() => readReasons())
-  const [origins, setOrigins] = useState<Tag[]>(() => readOrigins())
-  const [usage, setUsage] = useState<{ reasons: TagUsage; origins: TagUsage }>({
-    reasons: {},
-    origins: {},
-  })
+  const [lists, setLists] = useState<TagLists>(EMPTY)
 
-  // A contagem é lida uma vez e depois de cada exclusão: ela só existe para a
-  // tela saber o que ainda não pode sair, e o registro que muda enquanto a
-  // lista está aberta é o que a própria pessoa acabou de mexer.
-  const refreshUsage = useCallback(() => {
+  const refresh = useCallback(async () => {
+    try {
+      setLists(await loadTags())
+    } catch {
+      // Sem conexão a lista fica como estava; o formulário avisa ao salvar.
+    }
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
-    countTagUsage().then((counts) => {
-      if (!cancelled) setUsage(counts)
-    })
+    loadTags()
+      .then((loaded) => {
+        if (!cancelled) setLists(loaded)
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
   }, [])
 
-  useEffect(() => refreshUsage(), [refreshUsage])
-
-  /** Grava a lista inteira, que é como o storage a guarda. */
-  const commit = useCallback((kind: TagKind, next: Tag[]) => {
-    if (kind === 'reason') {
-      setReasons(next)
-      writeReasons(next)
-    } else {
-      setOrigins(next)
-      writeOrigins(next)
-    }
+  /** Cria a etiqueta no servidor e a devolve, já com o id definitivo. */
+  const create = useCallback(async (kind: TagKind, label: string): Promise<Tag> => {
+    const tag = await createTag(kind, label)
+    setLists((current) =>
+      kind === 'reason'
+        ? { ...current, reasons: [...current.reasons, tag] }
+        : { ...current, origins: [...current.origins, tag] },
+    )
+    return tag
   }, [])
 
-  const addReason = useCallback(
-    (tag: Tag) => setReasons((current) => {
-      const next = [...current, tag]
-      writeReasons(next)
-      return next
-    }),
-    [],
-  )
-
-  const addOrigin = useCallback(
-    (tag: Tag) => setOrigins((current) => {
-      const next = [...current, tag]
-      writeOrigins(next)
-      return next
-    }),
-    [],
-  )
+  const addReason = useCallback((label: string) => create('reason', label), [create])
+  const addOrigin = useCallback((label: string) => create('origin', label), [create])
 
   /**
    * Renomear é sempre seguro: o registro aponta para o `id`, não para o texto,
@@ -77,47 +69,48 @@ export function useTagLists() {
    * existem em vez de criar um motivo paralelo.
    */
   const renameTag = useCallback(
-    (kind: TagKind, id: string, label: string) => {
+    async (kind: TagKind, id: string, label: string) => {
       const texto = label.trim()
       if (!texto) return
 
-      const lista = kind === 'reason' ? reasons : origins
-      commit(
-        kind,
-        lista.map((tag) => (tag.id === id ? { ...tag, label: texto } : tag)),
-      )
+      try {
+        await renameRemoteTag(kind, id, texto)
+      } catch (erro) {
+        // Nome que já existe: a lista recarregada volta ao nome de antes.
+        if (!isTagConflict(erro)) throw erro
+      } finally {
+        await refresh()
+      }
     },
-    [reasons, origins, commit],
+    [refresh],
   )
 
   /**
-   * Excluir só vale para etiqueta que ninguém usa. Uma etiqueta em uso sairia
-   * deixando os registros dela apontando para o nada — e a lista de quebra
-   * mostraria motivo em branco sem explicação. Quem chama confere `usage`
-   * antes; aqui a checagem se repete porque a regra é da lista, não da tela.
+   * Excluir só vale para etiqueta que ninguém usa: uma etiqueta em uso sairia
+   * deixando os registros dela apontando para o nada. O servidor recusa (409),
+   * inclusive pelo uso nas outras lojas da conta, que esta tela não enxerga.
    */
   const deleteTag = useCallback(
-    (kind: TagKind, id: string) => {
-      const emUso = (kind === 'reason' ? usage.reasons : usage.origins)[id] ?? 0
-      if (emUso > 0) return
-
-      const lista = kind === 'reason' ? reasons : origins
-      commit(
-        kind,
-        lista.filter((tag) => tag.id !== id),
-      )
+    async (kind: TagKind, id: string) => {
+      try {
+        await deleteRemoteTag(kind, id)
+      } catch (erro) {
+        // Em uso: a lista recarregada mantém a etiqueta, com a contagem certa.
+        if (!isTagConflict(erro)) throw erro
+      } finally {
+        await refresh()
+      }
     },
-    [reasons, origins, usage, commit],
+    [refresh],
   )
 
   return {
-    reasons,
-    origins,
-    usage,
+    reasons: lists.reasons,
+    origins: lists.origins,
+    usage: lists.usage,
     addReason,
     addOrigin,
     renameTag,
     deleteTag,
-    refreshUsage,
   }
 }

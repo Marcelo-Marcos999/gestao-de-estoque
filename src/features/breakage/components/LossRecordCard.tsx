@@ -1,4 +1,5 @@
 import type { MouseEvent } from 'react'
+import { formatMoney } from '@/shared/lib/money'
 import { Badge } from '@/shared/ui/Badge'
 import { CalendarIcon, ChevronRightIcon } from '@/shared/ui/icons'
 import { formatDate } from '@/shared/lib/date'
@@ -106,9 +107,16 @@ export function LossRecordCard({
           </span>
         </div>
 
-        <div className={styles.quantity}>
-          <span className={styles.quantityValue}>{record.quantity}</span>
-          <span className={styles.quantityLabel}>un</span>
+        <div className={styles.amount}>
+          <div className={styles.quantity}>
+            <span className={styles.quantityValue}>{record.quantity}</span>
+            <span className={styles.quantityLabel}>un</span>
+          </div>
+          {/* Sem custo (produto pendente de cadastro) a linha some, em vez de
+              mostrar R$ 0,00 — que diria que a perda não custou nada. */}
+          {record.totalCost !== null && (
+            <span className={styles.totalCost}>custo {formatMoney(record.totalCost)}</span>
+          )}
         </div>
 
         {/* Sinal de que o cartão abre: sem ele, tocar para editar é um segredo. */}

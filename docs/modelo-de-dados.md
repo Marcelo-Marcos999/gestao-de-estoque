@@ -312,10 +312,27 @@ expõe todas as tabelas:
 
 | Já tem rotas | Ainda só no banco |
 |---|---|
-| `contas`/`lojas` (login, criar conta, confirmar e-mail, recuperar e trocar senha), `produtos`, `estoque` | `validades`, `quebras`, `anexos`, `motivos`, `origens`, `configuracoes_conta`, `changelog`, `administradores_plataforma` |
+| `contas`/`lojas` (login, criar conta, confirmar e-mail, recuperar e trocar senha), `produtos`, `estoque`, `validades`, `quebras`, `motivos`, `origens` | `anexos`, `configuracoes_conta`, `changelog`, `administradores_plataforma` |
 
-As telas de Validades e Quebra ainda usam dados em memória; migrar cada uma é
-mexer só no `api.ts` da feature (ver `CLAUDE.md`).
+Validades (`/validades`), Quebra (`/quebras`) e as listas de motivo e origem
+(`/motivos`, `/origens`) já gravam no banco. Não há base de exemplo: as listas
+começam vazias e só mostram o que a loja lançou.
+
+Três escolhas de desenho que vale conhecer:
+
+- **Quebra lê o produto do catálogo na hora.** Descrição, SKU e código de barras
+  de um produto cadastrado saem de `produtos`; só um produto pendente usa o que
+  o operador digitou (`sku`, `descricao`, `codigo_barras` na própria quebra).
+- **Motivo e origem obrigatórios também na API.** `POST /quebras` recusa um
+  registro sem os dois (400) e, como a criação é uma só instrução SQL, um item
+  inválido num envio de centenas desfaz o envio inteiro.
+- **Lista vazia de etiquetas se completa sozinha.** Conta anterior à migration
+  0003 não tem motivos nem origens; o primeiro `GET /motivos` (ou `/origens`)
+  cria os padrão, os mesmos de `criar_conta`.
+
+Falta guardar os **arquivos** dos anexos: a tabela `anexos` existe, mas ainda não
+há onde guardar a foto (`storage_path`). Enquanto isso o registro de quebra
+persiste e o anexo não.
 
 ## Como reconstruir o banco do zero
 

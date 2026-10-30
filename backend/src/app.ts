@@ -6,7 +6,10 @@ import { rotasAuth } from './rotas/auth.js'
 import { rotasCadastro } from './rotas/cadastro.js'
 import { rotasConta } from './rotas/conta.js'
 import { rotasEstoque } from './rotas/estoque.js'
+import { rotasMotivos, rotasOrigens } from './rotas/etiquetas.js'
 import { rotasProdutos } from './rotas/produtos.js'
+import { rotasQuebras } from './rotas/quebras.js'
+import { rotasValidades } from './rotas/validades.js'
 
 export function criarApp() {
   const app = express()
@@ -51,6 +54,10 @@ export function criarApp() {
   app.use('/conta', rotasConta)
   app.use('/produtos', rotasProdutos)
   app.use('/estoque', rotasEstoque)
+  app.use('/validades', rotasValidades)
+  app.use('/quebras', rotasQuebras)
+  app.use('/motivos', rotasMotivos)
+  app.use('/origens', rotasOrigens)
 
   // Último `app.use`, com 4 parâmetros — é assim que o Express reconhece um
   // middleware de ERRO em vez de uma rota normal. Toda rota é envolvida com

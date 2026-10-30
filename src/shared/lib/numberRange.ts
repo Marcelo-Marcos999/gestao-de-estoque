@@ -16,8 +16,14 @@ export function isRangeActive(range: NumberRange | undefined): boolean {
   return !!range && (range.min !== null || range.max !== null)
 }
 
-export function matchesRange(value: number, range: NumberRange | undefined): boolean {
-  if (!range) return true
+/**
+ * Valor `null` é "não sei" (ex.: custo de um produto que ainda não está no
+ * cadastro): passa quando não há filtro, e fica de fora assim que há um —
+ * dizer que ele "está entre 10 e 50" seria inventar o número.
+ */
+export function matchesRange(value: number | null, range: NumberRange | undefined): boolean {
+  if (!range || !isRangeActive(range)) return true
+  if (value === null) return false
   if (range.min !== null && value < range.min) return false
   if (range.max !== null && value > range.max) return false
   return true

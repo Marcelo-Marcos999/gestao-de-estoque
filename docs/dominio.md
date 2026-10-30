@@ -70,11 +70,17 @@ Dois eixos separados, não uma lista única de etiquetas:
 | Campo | O que responde | Exemplos |
 |---|---|---|
 | **Motivo** (obrigatório) | por que virou perda | vencido, danificado, avaria |
-| **Origem** (opcional) | de onde veio o problema | chegou assim do CD, aconteceu na loja, fornecedor |
+| **Origem** (obrigatória) | de onde veio o problema | chegou assim do CD, aconteceu na loja, fornecedor |
 
 Um item pode ser *danificado* **e** ter chegado *assim do CD*: são coisas
 diferentes. Numa lista só, as opções cresceriam por combinação ("danificado",
 "danificado do CD", "vencido do CD"…) e os relatórios não separariam mais.
+
+Os dois são obrigatórios. A origem já foi opcional, e o resultado era previsível:
+quem tem pressa deixa em branco, e a pergunta "quanto disso veio do CD" passa a
+ser respondida com uma fração dos registros — pior que não responder, porque o
+número parece completo. O banco já exigia (`quebras.origem_id` não aceita nulo);
+agora a tela exige também, em vez de descobrir isso no erro ao salvar.
 
 Separar importa por dinheiro: "quanto perdemos por avaria" é uma pergunta,
 "quanto disso veio do CD" é outra — e a segunda é a que dá base para cobrar o
@@ -86,7 +92,7 @@ centro de distribuição.
 
 A validade é o que distingue de verdade: duas unidades do mesmo produto com
 validades diferentes são coisas diferentes — uma ainda se vende, a outra não.
-A origem é atributo do registro, não parte da identidade.
+A origem é atributo (obrigatório) do registro, não parte da identidade.
 
 ## Registro repetido do mesmo item
 
@@ -152,6 +158,28 @@ A tela de Estoque também soma os dois totais de tudo que está na lista **com
 os filtros aplicados** — um resumo no topo, não a base inteira — para responder
 "quanto vale meu estoque hoje" sem precisar somar linha por linha. A exportação
 leva as duas colunas junto.
+
+### Custo nas telas de Validades e Quebra
+
+O custo é do estoque, e as outras duas telas **herdam** o número em vez de ter
+o seu: Validades mostra o **custo unitário** e o **total de custo** (saldo ×
+custo) de cada lote, e Quebra mostra o custo unitário e o **total de custo da
+perda** (quantidade × custo) de cada registro. É o que responde "quanto
+dinheiro está parado neste lote vencido" e "quanto essa perda custou".
+
+Nada é copiado para o lote nem para o registro: o custo é lido do estoque na
+hora de montar a tela, igual saldo e saídas. Corrigir o custo em Estoque
+corrige o total das outras duas. Pela mesma razão, o total **não é somado**
+entre linhas de Validades: o saldo é do produto, e dois lotes do mesmo produto
+repetiriam o mesmo saldo — somar contaria o mesmo dinheiro duas vezes. Em
+Quebra cada registro tem a própria quantidade, então ali a soma seria honesta
+(ainda não existe resumo).
+
+Produto pendente de cadastro, em Quebra, não tem estoque nem custo: a coluna
+mostra "—" e o filtro por faixa o deixa de fora quando ativo, em vez de tratá-lo
+como custo zero.
+
+Os dois valores entram no filtro por faixa e na exportação das duas telas.
 
 ### SKU que a importação não reconhece
 
@@ -449,6 +477,11 @@ próprio fato de estar ali — perguntar de novo seria perguntar o que a tela j�
 sabe. Por isso o botão só aparece quando **toda a seleção** está na faixa
 "venceu"; um só lote fora dela (que ainda vende, ou sem estimativa) esconde o
 botão inteiro, porque aí o motivo deixa de ser óbvio e alguém precisa decidir.
+
+A **origem**, ao contrário do motivo, não se deduz — o lote pode ter chegado
+vencido do CD ou vencido na prateleira — e é obrigatória. O envio em massa
+pergunta uma vez, num diálogo curto, e a origem escolhida vale para todos os
+registros criados naquele envio.
 
 A quantidade de cada registro segue a mesma regra do caminho de um lote só —
 o saldo do produto — e os lotes somem da lista de vencidos pelo mesmo caminho

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { AlertIcon, EditIcon, PlusIcon } from '@/shared/ui/icons'
 import { Button } from '@/shared/ui/Button'
-import { tagIdFrom } from '../tags'
 import type { TagUsage } from '../hooks/useTagLists'
 import type { Tag } from '../types'
 import { TagListDialog } from './TagListDialog'
@@ -16,8 +15,8 @@ interface TagPickerProps {
   /** Quantos registros usam cada etiqueta — o que pode ou não ser excluído. */
   usage: TagUsage
   onChange: (id: string) => void
-  /** Cria a etiqueta na lista da loja, não só neste registro. */
-  onCreate: (tag: Tag) => void
+  /** Cria a etiqueta na lista da conta, não só neste registro, e devolve-a com o id do servidor. */
+  onCreate: (label: string) => Promise<Tag>
   onRename: (id: string, label: string) => void
   onDelete: (id: string) => void
 }
@@ -45,8 +44,9 @@ export function TagPicker({
   const [creating, setCreating] = useState(false)
   const [novo, setNovo] = useState('')
   const [managing, setManaging] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
-  function confirmar() {
+  async function confirmar() {
     const texto = novo.trim()
     if (!texto) {
       setCreating(false)
@@ -59,12 +59,18 @@ export function TagPicker({
     if (existente) {
       onChange(existente.id)
     } else {
-      const tag: Tag = { id: tagIdFrom(texto, tags), label: texto, builtIn: false }
-      onCreate(tag)
-      onChange(tag.id)
+      // O id vem do servidor, então só depois da resposta dá para selecionar.
+      try {
+        const tag = await onCreate(texto)
+        onChange(tag.id)
+      } catch {
+        setCreateError('Não foi possível criar. Tente de novo.')
+        return
+      }
     }
 
     setNovo('')
+    setCreateError(null)
     setCreating(false)
   }
 
@@ -118,11 +124,14 @@ export function TagPicker({
           <input
             className={styles.newInput}
             value={novo}
-            onChange={(event) => setNovo(event.target.value)}
+            onChange={(event) => {
+              setNovo(event.target.value)
+              setCreateError(null)
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 event.preventDefault()
-                confirmar()
+                void confirmar()
               }
               if (event.key === 'Escape') setCreating(false)
             }}
@@ -130,14 +139,14 @@ export function TagPicker({
             aria-label={`Novo ${label.toLowerCase()}`}
             autoFocus
           />
-          <Button onClick={confirmar}>Adicionar</Button>
+          <Button onClick={() => void confirmar()}>Adicionar</Button>
         </div>
       )}
 
-      {error && (
+      {(error || createError) && (
         <p className={styles.error}>
           <AlertIcon width={16} height={16} />
-          {error}
+          {createError ?? error}
         </p>
       )}
 

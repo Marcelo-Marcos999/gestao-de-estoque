@@ -28,16 +28,22 @@ export interface ExpiryRow {
   expiryDate: IsoDate | null
   stock: number
   outflow: number
+  /** Custo unitário, herdado do estoque da loja. */
+  costPrice: number
+  /** Saldo × custo: quanto dinheiro está parado neste produto. Calculado, nunca guardado. */
+  totalCost: number
   situation: Situation
   daysToExpiry: number | null
   daysToZero: number | null
 }
 
-export type ExpiryRangeKey = 'stock' | 'outflow'
+export type ExpiryRangeKey = 'stock' | 'outflow' | 'costPrice' | 'totalCost'
 
 export const EXPIRY_RANGE_FIELDS: { key: ExpiryRangeKey; label: string }[] = [
   { key: 'stock', label: 'Saldo' },
   { key: 'outflow', label: 'Saídas' },
+  { key: 'costPrice', label: 'Custo' },
+  { key: 'totalCost', label: 'Total custo' },
 ]
 
 export const EMPTY_EXPIRY_RANGES: Record<ExpiryRangeKey, NumberRange> = Object.fromEntries(
