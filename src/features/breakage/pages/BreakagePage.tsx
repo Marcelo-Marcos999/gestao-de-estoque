@@ -14,6 +14,7 @@ import { useSort } from '@/shared/hooks/useSort'
 import { BreakageActions } from '../components/BreakageActions'
 import { BreakageImportDialog } from '../components/BreakageImportDialog'
 import { BreakageToolbar } from '../components/BreakageToolbar'
+import { BreakageTotals } from '../components/BreakageTotals'
 import { AttachmentViewer } from '../components/AttachmentViewer'
 import { LossRecordCard } from '../components/LossRecordCard'
 import { LossRecordDialog } from '../components/LossRecordDialog'
@@ -96,6 +97,8 @@ export function BreakagePage() {
           <div className={styles.actions}>{acoes}</div>
         </header>
       )}
+
+      {!focus.focused && list.status === 'ready' && <BreakageTotals records={list.records} />}
 
       <BreakageToolbar
         filters={list.filters}

@@ -18,6 +18,7 @@ import { ExpiryActions } from '../components/ExpiryActions'
 import { ExpiryEmptyState } from '../components/ExpiryEmptyState'
 import { ExpiryTable, type ExpirySortKey } from '../components/ExpiryTable'
 import { ExpiryToolbar } from '../components/ExpiryToolbar'
+import { ExpiryTotals } from '../components/ExpiryTotals'
 import { ExpiryImportDialog } from '../components/ExpiryImportDialog'
 import { NewExpiryDialog } from '../components/NewExpiryDialog'
 import { SituationTiles } from '../components/SituationTiles'
@@ -105,11 +106,14 @@ export function ExpiryPage() {
           visível na faixa abaixo, com o botão de limpar — senão a lista
           filtrada pareceria a lista inteira (ver CLAUDE.md). */}
       {!focus.focused && (
-        <SituationTiles
-          counts={list.counts}
-          selected={list.filters.situations}
-          onToggle={list.toggleSituation}
-        />
+        <>
+          <SituationTiles
+            counts={list.counts}
+            selected={list.filters.situations}
+            onToggle={list.toggleSituation}
+          />
+          <ExpiryTotals rows={list.rows} />
+        </>
       )}
 
       <ExpiryToolbar

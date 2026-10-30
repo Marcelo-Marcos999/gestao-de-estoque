@@ -728,6 +728,34 @@ sem estoque nesta loja entra com saldo zerado.
 - A data do registro e quem registrou **não são importados** (ficam o momento da
   importação e quem importou).
 
+## Quanto vale a perda: os cartões de total
+
+Estoque, Validades e Quebra mostram, no topo, quanto dinheiro está em jogo no que
+**está na tela, com os filtros aplicados** (mesmo desenho nas três; sem lista, o
+cartão não aparece, e o modo foco o esconde junto do cabeçalho):
+
+| Tela | Cartões | Como se calcula |
+|---|---|---|
+| **Estoque** | Total de custo · Total de venda | saldo × custo e saldo × venda de cada produto |
+| **Quebra** | Total de custo da perda | quantidade do registro × custo da loja dele |
+| **Validades** | Custo em estoque · Custo em risco de perda | ver abaixo |
+
+**Quebra.** É o valor da perda de verdade: cada registro tem a sua quantidade, então
+nada se conta duas vezes. Registro sem custo conhecido (produto pendente, que ainda
+não tem estoque) **não vale zero**: fica fora da soma, e o cartão diz quantos ficaram
+de fora, em vez de um total que parece completo e não é.
+
+**Validades.** Um lote só guarda a data; saldo e custo são do **produto** na loja.
+Somar linha a linha contaria o mesmo estoque uma vez por lote, então a soma é por
+produto (e loja) distintos.
+- *Custo em estoque*: o estoque, a custo, dos produtos mostrados.
+- *Custo em risco de perda*: o estoque, a custo, dos produtos que têm algum lote
+  **vencido** ou que **vence antes de vender**. Como o lote não tem quantidade própria,
+  é um **teto** — o que se perde de fato é no máximo isso.
+
+Como seguem os filtros, clicar em "Venceu" nos cartões de situação faz o primeiro
+cartão mostrar o custo do que já venceu: a perda que já aconteceu.
+
 ## O administrador vê as lojas todas
 
 O login **é** a loja (ver `docs/modelo-de-dados.md`), então "os registros de todos
