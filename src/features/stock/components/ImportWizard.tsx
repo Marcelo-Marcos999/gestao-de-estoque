@@ -63,6 +63,8 @@ export function ImportWizard({ open, onClose, onImported }: ImportWizardProps) {
           sheet={wizard.sheet}
           mapping={wizard.mapping}
           mappingProblem={wizard.mappingProblem}
+          createPending={wizard.createPending}
+          onCreatePendingChange={wizard.setCreatePending}
           onChange={wizard.setFieldColumn}
           sampleOf={wizard.sampleOf}
         />

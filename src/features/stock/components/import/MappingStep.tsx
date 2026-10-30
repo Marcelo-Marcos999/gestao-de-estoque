@@ -11,6 +11,9 @@ interface MappingStepProps {
   mapping: ColumnMapping
   /** Mensagem de por que falta escolher uma coluna, ou `null` quando o mapeamento basta. */
   mappingProblem: string | null
+  /** Criar produto pendente para o SKU que não está no cadastro (padrão); desligado, só atualiza o que existe. */
+  createPending: boolean
+  onCreatePendingChange: (value: boolean) => void
   onChange: (field: StockField, column: number) => void
   sampleOf: (column: number) => string
 }
@@ -26,6 +29,8 @@ export function MappingStep({
   sheet,
   mapping,
   mappingProblem,
+  createPending,
+  onCreatePendingChange,
   onChange,
   sampleOf,
 }: MappingStepProps) {
@@ -45,7 +50,8 @@ export function MappingStep({
       <Alert tone="info">
         Reconhecemos as colunas pelo cabeçalho da planilha. Confira antes de continuar —{' '}
         {sheet.rows.length.toLocaleString('pt-BR')} linhas encontradas na aba{' '}
-        <strong>{sheet.sheetName}</strong>.
+        <strong>{sheet.sheetName}</strong>. Só as colunas escolhidas são atualizadas — as outras
+        ficam como estão. Para atualizar só as saídas, deixe o resto em “Não importar”.
       </Alert>
 
       {STOCK_FIELDS.map((spec) => (
@@ -74,6 +80,22 @@ export function MappingStep({
           )}
         </div>
       ))}
+
+      <label className={styles.option}>
+        <input
+          type="checkbox"
+          className={styles.checkbox}
+          checked={createPending}
+          onChange={(event) => onCreatePendingChange(event.target.checked)}
+        />
+        <span className={styles.optionText}>
+          <span className={styles.label}>Criar produto pendente para SKU fora do cadastro</span>
+          <span className={styles.hint}>
+            Desmarque para só atualizar o que já existe: linhas de total e produtos que ninguém
+            cadastrou ficam de fora, sem criar nada.
+          </span>
+        </span>
+      </label>
 
       {mappingProblem && <Alert tone="danger">{mappingProblem}</Alert>}
     </div>

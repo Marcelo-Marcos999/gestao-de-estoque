@@ -144,6 +144,19 @@ basta, como na importação de Validades — e as demais colunas são opcionais:
 importação pode trazer só saldo e saídas, e o que não veio fica como estava em
 vez de zerar. O usuário trata o arquivo antes se precisar.
 
+**Atualizar só as saídas** (ou só qualquer outro número) é o uso normal: só as
+colunas mapeadas são gravadas, as demais ficam como estão. Em "Colunas" há ainda a
+opção **Criar produto pendente para SKU fora do cadastro** (marcada por padrão);
+desmarcada, a importação só atualiza o que já existe — o que se quer ao reimportar
+um relatório do ERP que traz linhas de total ("TOTAL GERAL:") e produtos que
+ninguém cadastrou.
+
+**Linha com número que o banco não aceita** (saída, saldo, custo ou venda
+**negativos** — comuns em relatório com devolução maior que a venda — ou acima do
+limite da coluna) **fica de fora**, com o motivo na revisão; as demais entram. Antes,
+uma só linha assim derrubava o lote inteiro de 500, e a tela dizia apenas "tente de
+novo". Quando o servidor recusa algo, a tela agora mostra o motivo dele.
+
 Como a linha acha o produto: primeiro pelo SKU; se o SKU não está no cadastro (ou
 a linha não tem), pelo código de barras. O mesmo produto citado duas vezes — uma
 por SKU, outra por código de barras — conta como **repetido**. Uma linha só com

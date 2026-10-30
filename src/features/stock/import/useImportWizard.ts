@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { cellToText } from '@/shared/lib/cell'
+import { ApiError } from '@/shared/lib/http'
 import { readSpreadsheet, SpreadsheetError, type SheetData } from '@/shared/lib/spreadsheet'
 import { bulkUpsertStock, getAllProducts } from '@/features/products'
 import { checkStockMapping, detectMapping, type ColumnMapping, type StockField } from './columns'
@@ -29,6 +30,7 @@ export function useImportWizard(onImported: () => void) {
   const [sheet, setSheet] = useState<SheetData | null>(null)
   const [mapping, setMapping] = useState<ColumnMapping | null>(null)
   const [plan, setPlan] = useState<ImportPlan | null>(null)
+  const [createPending, setCreatePending] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<Progress>({ done: 0, total: 0 })
@@ -40,6 +42,7 @@ export function useImportWizard(onImported: () => void) {
     setSheet(null)
     setMapping(null)
     setPlan(null)
+    setCreatePending(true)
     setError(null)
     setBusy(false)
     setProgress({ done: 0, total: 0 })
@@ -86,10 +89,10 @@ export function useImportWizard(onImported: () => void) {
 
     setBusy(true)
     const existing = await getAllProducts()
-    setPlan(buildImportPlan(sheet.rows, mapping, existing))
+    setPlan(buildImportPlan(sheet.rows, mapping, existing, { createPending }))
     setBusy(false)
     setStep('revisao')
-  }, [sheet, mapping])
+  }, [sheet, mapping, createPending])
 
   const apply = useCallback(async () => {
     if (!plan) return
@@ -105,13 +108,17 @@ export function useImportWizard(onImported: () => void) {
       setApplied(result)
       setStep('resumo')
       onImported()
-    } catch {
+    } catch (err) {
       // Sem isto a tela ficava parada em "0 de N" para sempre quando o
       // servidor falhava. Voltar para a revisão deixa tentar de novo: reaplicar
       // a mesma planilha é seguro, porque importar estoque só sobrescreve os
       // números do SKU — o resultado final é o mesmo.
+      //
+      // Quando o servidor recusa, o motivo dele vai junto: "tente de novo" sem
+      // dizer o que deu errado deixava a pessoa repetindo o mesmo envio.
+      const motivo = err instanceof ApiError && err.status < 500 ? ` ${err.message}` : ''
       setError(
-        'Não foi possível concluir a importação. Parte das linhas pode já ter sido gravada; tentar de novo é seguro.',
+        `Não foi possível concluir a importação.${motivo} Parte das linhas pode já ter sido gravada; tentar de novo é seguro.`,
       )
       setStep('revisao')
     }
@@ -144,6 +151,8 @@ export function useImportWizard(onImported: () => void) {
     progress,
     applied,
     mappingProblem,
+    createPending,
+    setCreatePending,
     reset,
     selectFile,
     setFieldColumn,
