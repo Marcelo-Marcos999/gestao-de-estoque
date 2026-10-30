@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
 import { comContextoDoUsuario } from '../db/contexto.js'
 import { poolAuth } from '../db/poolAuth.js'
-import { exigirAutenticacao } from '../auth/middleware.js'
+import { exigirAdmin, exigirAutenticacao } from '../auth/middleware.js'
 import { gerarTokenAcesso, gerarTokenRefresh } from '../auth/jwt.js'
 import { conferirSenha, gerarHash, validarSenhaNova } from '../auth/senha.js'
 import { assincrono } from '../lib/assincrono.js'
@@ -94,3 +94,58 @@ rotasConta.post(
     })
   }),
 )
+
+/**
+ * Dados da empresa e do plano. Qualquer login lê (o limite de usuários e o
+ * nome aparecem pra todos); só o administrador altera o nome. Plano e limites
+ * são da plataforma, não do cliente: não há rota para mudá-los.
+ */
+rotasConta.get('/', assincrono(async (req, res) => {
+  const linha = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rows } = await client.query(
+      `select c.nome, cc.plano, cc.limite_usuarios, cc.limite_armazenamento_mb,
+              (select count(*) from lojas where ativo)::int as usuarios_ativos
+       from contas c
+       left join configuracoes_conta cc on cc.conta_id = c.id
+       where c.id = $1`,
+      [req.sessao!.contaId],
+    )
+    return rows[0]
+  })
+
+  if (!linha) {
+    res.status(404).json({ erro: 'Conta não encontrada.' })
+    return
+  }
+  res.json({
+    nome: linha.nome,
+    plano: linha.plano ?? 'padrao',
+    limiteUsuarios: linha.limite_usuarios,
+    limiteArmazenamentoMb: linha.limite_armazenamento_mb,
+    usuariosAtivos: linha.usuarios_ativos,
+  })
+}))
+
+const corpoAtualizarConta = z.object({ nome: z.string().trim().min(2).max(120) })
+
+rotasConta.patch('/', exigirAdmin, assincrono(async (req, res) => {
+  const corpo = corpoAtualizarConta.safeParse(req.body)
+  if (!corpo.success) {
+    res.status(400).json({ erro: 'Informe o nome da empresa.' })
+    return
+  }
+
+  const alteradas = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rowCount } = await client.query('update contas set nome = $1 where id = $2', [
+      corpo.data.nome,
+      req.sessao!.contaId,
+    ])
+    return rowCount ?? 0
+  })
+
+  if (alteradas !== 1) {
+    res.status(404).json({ erro: 'Conta não encontrada.' })
+    return
+  }
+  res.json({ nome: corpo.data.nome })
+}))

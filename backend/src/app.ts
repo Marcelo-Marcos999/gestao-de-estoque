@@ -6,6 +6,7 @@ import { rotasAuth } from './rotas/auth.js'
 import { rotasCadastro } from './rotas/cadastro.js'
 import { rotasConta } from './rotas/conta.js'
 import { rotasEstoque } from './rotas/estoque.js'
+import { rotasLojas } from './rotas/lojas.js'
 import { rotasMotivos, rotasOrigens } from './rotas/etiquetas.js'
 import { rotasProdutos } from './rotas/produtos.js'
 import { rotasQuebras } from './rotas/quebras.js'
@@ -52,6 +53,7 @@ export function criarApp() {
   // da autenticação, sem sessão. Rotas de quem já está logado ficam em /conta.
   app.use('/auth', rotasCadastro)
   app.use('/conta', rotasConta)
+  app.use('/lojas', rotasLojas)
   app.use('/produtos', rotasProdutos)
   app.use('/estoque', rotasEstoque)
   app.use('/validades', rotasValidades)

@@ -11,6 +11,12 @@ import { ApiError, apiFetchComToken, apiFetchPublico } from '@/shared/lib/http'
 import type { Session } from '@/shared/lib/session'
 import type { AuthError, Credentials, Result } from './types'
 
+/** O que o servidor consegue fazer hoje. Hoje só: se há como enviar e-mail. */
+export async function getServerFeatures(): Promise<{ emailActive: boolean }> {
+  const { emailAtivo } = await apiFetchPublico<{ emailAtivo: boolean }>('/auth/recursos')
+  return { emailActive: emailAtivo }
+}
+
 function fail(code: AuthError['code'], message: string): { data: null; error: AuthError } {
   return { data: null, error: { code, message } }
 }
