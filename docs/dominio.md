@@ -682,17 +682,26 @@ sem estoque nesta loja entra com saldo zerado.
 - A data do registro e quem registrou **não são importados** (ficam o momento da
   importação e quem importou).
 
-## Excluir todo o estoque
+## Excluir estoque
 
-O administrador pode apagar **todo o estoque da loja** (botão "Excluir tudo" na
-tela de Estoque), para reimportar uma base do zero. É a ação mais destrutiva do
-sistema e **não tem desfazer**, então a confirmação é forte: mostra quantos
-produtos e quantos lotes de validade saem e exige digitar `EXCLUIR`.
+O administrador exclui estoque de duas formas, na tela de Estoque:
+
+- **Alguns produtos:** marca as linhas (caixa à esquerda; "Selecionar todos" marca
+  o que está na tela, com os filtros aplicados) e usa "Excluir" na barra de
+  seleção. A confirmação mostra quantos produtos e quantos lotes saem.
+- **Tudo:** botão "Excluir tudo", para reimportar uma base do zero. É a ação mais
+  destrutiva do sistema, então a confirmação também exige digitar `EXCLUIR`.
+
+Nenhuma das duas tem **desfazer** — diferente da exclusão de registros nas outras
+telas —, porque apagar uma posição leva os lotes de validade junto, e restaurá-los
+exigiria guardar tudo o que saiu. Em compensação, o diálogo diz o tamanho do que
+vai sair antes de confirmar.
 
 - Saem saldo, saídas, custo e venda, e os **lotes de validade** junto (um lote só
   existe como filho de uma posição de estoque).
 - **Ficam** os produtos no Cadastro e os registros de quebra.
-- Só o administrador vê o botão, e o servidor recusa os outros.
+- Só o administrador vê a coluna de marcação e os botões, e o servidor recusa os
+  outros: para o operador a tela não tem caixas que não fariam nada.
 
 **A tela de Estoque lista só quem tem estoque.** O cadastro tem todos os produtos,
 muitos sem estoque nenhum; listá-los aqui, com zeros, enchia a tela de "registros"

@@ -313,3 +313,52 @@ rotasEstoque.delete('/', exigirAdmin, assincrono(async (req, res) => {
   })
   res.json(resultado)
 }))
+
+const corpoLinhas = z.object({ produtoIds: z.array(z.string().uuid()).min(1).max(5000) })
+
+/** O que sairia se estas posições fossem apagadas: a tela mostra antes de confirmar. */
+rotasEstoque.post('/linhas/contagem', exigirAdmin, assincrono(async (req, res) => {
+  const corpo = corpoLinhas.safeParse(req.body)
+  if (!corpo.success) {
+    res.status(400).json({ erro: 'Informe os produtos.' })
+    return
+  }
+
+  const linha = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rows } = await client.query(
+      `select (select count(*) from estoque where loja_id = $1 and produto_id = any($2::uuid[]))::int as linhas,
+              (select count(*) from validades v join estoque e on e.id = v.estoque_id
+                where e.loja_id = $1 and e.produto_id = any($2::uuid[]))::int as lotes`,
+      [req.loginId, corpo.data.produtoIds],
+    )
+    return rows[0]
+  })
+  res.json(linha)
+}))
+
+/**
+ * Apaga a posição de estoque de alguns produtos (os selecionados na tela). Mesma
+ * regra do "excluir tudo": os lotes de validade desses produtos saem junto, e os
+ * produtos e as quebras ficam. Só o administrador.
+ */
+rotasEstoque.delete('/linhas', exigirAdmin, assincrono(async (req, res) => {
+  const corpo = corpoLinhas.safeParse(req.body)
+  if (!corpo.success) {
+    res.status(400).json({ erro: 'Informe os produtos.' })
+    return
+  }
+
+  const resultado = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rows: lotes } = await client.query(
+      `select count(*)::int as n from validades v join estoque e on e.id = v.estoque_id
+        where e.loja_id = $1 and e.produto_id = any($2::uuid[])`,
+      [req.loginId, corpo.data.produtoIds],
+    )
+    const { rowCount } = await client.query(
+      'delete from estoque where loja_id = $1 and produto_id = any($2::uuid[])',
+      [req.loginId, corpo.data.produtoIds],
+    )
+    return { linhas: rowCount ?? 0, lotes: lotes[0].n as number }
+  })
+  res.json(resultado)
+}))

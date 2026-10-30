@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/features/auth'
 import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { useFocusMode } from '@/shared/hooks/useLayoutPreferences'
 import { PAGE_SCROLLER_ATTR } from '@/shared/hooks/useListVirtualizer'
+import { useSelection } from '@/shared/hooks/useSelection'
 import { useSort } from '@/shared/hooks/useSort'
-import { DeleteAllStockDialog } from '../components/DeleteAllStockDialog'
+import { SelectionBar } from '@/shared/ui/SelectionBar'
+import { DeleteStockDialog } from '../components/DeleteStockDialog'
 import { ImportWizard } from '../components/ImportWizard'
 import { NewStockDialog } from '../components/NewStockDialog'
 import { StockActions } from '../components/StockActions'
@@ -64,21 +66,40 @@ export function StockPage() {
 
   const [importOpen, setImportOpen] = useState(false)
   const [novoAberto, setNovoAberto] = useState(false)
-  // `clearKey` muda a cada abertura: remonta o diálogo e esvazia a palavra digitada.
-  const [clearOpen, setClearOpen] = useState(false)
-  const [clearKey, setClearKey] = useState(0)
   const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+
+  // Só o administrador exclui: a seleção (e a coluna de marcação) nem existe para o operador.
+  const visibleIds = sort.sortedRows.map((row) => row.productId)
+  const selectionState = useSelection(visibleIds)
+
+  // `ids: null` apaga o estoque inteiro. `key` muda a cada abertura: remonta o
+  // diálogo e esvazia a palavra digitada.
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ ids: string[] | null; key: number }>({
+    ids: null,
+    key: 0,
+  })
+
+  function askDelete(ids: string[] | null) {
+    setDeleteTarget((current) => ({ ids, key: current.key + 1 }))
+    setDeleteOpen(true)
+  }
+
+  // Trocar de filtro limpa a seleção: uma linha marcada e depois escondida por
+  // um filtro novo não pode ser excluída sem a pessoa vê-la mais.
+  useEffect(() => {
+    selectionState.clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.filters])
 
   const acoes = (
     <StockActions
       rows={list.rows}
-      canClear={user?.role === 'admin'}
+      canClear={isAdmin}
       onImport={() => setImportOpen(true)}
       onNew={() => setNovoAberto(true)}
-      onClear={() => {
-        setClearKey((n) => n + 1)
-        setClearOpen(true)
-      }}
+      onClear={() => askDelete(null)}
     />
   )
 
@@ -121,6 +142,16 @@ export function StockPage() {
         onToggleFocus={focus.toggle}
       />
 
+      {isAdmin && (
+        <SelectionBar
+          selected={selectionState.selection.size}
+          total={visibleIds.length}
+          onSelectAll={selectionState.selectAll}
+          onClear={selectionState.clear}
+          onDelete={() => askDelete([...selectionState.selection])}
+        />
+      )}
+
       {list.status === 'loading' && <ProductsSkeleton rowHeight={rowHeight} />}
 
       {list.status === 'error' && <StockErrorState onRetry={list.reload} />}
@@ -140,6 +171,8 @@ export function StockPage() {
           estimatedRowHeight={rowHeight}
           narrow={isNarrow}
           onEdit={editor.open}
+          selection={isAdmin ? selectionState.selection : undefined}
+          onToggleSelect={isAdmin ? selectionState.toggle : undefined}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
           onSort={sort.cycleSort}
@@ -159,11 +192,15 @@ export function StockPage() {
         onImported={list.reload}
       />
 
-      <DeleteAllStockDialog
-        key={clearKey}
-        open={clearOpen}
-        onClose={() => setClearOpen(false)}
-        onDeleted={list.reload}
+      <DeleteStockDialog
+        key={deleteTarget.key}
+        open={deleteOpen}
+        productIds={deleteTarget.ids}
+        onClose={() => setDeleteOpen(false)}
+        onDeleted={() => {
+          selectionState.clear()
+          list.reload()
+        }}
       />
 
       <NewStockDialog

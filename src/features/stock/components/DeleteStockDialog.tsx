@@ -4,28 +4,39 @@ import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { TextField } from '@/shared/ui/TextField'
-import { deleteAllStock, getStockCounts, type StockCounts } from '../clearApi'
-import styles from './DeleteAllStockDialog.module.css'
+import {
+  deleteAllStock,
+  deleteStockRows,
+  getSelectionCounts,
+  getStockCounts,
+  type StockCounts,
+} from '../clearApi'
+import styles from './DeleteStockDialog.module.css'
 
-/** O que a pessoa precisa digitar: confirmar com um clique não protege de um clique errado. */
+/** O que a pessoa precisa digitar para apagar TUDO: um clique errado não pode bastar. */
 const CONFIRMATION = 'EXCLUIR'
 
-interface DeleteAllStockDialogProps {
+interface DeleteStockDialogProps {
   open: boolean
+  /** Os produtos escolhidos na tela; `null` apaga o estoque inteiro da loja. */
+  productIds: string[] | null
   onClose: () => void
   onDeleted: () => void
 }
 
 /**
- * Apagar TODO o estoque da loja, para reimportar uma base do zero.
+ * Confirmação de apagar estoque: de alguns produtos escolhidos, ou de todos.
  *
- * Não tem desfazer — diferente da exclusão de registros avulsos, que oferece —,
- * porque desfazer milhares de linhas exigiria guardá-las todas. Por isso a
- * confirmação é forte: mostra o tamanho do estrago e exige digitar uma palavra.
+ * Não tem desfazer — diferente da exclusão de registros avulsos nas outras
+ * telas, que oferece —, porque apagar uma posição leva os lotes de validade
+ * junto, e restaurá-los exigiria guardar tudo o que saiu. Por isso a
+ * confirmação mostra o tamanho do estrago. Para **tudo** ela também exige
+ * digitar uma palavra; para uma seleção, a pessoa já marcou linha por linha.
  *
  * Quem usa troca a `key` a cada abertura, então o que foi digitado não volta.
  */
-export function DeleteAllStockDialog({ open, onClose, onDeleted }: DeleteAllStockDialogProps) {
+export function DeleteStockDialog({ open, productIds, onClose, onDeleted }: DeleteStockDialogProps) {
+  const all = productIds === null
   const [counts, setCounts] = useState<StockCounts | null>(null)
   const [typed, setTyped] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -35,23 +46,23 @@ export function DeleteAllStockDialog({ open, onClose, onDeleted }: DeleteAllStoc
     if (!open) return
 
     let cancelled = false
-    getStockCounts()
+    ;(all ? getStockCounts() : getSelectionCounts(productIds))
       .then((c) => {
         if (!cancelled) setCounts(c)
       })
       .catch(() => {
-        if (!cancelled) setError('Não foi possível conferir o tamanho do estoque. Tente de novo.')
+        if (!cancelled) setError('Não foi possível conferir o tamanho da exclusão. Tente de novo.')
       })
     return () => {
       cancelled = true
     }
-  }, [open])
+  }, [open, all, productIds])
 
   async function confirm() {
     setError(null)
     setDeleting(true)
     try {
-      await deleteAllStock()
+      await (all ? deleteAllStock() : deleteStockRows(productIds))
       onDeleted()
       onClose()
     } catch (erro) {
@@ -62,13 +73,15 @@ export function DeleteAllStockDialog({ open, onClose, onDeleted }: DeleteAllStoc
   }
 
   const empty = counts !== null && counts.rows === 0
-  const ready = typed.trim().toUpperCase() === CONFIRMATION && counts !== null && !empty
+  const typedOk = !all || typed.trim().toUpperCase() === CONFIRMATION
+  const ready = typedOk && counts !== null && !empty
+  const n = counts?.rows ?? 0
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="Excluir todo o estoque?"
+      title={all ? 'Excluir todo o estoque?' : `Excluir ${productIds.length.toLocaleString('pt-BR')} do estoque?`}
       subtitle="Não tem desfazer."
       dismissible={!deleting}
       footer={
@@ -77,7 +90,7 @@ export function DeleteAllStockDialog({ open, onClose, onDeleted }: DeleteAllStoc
             Cancelar
           </Button>
           <Button variant="danger" onClick={() => void confirm()} loading={deleting} disabled={!ready}>
-            {deleting ? 'Excluindo…' : 'Excluir tudo'}
+            {deleting ? 'Excluindo…' : all ? 'Excluir tudo' : 'Excluir'}
           </Button>
         </>
       }
@@ -86,35 +99,37 @@ export function DeleteAllStockDialog({ open, onClose, onDeleted }: DeleteAllStoc
 
       {counts === null && !error && <p>Conferindo o que existe…</p>}
 
-      {empty && <Alert tone="info">Não há nada no estoque desta loja para excluir.</Alert>}
+      {empty && <Alert tone="info">Não há estoque para excluir.</Alert>}
 
       {counts !== null && !empty && (
         <div className={styles.body}>
           <p>
             Isto apaga o saldo, as saídas, o custo e a venda de{' '}
-            <strong>{counts.rows.toLocaleString('pt-BR')}</strong> produto{counts.rows === 1 ? '' : 's'}
+            <strong>{n.toLocaleString('pt-BR')}</strong> produto{n === 1 ? '' : 's'}
             {counts.lots > 0 && (
               <>
                 {' '}
                 e os <strong>{counts.lots.toLocaleString('pt-BR')}</strong> lote
-                {counts.lots === 1 ? '' : 's'} de validade que dependem dele{counts.rows === 1 ? '' : 's'}
+                {counts.lots === 1 ? '' : 's'} de validade que dependem {n === 1 ? 'dele' : 'deles'}
               </>
             )}
             .
           </p>
           <p>
             Os produtos continuam no Cadastro de produtos e os registros de quebra não são tocados.
-            Use isto para começar a importar uma base do zero.
+            {all && ' Use isto para começar a importar uma base do zero.'}
           </p>
 
-          <TextField
-            label={`Para confirmar, digite ${CONFIRMATION}`}
-            value={typed}
-            onChange={(event) => setTyped(event.target.value)}
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-          />
+          {all && (
+            <TextField
+              label={`Para confirmar, digite ${CONFIRMATION}`}
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+            />
+          )}
         </div>
       )}
     </Dialog>

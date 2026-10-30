@@ -30,9 +30,8 @@ export function StockActions({ rows, canClear, onImport, onNew, onClear }: Stock
       {canClear && (
         <Button variant="secondary" onClick={onClear}>
           <TrashIcon width={18} height={18} />
-          <span>
-            Excluir<span className={styles.labelExtra}> tudo</span>
-          </span>
+          {/* O rótulo inteiro mesmo no celular: ali "Excluir" sozinho se confundiria com o da barra de seleção. */}
+          <span>Excluir tudo</span>
         </Button>
       )}
 

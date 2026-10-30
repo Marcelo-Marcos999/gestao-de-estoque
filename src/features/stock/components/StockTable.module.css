@@ -17,6 +17,30 @@
   padding: 0 var(--sp-4);
 }
 
+/* Com a coluna de marcação (só o administrador, que pode excluir). */
+.selectable {
+  grid-template-columns: 24px 1fr 72px 72px 92px 92px 108px 108px 44px;
+}
+
+.select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.selected {
+  background: var(--brand-soft);
+}
+
 .head {
   composes: row;
   height: 40px;
@@ -147,6 +171,23 @@
     grid-template-areas:
       'produto edit'
       'dados   edit';
+  }
+
+  /* Com marcação, o cartão ganha uma coluna de alvo de toque inteiro à esquerda. */
+  .selectable {
+    grid-template-columns: var(--touch-target) 1fr auto;
+  }
+
+  .itemInner.selectable {
+    grid-template-areas:
+      'marca produto edit'
+      'marca dados   edit';
+  }
+
+  .select {
+    grid-area: marca;
+    height: var(--touch-target);
+    align-self: start;
   }
 
   .product {

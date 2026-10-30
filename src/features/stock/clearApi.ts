@@ -31,3 +31,44 @@ export async function deleteAllStock(): Promise<StockCounts> {
     invalidateStore()
   }
 }
+
+/** O que o servidor aceita por chamada em `/estoque/linhas`; 2000 mantém o corpo bem abaixo do limite de 1 MB. */
+const BATCH = 2000
+
+function chunks<T>(items: T[]): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += BATCH) out.push(items.slice(i, i + BATCH))
+  return out
+}
+
+/** O que sairia ao apagar só estes produtos do estoque (soma dos lotes de envio). */
+export async function getSelectionCounts(productIds: string[]): Promise<StockCounts> {
+  const total: StockCounts = { rows: 0, lots: 0 }
+  for (const ids of chunks(productIds)) {
+    const { linhas, lotes } = await apiFetch<{ linhas: number; lotes: number }>('/estoque/linhas/contagem', {
+      method: 'POST',
+      body: { produtoIds: ids },
+    })
+    total.rows += linhas
+    total.lots += lotes
+  }
+  return total
+}
+
+/** Apaga o estoque só dos produtos escolhidos. Os lotes de validade deles saem junto. */
+export async function deleteStockRows(productIds: string[]): Promise<StockCounts> {
+  const total: StockCounts = { rows: 0, lots: 0 }
+  try {
+    for (const ids of chunks(productIds)) {
+      const { linhas, lotes } = await apiFetch<{ linhas: number; lotes: number }>('/estoque/linhas', {
+        method: 'DELETE',
+        body: { produtoIds: ids },
+      })
+      total.rows += linhas
+      total.lots += lotes
+    }
+  } finally {
+    invalidateStore()
+  }
+  return total
+}

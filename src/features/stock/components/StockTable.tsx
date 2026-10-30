@@ -23,6 +23,12 @@ interface StockTableProps {
   /** Tela estreita: quem rola é a página, e a lista se ancora nela. */
   narrow: boolean
   onEdit: (row: StockRow) => void
+  /**
+   * Seleção para excluir. Sem `onToggleSelect` a tabela não tem a coluna de
+   * marcação: quem não pode excluir (o operador) não vê uma caixa que não faz nada.
+   */
+  selection?: ReadonlySet<string>
+  onToggleSelect?: (productId: string) => void
   sortKey: StockSortKey | null
   sortDir: SortDir | null
   onSort: (key: StockSortKey) => void
@@ -40,6 +46,8 @@ export function StockTable({
   estimatedRowHeight,
   narrow,
   onEdit,
+  selection,
+  onToggleSelect,
   sortKey,
   sortDir,
   onSort,
@@ -51,10 +59,12 @@ export function StockTable({
   })
 
   const sortProps = { activeKey: sortKey, activeDir: sortDir, onSort }
+  const selectable = onToggleSelect !== undefined
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.head} role="presentation">
+      <div className={`${styles.head} ${selectable ? styles.selectable : ''}`} role="presentation">
+        {selectable && <span aria-hidden="true" />}
         <SortButton label="Produto" sortKey="description" {...sortProps} />
         <SortButton label="Estoque" sortKey="stock" {...sortProps} />
         <SortButton label="Saídas" sortKey="outflow" {...sortProps} />
@@ -73,6 +83,7 @@ export function StockTable({
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const row = rows[virtualRow.index]
+            const selected = selection?.has(row.productId) ?? false
 
             return (
               <div
@@ -82,7 +93,25 @@ export function StockTable({
                 ref={virtualizer.measureElement}
                 style={{ transform: `translateY(${virtualRow.start - scrollMargin}px)` }}
               >
-                <div className={styles.itemInner}>
+                <div
+                  className={`${styles.itemInner} ${selectable ? styles.selectable : ''} ${
+                    selected ? styles.selected : ''
+                  }`}
+                >
+                  {selectable && (
+                    <label className={styles.select}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={selected}
+                        onChange={() => onToggleSelect(row.productId)}
+                      />
+                      <span className={styles.srOnly}>
+                        Selecionar {row.description || `SKU ${row.sku}`}
+                      </span>
+                    </label>
+                  )}
+
                   <span className={styles.product}>
                     {row.pendingCadastro ? (
                       <span className={styles.pendingLine}>
