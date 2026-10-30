@@ -10,7 +10,7 @@ lojas**. Três camadas, e cada tabela mora em exatamente uma delas:
 
 | Camada | Pertence a | Tabelas |
 |---|---|---|
-| Conta (a empresa cliente) | `contas` | `contas`, `lojas`, `configuracoes_conta` |
+| Conta (a empresa cliente) | `contas` | `contas`, `lojas`, `configuracoes_conta`, `tokens_email` |
 | Catálogo (compartilhado pela empresa inteira) | `conta_id` | `produtos`, `motivos`, `origens` |
 | Operacional (só da loja) | `loja_id` | `estoque`, `validades`, `quebras`, `anexos` |
 | Plataforma (sem dono, fora de qualquer conta) | ninguém | `changelog`, `administradores_plataforma` |
@@ -28,6 +28,8 @@ erDiagram
   contas ||--o{ produtos : "catálogo"
   contas ||--o{ motivos : "catálogo"
   contas ||--o{ origens : "catálogo"
+
+  lojas ||--o{ tokens_email : "recebe links por e-mail"
 
   lojas ||--o{ estoque : "tem posição"
   produtos ||--o{ estoque : "é lançado em"
@@ -78,6 +80,8 @@ Uma loja **e** o seu login.
 | `senha_hash`* | text | bcrypt, custo 12. A senha nunca é guardada |
 | `role`* | `loja_role` | `admin` (enxerga e gerencia a conta inteira) ou `operador` (o padrão: só a própria loja) |
 | `ativo`* | boolean | Desativar bloqueia o login sem apagar o histórico |
+| `email_confirmado_em` | timestamptz | Nulo = e-mail ainda não confirmado, e o login é recusado. Conta nova nasce nula; quem existia antes do cadastro público foi preenchido na migration |
+| `senha_alterada_em`* | timestamptz | Quando a senha mudou pela última vez. Refresh token emitido antes disso deixa de valer: trocar a senha encerra as outras sessões |
 | `criado_em`*, `atualizado_em` | timestamptz | `atualizado_em` mantido por gatilho |
 
 ### `configuracoes_conta`
@@ -89,6 +93,24 @@ Uma linha por conta (1:1). Limites e plano.
 | `limite_usuarios`, `limite_armazenamento_mb` | integer | Nulo = sem limite |
 | `plano`* | text | Padrão `padrao` |
 | `atualizado_em` | timestamptz | Gatilho |
+
+### `tokens_email`
+Links de uso único enviados por e-mail (confirmar e-mail, redefinir senha).
+Guarda só o **hash** do token: quem lesse a tabela veria hashes, que não servem
+de link.
+
+| Coluna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `loja_id`* | uuid | FK → `lojas` (cascata) |
+| `tipo`* | `token_email_tipo` | `confirmar-email` (vale 24 h) ou `redefinir-senha` (vale 1 h) |
+| `token_hash`* | text | **U**. SHA-256 do token que foi no link |
+| `expira_em`* | timestamptz | |
+| `usado_em` | timestamptz | Preenchido ao usar: token de uso único, nunca volta a valer |
+| `criado_em`* | timestamptz | Pedidos repetidos em menos de 1 minuto são ignorados |
+
+Nem `app_runtime` nem `app_auth` leem esta tabela: só as funções de cadastro
+(ver "Segurança").
 
 ### `produtos` (catálogo da conta)
 O cadastro padronizado: identidade do produto, igual pra todas as lojas.
@@ -209,7 +231,7 @@ clientes, sem relação por chave com nenhuma conta.
 | Relação | Ao apagar o pai |
 |---|---|
 | `contas` → `lojas`, `configuracoes_conta`, `produtos`, `motivos`, `origens` | **Cascata**: a conta leva tudo junto |
-| `lojas` → `estoque` | Cascata |
+| `lojas` → `estoque`, `tokens_email` | Cascata |
 | `estoque` → `validades` | Cascata |
 | `quebras` → `anexos` | Cascata |
 | `produtos` → `estoque` | **Restrito**: produto com estoque em alguma loja não sai do catálogo |
@@ -227,7 +249,8 @@ Três credenciais de banco, cada uma com o mínimo que precisa:
 |---|---|---|
 | dona (`neondb_owner`) | só migrations e manutenção, nunca o app | Tudo. **Ignora a RLS** (dono sempre ignora) |
 | `app_runtime` | o back-end, em toda requisição de usuário logado | Ler/gravar, **sempre sob RLS** |
-| `app_auth` | só o login | Apenas `SELECT` em `lojas` e `administradores_plataforma` |
+| `app_auth` | login, cadastro e recuperação de senha | `SELECT` em `lojas` e `administradores_plataforma` e **executar quatro funções** (abaixo). Nenhum privilégio de escrita em tabela |
+| `app_definer` | ninguém (`NOLOGIN`) | É só a dona das quatro funções. Escreve em `contas`, `lojas`, `configuracoes_conta`, `motivos`, `origens` e `tokens_email`, nada além, e não pode criar objetos |
 
 **Row Level Security** está ligada e forçada (`force`) em todas as tabelas. A
 cada requisição o back-end declara ao banco quem está chamando
@@ -244,10 +267,26 @@ um erro numa rota não consegue vazar dados de outra conta.
 | `estoque`, `validades`, `quebras`, `anexos` | operador: só a própria loja · admin: todas as lojas da conta | idem |
 | `changelog` | todos (a troca por `texto_generico` é feita pelo back-end) | só a plataforma |
 | `administradores_plataforma` | só `app_auth` (login) | ninguém pelo app |
+| `tokens_email` | ninguém pelo app | só as funções de cadastro |
 
 O e-mail de login é único no sistema todo e o login busca por e-mail **antes**
 de saber a conta, por isso essa consulta usa a role `app_auth` à parte. Ela é
 a única exceção ao filtro por conta e só lê duas tabelas.
+
+### Funções de cadastro e recuperação de senha
+
+Criar conta e trocar senha por link são as operações mais sensíveis, então
+não são consultas soltas: são funções do banco (`SECURITY DEFINER`, com
+`search_path` fixo) que o login apenas **executa**. As que mudam algo exigem o
+token **dentro** da função, então mesmo que a credencial do login vazasse, ela
+só conseguiria o que um token válido permite.
+
+| Função | O que faz |
+|---|---|
+| `criar_conta(empresa, loja, e-mail, hash)` | Cria conta, loja administradora, configurações e os motivos/origens padrão, tudo ou nada. Devolve `NULL` se o e-mail já existe (a rota responde igual nos dois casos) |
+| `solicitar_token(e-mail, tipo, hash, validade)` | Registra o token e devolve pra quem enviar. Não devolve nada, e não diz por quê, se o e-mail não existe, a conta está desativada, já foi confirmada ou houve pedido há menos de 1 minuto |
+| `confirmar_email_com_token(hash)` | Consome o token (uma vez só, atomicamente) e confirma o e-mail |
+| `redefinir_senha_com_token(hash, senha_hash)` | Consome o token e troca a senha, encerra as outras sessões e invalida os demais links da loja. Receber o link também confirma o e-mail |
 
 ## Índices (além das chaves primárias)
 
@@ -258,6 +297,7 @@ a única exceção ao filtro por conta e só lê duas tabelas.
 | `produtos` | (`conta_id`, `codigo_barras`) único parcial | código de barras não repete; vazio e nulo ficam de fora |
 | `produtos` | `descricao` GIN trigram | busca por pedaço do nome (`ILIKE '%termo%'`) sem varrer a tabela |
 | `produtos` | (`conta_id`) parcial onde `pendente_cadastro` | a fila do administrador, pequena e sempre filtrada assim |
+| `tokens_email` | (`loja_id`, `tipo`) parcial onde `usado_em` é nulo | achar o link pendente de uma loja |
 | `estoque` | (`loja_id`, `produto_id`) único | uma posição por loja e produto |
 | `validades` | (`estoque_id`, `data_validade`) | a tela de validades ordena por urgência |
 | `quebras` | (`loja_id`, `criado_em` desc) | listagem padrão da tela de quebra |
@@ -267,12 +307,12 @@ a única exceção ao filtro por conta e só lê duas tabelas.
 
 ## Estado da implementação
 
-O banco tem o modelo inteiro. O back-end (`backend/src/rotas/`) ainda não
+O banco tem o modelo inteiro (13 tabelas). O back-end (`backend/src/rotas/`) ainda não
 expõe todas as tabelas:
 
 | Já tem rotas | Ainda só no banco |
 |---|---|
-| `contas`/`lojas` (login), `produtos`, `estoque` | `validades`, `quebras`, `anexos`, `motivos`, `origens`, `configuracoes_conta`, `changelog`, `administradores_plataforma` |
+| `contas`/`lojas` (login, criar conta, confirmar e-mail, recuperar e trocar senha), `produtos`, `estoque` | `validades`, `quebras`, `anexos`, `motivos`, `origens`, `configuracoes_conta`, `changelog`, `administradores_plataforma` |
 
 As telas de Validades e Quebra ainda usam dados em memória; migrar cada uma é
 mexer só no `api.ts` da feature (ver `CLAUDE.md`).
@@ -284,6 +324,7 @@ Rodar, na ordem, como a role dona:
 1. `backend/migrations/1700000000000_schema.sql`: tabelas, tipos, índices, gatilhos
 2. `backend/migrations/1700000000001_rls.sql`: roles, funções e políticas de RLS
 3. `backend/migrations/1700000000002_produtos_pendente_pelo_operador.sql`: política do operador pra produto pendente
+4. `backend/migrations/1700000000003_cadastro_e_recuperacao_de_senha.sql`: `tokens_email`, colunas novas em `lojas`, role `app_definer` e as quatro funções
 
 Depois, definir a senha das roles `app_runtime` e `app_auth` (nunca em arquivo
 versionado) e criar a primeira conta e a primeira loja `admin`.

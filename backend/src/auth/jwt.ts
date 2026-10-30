@@ -24,6 +24,8 @@ interface PayloadAcesso extends SessaoUsuario {
 interface PayloadRefresh {
   sub: string
   tipo: 'refresh'
+  /** Quando foi emitido (segundos). A biblioteca de JWT preenche sozinha. */
+  iat?: number
 }
 
 export function gerarTokenAcesso(loginId: string, sessao: SessaoUsuario): string {

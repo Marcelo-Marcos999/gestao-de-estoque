@@ -18,6 +18,12 @@ export type AuthErrorCode =
   | 'invalid_credentials'
   | 'account_disabled'
   | 'invalid_token'
+  | 'email_not_confirmed'
+  /** O servidor ainda não tem serviço de e-mail ligado: cadastro e recuperação não conseguem enviar nada. */
+  | 'email_unavailable'
+  | 'rate_limited'
+  /** O servidor recusou os dados (senha fraca, e-mail inválido…); a mensagem já vem explicando. */
+  | 'validation'
   | 'network'
 
 export interface AuthError {

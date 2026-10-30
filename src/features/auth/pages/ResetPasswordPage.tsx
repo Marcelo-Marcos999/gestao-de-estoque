@@ -1,17 +1,17 @@
-import { useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
+import { useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { TextField } from '@/shared/ui/TextField'
 import { ArrowLeftIcon, CheckIcon } from '@/shared/ui/icons'
 import {
-  MIN_PASSWORD_LENGTH,
   validateNewPassword,
   validateOnBlur,
   validatePasswordConfirmation,
 } from '@/shared/lib/validation'
 import { AuthLayout } from '../components/AuthLayout'
+import { PasswordRequirements } from '../components/PasswordRequirements'
 import { resetPassword } from '../api'
 import styles from '../components/authForm.module.css'
 
@@ -38,15 +38,13 @@ export function ResetPasswordPage() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
-  // Derivado do estado, não copiado para outro useState.
-  const requirements = useMemo(
-    () => [
-      { label: `Pelo menos ${MIN_PASSWORD_LENGTH} caracteres`, met: password.length >= MIN_PASSWORD_LENGTH },
-      { label: 'Uma letra', met: /[a-zA-Z]/.test(password) },
-      { label: 'Um número', met: /[0-9]/.test(password) },
-    ],
-    [password],
-  )
+  // O aviso de um campo some assim que a pessoa volta a digitar nele.
+  const edit =
+    (field: keyof FieldErrors, set: (value: string) => void) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      set(event.target.value)
+      setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
+    }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -105,7 +103,7 @@ export function ResetPasswordPage() {
           label="Nova senha"
           name="new-password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={edit('password', setPassword)}
           error={fieldErrors.password}
           autoComplete="new-password"
           revealable
@@ -113,25 +111,13 @@ export function ResetPasswordPage() {
           required
         />
 
-        <ul className={styles.requirements}>
-          {requirements.map((requirement) => (
-            <li
-              key={requirement.label}
-              className={`${styles.requirement} ${requirement.met ? styles.requirementMet : ''}`}
-            >
-              <span className={styles.requirementDot}>
-                {requirement.met ? <CheckIcon width={16} height={16} /> : '•'}
-              </span>
-              {requirement.label}
-            </li>
-          ))}
-        </ul>
+        <PasswordRequirements password={password} />
 
         <TextField
           label="Repita a nova senha"
           name="confirm-password"
           value={confirmation}
-          onChange={(e) => setConfirmation(e.target.value)}
+          onChange={edit('confirmation', setConfirmation)}
           onBlur={() =>
             setFieldErrors((prev) => ({
               ...prev,

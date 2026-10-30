@@ -65,30 +65,6 @@
   margin-top: var(--sp-4);
 }
 
-/* Bloco de contas de teste — existe só enquanto não há back-end. */
-.demo {
-  margin-top: var(--sp-6);
-  padding: var(--sp-3) var(--sp-4);
-  background: var(--surface);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius);
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  line-height: 1.7;
-}
-
-.demoTitle {
-  display: block;
-  margin-bottom: var(--sp-1);
-  font-weight: 600;
-  color: var(--text);
-}
-
-.demo code {
-  color: var(--text);
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-}
-
 /* Confirmação de e-mail enviado. */
 .confirmation {
   display: flex;

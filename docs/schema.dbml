@@ -6,6 +6,11 @@ enum loja_role {
   operador
 }
 
+enum token_email_tipo {
+  "confirmar-email"
+  "redefinir-senha"
+}
+
 enum anexo_tipo {
   "foto-produto"
   "foto-etiqueta"
@@ -37,10 +42,24 @@ Table lojas {
   senha_hash text [not null]
   role loja_role [not null, default: 'operador']
   ativo boolean [not null]
+  email_confirmado_em timestamptz
+  senha_alterada_em timestamptz [not null]
   criado_em timestamptz [not null]
   atualizado_em timestamptz
 
   Note: 'O login é a loja. role=admin enxerga a conta inteira. email único no sistema inteiro (login não pergunta qual empresa).'
+}
+
+Table tokens_email {
+  id uuid [pk]
+  loja_id uuid [not null]
+  tipo token_email_tipo [not null]
+  token_hash text [not null, unique]
+  expira_em timestamptz [not null]
+  usado_em timestamptz
+  criado_em timestamptz [not null]
+
+  Note: 'Links de uso único (confirmar e-mail, redefinir senha). Guarda só o hash do token.'
 }
 
 Table configuracoes_conta {
@@ -160,6 +179,7 @@ Table anexos {
 
 Ref: lojas.conta_id > contas.id [delete: cascade]
 Ref: configuracoes_conta.conta_id - contas.id [delete: cascade]
+Ref: tokens_email.loja_id > lojas.id [delete: cascade]
 Ref: produtos.conta_id > contas.id [delete: cascade]
 Ref: produtos.loja_origem_id > lojas.id [delete: set null]
 Ref: estoque.loja_id > lojas.id [delete: cascade]

@@ -3,6 +3,8 @@ import express from 'express'
 import type { NextFunction, Request, Response } from 'express'
 import helmet from 'helmet'
 import { rotasAuth } from './rotas/auth.js'
+import { rotasCadastro } from './rotas/cadastro.js'
+import { rotasConta } from './rotas/conta.js'
 import { rotasEstoque } from './rotas/estoque.js'
 import { rotasProdutos } from './rotas/produtos.js'
 
@@ -43,6 +45,10 @@ export function criarApp() {
   })
 
   app.use('/auth', rotasAuth)
+  // Mesmo prefixo: login, cadastro e recuperação de senha são o "lado de fora"
+  // da autenticação, sem sessão. Rotas de quem já está logado ficam em /conta.
+  app.use('/auth', rotasCadastro)
+  app.use('/conta', rotasConta)
   app.use('/produtos', rotasProdutos)
   app.use('/estoque', rotasEstoque)
 
@@ -53,6 +59,12 @@ export function criarApp() {
   // nunca viu a causa real do erro, só um 500 genérico; os detalhes vão pro
   // log do servidor, não pra resposta.
   app.use((erro: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    // JSON malformado no corpo é erro de quem chamou, não do servidor.
+    if (erro instanceof SyntaxError && 'status' in erro && erro.status === 400) {
+      res.status(400).json({ erro: 'Corpo da requisição inválido.' })
+      return
+    }
+
     console.error('Erro não tratado numa rota:', erro)
     res.status(500).json({ erro: 'Erro inesperado no servidor. Tente de novo em instantes.' })
   })
