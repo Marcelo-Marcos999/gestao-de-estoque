@@ -97,14 +97,26 @@ export function useImportWizard(onImported: () => void) {
     if (!plan) return
 
     const rows = rowsToImport(plan)
+    setError(null)
     setStep('aplicando')
     setProgress({ done: 0, total: rows.length })
 
-    const result = await bulkUpsertStock(rows, (done, total) => setProgress({ done, total }))
+    try {
+      const result = await bulkUpsertStock(rows, (done, total) => setProgress({ done, total }))
 
-    setApplied(result)
-    setStep('resumo')
-    onImported()
+      setApplied(result)
+      setStep('resumo')
+      onImported()
+    } catch {
+      // Sem isto a tela ficava parada em "0 de N" para sempre quando o
+      // servidor falhava. Voltar para a revisão deixa tentar de novo: reaplicar
+      // a mesma planilha é seguro, porque importar estoque só sobrescreve os
+      // números do SKU — o resultado final é o mesmo.
+      setError(
+        'Não foi possível concluir a importação. Parte das linhas pode já ter sido gravada; tentar de novo é seguro.',
+      )
+      setStep('revisao')
+    }
   }, [plan, onImported])
 
   /** Primeiro valor não vazio de uma coluna, para conferir o mapeamento. */

@@ -9,6 +9,15 @@ import { rotasProdutos } from './rotas/produtos.js'
 export function criarApp() {
   const app = express()
 
+  // O Render coloca um proxy na frente do app e repassa o IP real de quem
+  // chamou em X-Forwarded-For. Sem isto o Express enxerga o IP do proxy em
+  // todas as requisições, e o limite de tentativas de login (rotas/auth.ts)
+  // contaria todo mundo junto: 10 erros de senha de qualquer pessoa
+  // bloqueariam o login de todas as outras. O `1` é o número de proxies
+  // confiáveis (só o do Render); um valor maior deixaria o cliente forjar o
+  // IP mandando o próprio cabeçalho.
+  app.set('trust proxy', 1)
+
   // Cabeçalhos de segurança padrão (HSTS, no-sniff, etc.) — sem isso o
   // Express não manda nenhum.
   app.use(helmet())
