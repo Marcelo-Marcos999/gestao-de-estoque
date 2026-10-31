@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
-import { DownloadIcon, FileIcon } from '@/shared/ui/icons'
+import { DownloadIcon, EyeIcon, FileIcon } from '@/shared/ui/icons'
 import { downloadBlob } from '@/shared/lib/download'
 import {
   ATTACHMENT_LABELS,
@@ -30,7 +30,7 @@ interface Source {
  * Imagem aparece na hora — é o caso comum, a foto da etiqueta que alguém quer
  * conferir sem sair da lista. Documento não tenta se mostrar: um PDF embutido
  * num diálogo pequeno é pior que o leitor do próprio sistema, então aqui ele
- * se apresenta e oferece o download.
+ * se apresenta e oferece duas saídas: abrir em outra aba, para ler, ou baixar.
  *
  * O arquivo vem do servidor com o token de quem está logado, então há um
  * instante de carregamento (e a chance de falhar, sem rede, por exemplo).
@@ -58,6 +58,15 @@ export function AttachmentViewer({ attachment, onClose }: AttachmentViewerProps)
   const failed = current !== null && !url
   const imagem = isImage(attachment)
 
+  /**
+   * Abre o documento numa nova aba, no leitor do próprio navegador, sem salvar o
+   * arquivo. Não é uma pré-visualização dentro do diálogo: o celular não mostra PDF
+   * embutido numa página, e é nele que o sistema é usado.
+   */
+  function abrir() {
+    if (url) window.open(url, '_blank', 'noopener')
+  }
+
   async function baixar() {
     if (!attachment) return
     downloadBlob(await fetchAttachmentBlob(attachment), attachment.fileName)
@@ -74,6 +83,12 @@ export function AttachmentViewer({ attachment, onClose }: AttachmentViewerProps)
           <Button variant="secondary" onClick={onClose}>
             Fechar
           </Button>
+          {!imagem && (
+            <Button variant="secondary" onClick={abrir} disabled={!url}>
+              <EyeIcon width={18} height={18} />
+              <span>Abrir</span>
+            </Button>
+          )}
           <Button onClick={() => void baixar()} disabled={!url}>
             <DownloadIcon width={18} height={18} />
             <span>Baixar</span>
@@ -89,7 +104,7 @@ export function AttachmentViewer({ attachment, onClose }: AttachmentViewerProps)
         <div className={styles.file}>
           <FileIcon className={styles.fileIcon} width={40} height={40} />
           <span className={styles.fileName}>{attachment.fileName}</span>
-          <span className={styles.fileHint}>Baixe para abrir no leitor do seu aparelho.</span>
+          <span className={styles.fileHint}>Abra para ler agora, em outra aba, ou baixe para guardar no aparelho.</span>
         </div>
       )}
 

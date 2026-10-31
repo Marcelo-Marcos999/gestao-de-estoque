@@ -130,6 +130,10 @@ Um registro guarda:
   passa de 4 MB, e quem envia está no 4G da loja. PDF sobe como está. Limite de
   10 MB por arquivo; só foto (JPG, PNG, WebP, HEIC) e PDF.
 - **Um espaço por tipo:** enviar de novo troca o anterior.
+- **Ver o anexo:** foto aparece no próprio diálogo. Documento (PDF) oferece **Abrir**
+  (numa nova aba, no leitor do navegador ou do celular, sem salvar o arquivo) e
+  **Baixar**. Não há pré-visualização embutida: o celular não mostra PDF dentro de
+  uma página, e é nele que o sistema é usado.
 - **O arquivo sobe depois do registro** (o anexo pertence a ele). Se o envio falha
   num registro **novo**, o registro é desfeito e o formulário volta como estava —
   deixá-lo salvo pela metade faria quem tenta de novo criar um segundo igual. Na
