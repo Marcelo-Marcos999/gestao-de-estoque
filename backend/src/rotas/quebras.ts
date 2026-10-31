@@ -31,7 +31,11 @@ const COLUNAS = `q.id, q.produto_id,
                  q.quantidade, q.motivo_id, q.origem_id,
                  coalesce(q.observacao, '') as observacao,
                  q.criado_em, q.criado_por_id, l.nome as criado_por,
-                 q.loja_id, lo.nome as loja_nome, e.saldo, e.valor_custo`
+                 q.loja_id, lo.nome as loja_nome, e.saldo, e.valor_custo,
+                 (select coalesce(json_agg(json_build_object(
+                           'id', a.id, 'tipo', a.tipo, 'nome', a.nome_arquivo,
+                           'mime', a.mime_type, 'tamanho', a.tamanho_bytes) order by a.criado_em), '[]'::json)
+                    from anexos a where a.quebra_id = q.id) as anexos`
 
 /**
  * `e`: o estoque DA LOJA DO REGISTRO. O saldo limita a quantidade e o custo
@@ -254,6 +258,18 @@ const corpoRestaurar = z.object({
         criadoPorId: z.string().uuid(),
         criadoEm: z.string(),
         lojaId: z.string().uuid().optional(),
+        /** Os anexos do registro excluído: o arquivo continua no bucket, só a linha precisa voltar. */
+        anexos: z
+          .array(
+            z.object({
+              id: z.string().uuid(),
+              tipo: z.enum(['foto-produto', 'foto-etiqueta', 'documento']),
+              nome: z.string().max(200),
+              mime: z.string().max(100),
+              tamanho: z.number().int().min(0),
+            }),
+          )
+          .optional(),
       }),
     )
     .min(1)
@@ -306,6 +322,30 @@ rotasQuebras.post('/restaurar', assincrono(async (req, res) => {
         r.map((x) => x.lojaId ?? null),
       ],
     )
+
+    // Só volta o anexo de registro que de fato voltou (o `join` em `quebras`), e o
+    // caminho é refeito dos ids — nunca aceito do cliente (ver `caminhoDoAnexo`).
+    const anexos = r.flatMap((x) => (x.anexos ?? []).map((a) => ({ ...a, quebraId: x.id })))
+    if (anexos.length > 0) {
+      await client.query(
+        `insert into anexos (id, quebra_id, tipo, nome_arquivo, mime_type, tamanho_bytes, storage_path)
+         select a.id, a.quebra_id, a.tipo::anexo_tipo, a.nome, a.mime, a.tamanho,
+                $1::text || '/' || a.quebra_id::text || '/' || a.id::text
+         from unnest($2::uuid[], $3::uuid[], $4::text[], $5::text[], $6::text[], $7::bigint[])
+              as a(id, quebra_id, tipo, nome, mime, tamanho)
+         join quebras q on q.id = a.quebra_id
+         on conflict (id) do nothing`,
+        [
+          req.sessao!.contaId,
+          anexos.map((a) => a.id),
+          anexos.map((a) => a.quebraId),
+          anexos.map((a) => a.tipo),
+          anexos.map((a) => a.nome),
+          anexos.map((a) => a.mime),
+          anexos.map((a) => a.tamanho),
+        ],
+      )
+    }
   })
   res.status(204).end()
 }))

@@ -122,6 +122,26 @@ Um registro guarda:
 - **Documento da ocorrência** — o e-mail da divergência com o CD, por exemplo.
   É a prova que sustenta a cobrança, e é por ocorrência, não por produto.
 
+**Onde o arquivo mora e como se comporta.**
+- Os arquivos ficam no **R2 da Cloudflare**, enviados pelo back-end; o banco guarda
+  só nome, tipo e tamanho. Quem enxerga o registro enxerga os anexos (a RLS decide:
+  o operador, só os da própria loja).
+- **Foto é reduzida antes de subir** (1600 px no lado maior): uma foto de celular
+  passa de 4 MB, e quem envia está no 4G da loja. PDF sobe como está. Limite de
+  10 MB por arquivo; só foto (JPG, PNG, WebP, HEIC) e PDF.
+- **Um espaço por tipo:** enviar de novo troca o anterior.
+- **O arquivo sobe depois do registro** (o anexo pertence a ele). Se o envio falha
+  num registro **novo**, o registro é desfeito e o formulário volta como estava —
+  deixá-lo salvo pela metade faria quem tenta de novo criar um segundo igual. Na
+  **edição**, o registro já mudou: o formulário fica aberto e avisa qual anexo não
+  subiu.
+- **Excluir o registro mantém os arquivos no bucket** durante o "desfazer", que
+  devolve a linha do anexo. Os arquivos de registros excluídos de vez ficam
+  órfãos no bucket (custam centavos); uma limpeza periódica é uma melhoria futura.
+- **Sem armazenamento configurado**, o formulário avisa que os anexos não estão
+  ativos e não oferece os campos: aceitar uma foto que não seria guardada deixaria
+  quem a tirou no corredor achando que ela foi.
+
 **Nenhum é obrigatório.** A interface sugere e deixa claro que o registro fica
 incompleto sem eles, mas permite salvar. Registro incompleto é melhor que
 registro que não acontece porque o celular ficou sem bateria no corredor — e o

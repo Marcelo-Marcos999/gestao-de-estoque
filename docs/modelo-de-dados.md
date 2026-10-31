@@ -190,8 +190,10 @@ e exatamente 1 origem**.
 | `criado_em`* | timestamptz | |
 
 ### `anexos`
-Fotos e documentos de uma quebra. O arquivo em si fica fora do banco; aqui só o
-caminho.
+Fotos e documentos de uma quebra. O arquivo em si fica fora do banco (no bucket);
+aqui só o caminho, que é SEMPRE `conta/registro/anexo` — derivado dos ids, nunca
+informado pelo cliente (assim o "desfazer" da exclusão não pode apontar para o
+arquivo de outra loja). Um espaço por tipo em cada registro.
 
 | Coluna | Tipo | Notas |
 |---|---|---|
@@ -356,9 +358,9 @@ Três escolhas de desenho que vale conhecer:
   0003 não tem motivos nem origens; o primeiro `GET /motivos` (ou `/origens`)
   cria os padrão, os mesmos de `criar_conta`.
 
-Falta guardar os **arquivos** dos anexos: a tabela `anexos` existe, mas ainda não
-há onde guardar a foto (`storage_path`). Enquanto isso o registro de quebra
-persiste e o anexo não.
+Os **arquivos** dos anexos moram num bucket compatível com S3 (R2 da Cloudflare),
+pelo back-end (`/anexos`); a tabela `anexos` guarda só os dados e o caminho
+(`storage_path`). Ver "Anexos" em `docs/dominio.md`.
 
 ## Como reconstruir o banco do zero
 

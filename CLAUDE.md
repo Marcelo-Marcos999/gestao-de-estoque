@@ -154,9 +154,9 @@ entre contas e lojas, não o código da rota (ver `backend/migrations/`).
 
 Nem toda feature já fala com ele. `auth`, `products`, `expiry` (lotes),
 `breakage` (registros, motivos e origens) e a leitura de números em `stock` já
-chamam o back-end de verdade. Falta guardar os **arquivos** dos anexos de
-quebra, que dependem de um armazenamento de arquivos que ainda não existe: o
-registro persiste, a foto não.
+chamam o back-end de verdade. Os **arquivos** dos anexos de quebra vão para um
+bucket compatível com S3 (R2 da Cloudflare, `R2_*` em `backend/.env.example`): sem
+essas variáveis o armazenamento fica desligado e a tela esconde os anexos.
 
 Criar conta, confirmar e-mail e "esqueci a senha" dependem de um provedor de
 e-mail (`EMAIL_PROVEDOR` em `backend/.env.example`) que ainda não está ligado em

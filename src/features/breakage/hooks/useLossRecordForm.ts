@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getProduct } from '@/features/products'
 import type { IsoDate } from '@/shared/lib/date'
-import { addToRecord, createLossRecord, findSameRecord, updateLossRecord } from '../api'
+import { addToRecord, findSameRecord } from '../api'
 import { putAttachmentFile } from '../attachments'
+import { AttachmentsFailedError, saveLossRecord } from '../saveRecord'
 import type {
   AttachmentKind,
   LossRecord,
@@ -60,6 +61,8 @@ export function useLossRecordForm(
   onSaved: () => void,
   editing?: LossRecord,
   initial?: LossRecordInitialDraft,
+  /** A lista atrás do formulário precisa reler (sem fechá-lo): o registro mudou, mas um anexo falhou. */
+  onChanged?: () => void,
 ) {
   const [product, setProduct] = useState<ChosenProduct | null>(
     () => initialProduct(editing) ?? initial?.product ?? null,
@@ -89,6 +92,8 @@ export function useLossRecordForm(
   const [attachments, setAttachments] = useState<LossRecordDraft['attachments']>(
     editing?.attachments ?? [],
   )
+  // O que o servidor já tem deste registro: base para saber o que enviar e o que apagar.
+  const [savedAttachments, setSavedAttachments] = useState(editing?.attachments ?? [])
 
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
@@ -166,16 +171,21 @@ export function useLossRecordForm(
   const persist = useCallback(async () => {
     setSaving(true)
     try {
-      if (editing) await updateLossRecord(editing.id, draft)
-      else await createLossRecord(draft)
+      await saveLossRecord(draft, editing, savedAttachments)
     } catch (erro) {
+      if (erro instanceof AttachmentsFailedError) {
+        // Mantém o formulário com o que o servidor já tem, para tentar de novo.
+        setSavedAttachments(erro.after.filter((a) => !erro.failed.includes(a)))
+        setAttachments(erro.after)
+        onChanged?.()
+      }
       reportFailure(erro)
       return
     }
     setSaving(false)
     setDuplicate(null)
     onSaved()
-  }, [draft, editing, onSaved, reportFailure])
+  }, [draft, editing, savedAttachments, onSaved, onChanged, reportFailure])
 
   /**
    * Grava o registro, avisando antes se já existe um igual.
