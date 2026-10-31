@@ -170,6 +170,15 @@ o administrador cria os logins e as senhas provisórias em Configurações. Em q
 casos, cada feature isola o acesso a dados no próprio `api.ts` — migrar uma
 feature pro back-end real é mexer só nesse arquivo, nunca na tela.
 
+## Backup do banco
+
+O Neon só guarda 6 horas de histórico, então um fluxo do GitHub Actions
+(`.github/workflows/backup-banco.yml`) faz um dump criptografado por dia no R2 e
+restaura de teste a cada execução. Scripts em `backend/scripts/backup/`; configuração
+e recuperação em [`docs/backup.md`](docs/backup.md). Duas regras: o dump **mantém os
+donos** dos objetos (as funções `SECURITY DEFINER` pertencem ao `app_definer`), e o
+bucket de backup é **separado** do dos anexos.
+
 ## App instalável (PWA)
 
 O sistema é instalável no celular e no computador: `public/manifest.webmanifest`,
