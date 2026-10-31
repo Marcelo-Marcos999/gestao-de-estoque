@@ -1,3 +1,4 @@
+import { limitMessage } from '@/shared/lib/limits'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Alert } from '@/shared/ui/Alert'
@@ -93,14 +94,20 @@ function ProductForm({ product, onClose, onSaved }: ProductFormProps) {
       barcode: draft.barcode.trim(),
     }
 
-    const { error } = product
-      ? await updateProduct(product.id, payload)
-      : await createProduct(payload)
+    let resultado: Awaited<ReturnType<typeof createProduct>>
+    try {
+      resultado = product ? await updateProduct(product.id, payload) : await createProduct(payload)
+    } catch (erro) {
+      // Limite do plano ou falha de rede: sem isto o botão ficaria girando.
+      setSaving(false)
+      setFormError(limitMessage(erro) ?? 'Não foi possível salvar. Verifique a conexão e tente de novo.')
+      return
+    }
 
     setSaving(false)
 
-    if (error) {
-      setFormError(SAVE_MESSAGES[error])
+    if (resultado.error) {
+      setFormError(SAVE_MESSAGES[resultado.error])
       return
     }
 

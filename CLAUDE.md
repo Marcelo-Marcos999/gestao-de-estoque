@@ -158,6 +158,11 @@ chamam o back-end de verdade. Os **arquivos** dos anexos de quebra vão para um
 bucket compatível com S3 (R2 da Cloudflare, `R2_*` em `backend/.env.example`): sem
 essas variáveis o armazenamento fica desligado e a tela esconde os anexos.
 
+Cada conta tem **limites de registros e de arquivos**, aplicados por gatilhos no
+banco (ver `docs/modelo-de-dados.md`, "Limites de uso"): nenhuma rota confere o limite
+por conta própria, e toda tela que cria algo precisa tratar o 409 (`limitMessage` em
+`shared/lib/limits.ts`), senão o botão fica girando.
+
 O servidor comprime as respostas (gzip) e registra no log as requisições recusadas
 (4xx, menos o 401, e 5xx): método, rota sem ids, status, motivo e os ids de login e
 conta — nunca corpo, query, e-mail ou IP. Toda resposta leva `x-request-id`, o mesmo

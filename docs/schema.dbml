@@ -66,7 +66,8 @@ Table tokens_email {
 Table configuracoes_conta {
   conta_id uuid [pk]
   limite_usuarios integer
-  limite_armazenamento_mb integer
+  limite_armazenamento_mb integer [default: 1024, note: 'Só vale para contas novas; nulo = sem limite']
+  limite_registros integer [default: 250000, note: 'Produtos + estoque + lotes + quebras da conta; nulo = sem limite']
   plano text [not null, default: 'padrao']
   atualizado_em timestamptz
 }

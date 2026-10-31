@@ -35,7 +35,17 @@ const COLUNAS_DO_LOTE = `v.id, e.produto_id, to_char(v.data_validade, 'YYYY-MM-D
 
 const dataValidade = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
+// `?produto=<id>` devolve só os lotes daquele produto: é como o diálogo de novo
+// lote avisa que o item já está em acompanhamento, sem baixar a loja inteira.
+const filtroDoProduto = z.object({ produto: z.string().uuid().optional() })
+
 rotasValidades.get('/', assincrono(async (req, res) => {
+  const filtro = filtroDoProduto.safeParse(req.query)
+  if (!filtro.success) {
+    res.status(400).json({ erro: 'Produto inválido.' })
+    return
+  }
+
   const linhas = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows } = await client.query(
       `select ${COLUNAS_DO_LOTE}
@@ -43,8 +53,9 @@ rotasValidades.get('/', assincrono(async (req, res) => {
        join estoque e on e.id = v.estoque_id
        join lojas l on l.id = e.loja_id
        where ($1::uuid is null or e.loja_id = $1)
+         and ($2::uuid is null or e.produto_id = $2)
        order by v.criado_em desc`,
-      [lojaDaConsulta(req)],
+      [lojaDaConsulta(req), filtro.data.produto ?? null],
     )
     return rows
   })

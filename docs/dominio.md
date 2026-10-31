@@ -114,6 +114,15 @@ seu documento — juntar as duas num registro só perderia a prova de cada uma.
 Por isso o aviso é informativo: ele mostra o que já existe para a pessoa
 **entender** se aquilo é a mesma ocorrência ou outra.
 
+**Dois avisos, de pesos diferentes.** A janela acima (produto + validade + motivo)
+**interrompe** no envio, porque pede uma decisão: somar ao que existe ou criar outro.
+Além dela, assim que o produto é escolhido, o formulário mostra uma **nota ao lado do
+campo** quando a loja já tem *qualquer* registro daquele produto (quantos, e o mais
+recente). A nota não custa um clique, então pode aparecer sempre sem virar ruído: ela só
+dá contexto. O casamento é por **id, SKU ou código de barras**, porque um produto ainda
+pendente não tem id no cadastro, só o que foi digitado. Ver as duas, e nenhuma impede
+registrar.
+
 ## Anexos
 
 Um registro guarda:
@@ -609,7 +618,10 @@ Duas regras que essas portas novas seguem:
   deveria alimentar. O seletor manda cadastrar antes — diferente da quebra,
   onde a perda aconteceu de qualquer jeito e bloquear garantiria que o registro
   não existisse. Lote repetido também não duplica: avisa que aquele produto já
-  está em acompanhamento naquela data.
+  está em acompanhamento naquela data. Assim que o produto é escolhido, o diálogo de
+  novo lote já avisa quantos lotes ele tem e de quando (sem impedir outro lote com data
+  diferente); só a **mesma** data não gera lote novo, porque produto mais validade é,
+  por definição, o mesmo lote.
 - **Adicionar ao estoque é a importação de uma linha só.** Passa pelo mesmo
   caminho da planilha, com a mesma regra de SKU desconhecido. Quando o SKU casa
   com um produto que já existe, o formulário abre com os números atuais dele:
@@ -878,6 +890,31 @@ de gravação; isso é decisão de produto, não de cache, e não foi feito.
 **Publicou uma versão nova?** Nada a fazer: o service worker novo assume sozinho
 e os arquivos mudam de nome. Só mexa em `VERSAO` no `sw.js` se mudar a *estratégia*
 de cache.
+
+## Limites do plano: registros e arquivos
+
+Cada conta tem um teto de **registros** (produtos, linhas de estoque, lotes de
+validade e registros de quebra, somados) e de **arquivos** (a soma dos anexos, em
+MB). É da **conta**, não da loja: um operador com a loja vazia esbarra no limite se
+as outras lojas já o encheram.
+
+| | Quando passa do teto |
+|---|---|
+| Novo produto, estoque, lote ou quebra | recusado, com a mensagem do plano; nada é gravado (numa importação, o lote de 500 linhas que estourou volta inteiro) |
+| Novo anexo | recusado, e o arquivo já enviado ao bucket é apagado |
+| Editar, excluir, trocar anexo por um menor | **sempre permitido**: quem está no teto precisa poder limpar |
+
+- **Quem vê o consumo:** o administrador, em Configurações → Empresa → "Uso do plano"
+  (barras de registros e arquivos, com aviso a partir de 80%). O operador não tem essa
+  aba; ele vê a mensagem quando é barrado, e ela diz o que fazer.
+- **Padrões:** contas **novas** nascem com 250.000 registros e 1.024 MB. As que já
+  existiam ficam **sem limite** até alguém definir: impor teto a quem já usa o
+  sistema é decisão comercial, não efeito de uma migração. Os números são da
+  plataforma, não do cliente (não há rota para mudá-los; hoje é por SQL em
+  `configuracoes_conta`).
+- **É um teto de plano, não uma cota exata:** a regra mora no banco (ver
+  `docs/modelo-de-dados.md`, "Limites de uso"), então vale para qualquer caminho de
+  gravação, e a contagem dos registros inclui linhas que a tela não mostra.
 
 ## O que veio do AppSheet e não se repete aqui
 
