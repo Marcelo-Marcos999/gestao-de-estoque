@@ -59,6 +59,16 @@ export async function loadItems(storeParam = ''): Promise<ExpiryItem[]> {
   return lotes.map(paraExpiryItem)
 }
 
+/**
+ * Os lotes de UM produto na loja do login. Serve ao aviso do diálogo de novo
+ * lote ("este produto já está em acompanhamento"), que não pode baixar a loja
+ * inteira só para olhar um item.
+ */
+export async function loadItemsOfProduct(productId: string): Promise<ExpiryItem[]> {
+  const lotes = await apiFetch<LoteApi[]>(`/validades?produto=${encodeURIComponent(productId)}`)
+  return lotes.map(paraExpiryItem)
+}
+
 /* ---- Consulta ------------------------------------------------------------ */
 
 /**

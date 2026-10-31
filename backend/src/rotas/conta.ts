@@ -103,10 +103,14 @@ rotasConta.post(
 rotasConta.get('/', assincrono(async (req, res) => {
   const linha = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows } = await client.query(
-      `select c.nome, cc.plano, cc.limite_usuarios, cc.limite_armazenamento_mb,
-              (select count(*) from lojas where ativo)::int as usuarios_ativos
+      `select c.nome, cc.plano, cc.limite_usuarios, cc.limite_armazenamento_mb, cc.limite_registros,
+              (select count(*) from lojas where ativo)::int as usuarios_ativos,
+              uso.registros::int as uso_registros, uso.arquivos_bytes::float8 as uso_arquivos_bytes
        from contas c
        left join configuracoes_conta cc on cc.conta_id = c.id
+       -- O uso é da conta INTEIRA, inclusive das lojas que este login não vê
+       -- (ver migrations/..._limites_de_registros_e_arquivos.sql).
+       cross join uso_da_conta() uso
        where c.id = $1`,
       [req.sessao!.contaId],
     )
@@ -122,7 +126,10 @@ rotasConta.get('/', assincrono(async (req, res) => {
     plano: linha.plano ?? 'padrao',
     limiteUsuarios: linha.limite_usuarios,
     limiteArmazenamentoMb: linha.limite_armazenamento_mb,
+    limiteRegistros: linha.limite_registros,
     usuariosAtivos: linha.usuarios_ativos,
+    usoRegistros: linha.uso_registros,
+    usoArquivosBytes: linha.uso_arquivos_bytes,
   })
 }))
 

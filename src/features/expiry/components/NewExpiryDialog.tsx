@@ -4,7 +4,10 @@ import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { daysUntil, parseDate, type IsoDate } from '@/shared/lib/date'
+import { limitMessage } from '@/shared/lib/limits'
 import { ensureExpiryItem } from '../api'
+import { useLotsOfProduct } from '../hooks/useLotsOfProduct'
+import { SameProductNotice } from './SameProductNotice'
 import styles from './NewExpiryDialog.module.css'
 
 interface NewExpiryDialogProps {
@@ -38,6 +41,7 @@ function Form({ onClose, onCreated }: Omit<NewExpiryDialogProps, 'open'>) {
   const [erro, setErro] = useState<string | null>(null)
 
   const restantes = daysUntil(expiryDate)
+  const existing = useLotsOfProduct(product?.productId ?? null)
 
   async function salvar() {
     if (!product) {
@@ -50,7 +54,14 @@ function Form({ onClose, onCreated }: Omit<NewExpiryDialogProps, 'open'>) {
     }
 
     setSaving(true)
-    const criou = await ensureExpiryItem(product.productId, expiryDate)
+    let criou: boolean
+    try {
+      criou = await ensureExpiryItem(product.productId, expiryDate)
+    } catch (erro) {
+      setSaving(false)
+      setErro(limitMessage(erro) ?? 'Não foi possível salvar. Verifique a conexão e tente de novo.')
+      return
+    }
     setSaving(false)
 
     // Lote repetido não é erro nem duplicata nova: é o mesmo lote, e dizer
@@ -95,6 +106,7 @@ function Form({ onClose, onCreated }: Omit<NewExpiryDialogProps, 'open'>) {
             }}
             onDescriptionChange={() => {}}
           />
+          <SameProductNotice existing={existing} chosenDate={expiryDate} />
         </div>
 
         <div className={styles.field}>
