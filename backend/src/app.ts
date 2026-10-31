@@ -1,7 +1,9 @@
+import compression from 'compression'
 import cors from 'cors'
 import express from 'express'
 import type { NextFunction, Request, Response } from 'express'
 import helmet from 'helmet'
+import { registrarRequisicoes } from './lib/registro.js'
 import { rotasAuth } from './rotas/auth.js'
 import { rotasCadastro } from './rotas/cadastro.js'
 import { rotasConta } from './rotas/conta.js'
@@ -25,9 +27,18 @@ export function criarApp() {
   // IP mandando o próprio cabeçalho.
   app.set('trust proxy', 1)
 
+  // Primeiro de todos: assim também registra o que é recusado antes de chegar a
+  // uma rota (corpo grande demais, JSON quebrado).
+  app.use(registrarRequisicoes)
+
   // Cabeçalhos de segurança padrão (HSTS, no-sniff, etc.) — sem isso o
   // Express não manda nenhum.
   app.use(helmet())
+
+  // Respostas em JSON comprimidas (gzip): a lista de 26 mil produtos tem 6 MB e
+  // vai a menos de 1 MB — o que pesa no 4G do corredor. Foto e PDF não entram:
+  // já vêm comprimidos, e o filtro padrão do pacote só comprime texto.
+  app.use(compression())
 
   const origensPermitidas = (process.env.CORS_ORIGENS ?? '')
     .split(',')
@@ -83,7 +94,8 @@ export function criarApp() {
       return
     }
 
-    console.error('Erro não tratado numa rota:', erro)
+    // O mesmo `x-request-id` da linha de registro: liga o defeito à requisição.
+    console.error(`Erro não tratado numa rota (${String(res.getHeader('x-request-id'))}):`, erro)
     res.status(500).json({ erro: 'Erro inesperado no servidor. Tente de novo em instantes.' })
   })
 

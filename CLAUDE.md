@@ -158,6 +158,11 @@ chamam o back-end de verdade. Os **arquivos** dos anexos de quebra vão para um
 bucket compatível com S3 (R2 da Cloudflare, `R2_*` em `backend/.env.example`): sem
 essas variáveis o armazenamento fica desligado e a tela esconde os anexos.
 
+O servidor comprime as respostas (gzip) e registra no log as requisições recusadas
+(4xx, menos o 401, e 5xx): método, rota sem ids, status, motivo e os ids de login e
+conta — nunca corpo, query, e-mail ou IP. Toda resposta leva `x-request-id`, o mesmo
+da linha do log (`backend/src/lib/registro.ts`).
+
 Criar conta, confirmar e-mail e "esqueci a senha" dependem de um provedor de
 e-mail (`EMAIL_PROVEDOR` em `backend/.env.example`) que ainda não está ligado em
 produção, e a tela de login esconde essas opções enquanto ele não existe. Até lá,

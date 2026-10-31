@@ -24,6 +24,17 @@ const cliente =
     ? new AwsClient({ accessKeyId: chave, secretAccessKey: segredo, service: 's3', region: 'auto' })
     : null
 
+/** Nomes (nunca valores) das variáveis que faltam para ligar o armazenamento: o log de inicialização as lista. */
+export function variaveisFaltando(): string[] {
+  const necessarias: Array<[string, string | undefined]> = [
+    ['R2_ACCOUNT_ID', process.env.R2_ENDPOINT ? 'ok' : idDaConta],
+    ['R2_ACCESS_KEY_ID', chave],
+    ['R2_SECRET_ACCESS_KEY', segredo],
+    ['R2_BUCKET', balde],
+  ]
+  return necessarias.filter(([, valor]) => !valor).map(([nome]) => nome)
+}
+
 export function armazenamentoLigado(): boolean {
   return Boolean(cliente && balde && endpoint)
 }
