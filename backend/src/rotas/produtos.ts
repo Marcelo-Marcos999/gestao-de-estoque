@@ -88,7 +88,9 @@ const corpoEditarProduto = z.object({
 // pendência acabou de ser resolvida.
 rotasProdutos.patch('/:id', exigirAdmin, assincrono(async (req, res) => {
   const corpo = corpoEditarProduto.safeParse(req.body)
-  if (!corpo.success) {
+  // Um id que não é uuid chegava ao Postgres e voltava como 500; é erro de quem chamou.
+  const id = z.string().uuid().safeParse(req.params.id)
+  if (!corpo.success || !id.success) {
     res.status(400).json({ erro: 'Dados do produto inválidos.' })
     return
   }
@@ -100,7 +102,7 @@ rotasProdutos.patch('/:id', exigirAdmin, assincrono(async (req, res) => {
          set sku = $1, descricao = $2, codigo_barras = $3, pendente_cadastro = false
          where id = $4
          returning id, sku, descricao, codigo_barras, pendente_cadastro, criado_em, atualizado_em`,
-        [corpo.data.sku, corpo.data.descricao, corpo.data.codigoBarras ?? null, req.params.id],
+        [corpo.data.sku, corpo.data.descricao, corpo.data.codigoBarras ?? null, id.data],
       )
       return rows[0]
     })

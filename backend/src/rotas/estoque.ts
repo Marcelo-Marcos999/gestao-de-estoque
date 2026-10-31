@@ -70,7 +70,9 @@ function arredondarSeDefinido(valor: number | undefined): number | undefined {
  */
 rotasEstoque.patch('/:produtoId', assincrono(async (req, res) => {
   const corpo = corpoAtualizarEstoque.safeParse(req.body)
-  if (!corpo.success) {
+  // Um id que não é uuid chegava ao Postgres e voltava como 500; é erro de quem chamou.
+  const produtoId = z.string().uuid().safeParse(req.params.produtoId)
+  if (!corpo.success || !produtoId.success) {
     res.status(400).json({ erro: 'Valores de estoque inválidos.' })
     return
   }
@@ -101,7 +103,7 @@ rotasEstoque.patch('/:produtoId', assincrono(async (req, res) => {
        returning produto_id, saldo, saidas, valor_custo, valor_venda`,
       [
         loja,
-        req.params.produtoId,
+        produtoId.data,
         arredondarSeDefinido(corpo.data.saldo),
         arredondarSeDefinido(corpo.data.saidas),
         corpo.data.valorCusto,
