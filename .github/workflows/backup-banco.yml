@@ -1,0 +1,109 @@
+# Backup diário do banco de produção (Neon) para o R2 da Cloudflare.
+#
+# Por que existe: o Neon só guarda 6 horas de histórico para restaurar. Um erro
+# descoberto no dia seguinte — uma importação errada, um "Excluir tudo" por
+# engano, uma conta apagada — não teria volta. Este fluxo guarda uma cópia por
+# dia, criptografada, num bucket separado do dos anexos.
+#
+# Cada execução: dump → criptografa → envia → RESTAURA o arquivo enviado num
+# Postgres descartável e compara com a origem → só então apaga backups velhos.
+# O passo a passo de configuração e de recuperação está em docs/backup.md.
+#
+# Falhou? O GitHub avisa por e-mail quem editou este agendamento por último.
+name: Backup do banco
+
+on:
+  schedule:
+    # 06:17 UTC = 03:17 em São Paulo: madrugada, sem ninguém lançando quebra.
+    # O minuto "quebrado" evita o horário cheio, em que o GitHub atrasa tarefas.
+    - cron: '17 6 * * *'
+  # Permite rodar à mão pela aba Actions: é como se testa a configuração.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Dois backups ao mesmo tempo disputariam o banco sem ganho nenhum.
+concurrency:
+  group: backup-banco
+  cancel-in-progress: false
+
+env:
+  # Precisa ser a mesma versão do Postgres do Neon (ou mais nova): o pg_dump
+  # recusa servidor mais novo que ele, e o pg_restore recusa dump mais novo.
+  PG_MAJOR: 18
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Banco descartável onde o backup é restaurado de teste. Nasce vazio a cada
+    # execução e morre junto com ela.
+    services:
+      restauracao:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: restauracao
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # O cliente do Postgres que já vem no runner é de outra versão.
+      - name: Instalar o cliente do Postgres ${{ env.PG_MAJOR }}
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y "postgresql-client-${PG_MAJOR}"
+          echo "/usr/lib/postgresql/${PG_MAJOR}/bin" >> "$GITHUB_PATH"
+
+      - name: Instalar dependências do back-end
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      - name: Fazer o backup
+        id: backup
+        working-directory: backend
+        run: bash scripts/backup/fazer-backup.sh
+        env:
+          DATABASE_URL_BACKUP: ${{ secrets.DATABASE_URL_BACKUP }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          BACKUP_R2_ACCOUNT_ID: ${{ secrets.BACKUP_R2_ACCOUNT_ID }}
+          BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+          BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+          BACKUP_R2_BUCKET: ${{ secrets.BACKUP_R2_BUCKET }}
+
+      - name: Testar a restauração do arquivo enviado
+        working-directory: backend
+        run: bash scripts/backup/testar-restauracao.sh "${{ steps.backup.outputs.chave }}"
+        env:
+          DATABASE_URL_BACKUP: ${{ secrets.DATABASE_URL_BACKUP }}
+          RESTORE_DATABASE_URL: postgresql://postgres:restauracao@localhost:5432/postgres
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          BACKUP_R2_ACCOUNT_ID: ${{ secrets.BACKUP_R2_ACCOUNT_ID }}
+          BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+          BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+          BACKUP_R2_BUCKET: ${{ secrets.BACKUP_R2_BUCKET }}
+
+      # Só chega aqui se o backup novo foi enviado e restaurou: apagar o antigo
+      # depois de um backup ruim deixaria menos cópias do que antes.
+      - name: Apagar backups antigos
+        working-directory: backend
+        run: bash scripts/backup/aplicar-retencao.sh
+        env:
+          BACKUP_R2_ACCOUNT_ID: ${{ secrets.BACKUP_R2_ACCOUNT_ID }}
+          BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+          BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+          BACKUP_R2_BUCKET: ${{ secrets.BACKUP_R2_BUCKET }}
