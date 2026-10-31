@@ -9,6 +9,7 @@ import { rotasEstoque } from './rotas/estoque.js'
 import { rotasLojas } from './rotas/lojas.js'
 import { rotasMotivos, rotasOrigens } from './rotas/etiquetas.js'
 import { rotasProdutos } from './rotas/produtos.js'
+import { rotasAnexos } from './rotas/anexos.js'
 import { rotasQuebras } from './rotas/quebras.js'
 import { rotasValidades } from './rotas/validades.js'
 
@@ -58,6 +59,7 @@ export function criarApp() {
   app.use('/estoque', rotasEstoque)
   app.use('/validades', rotasValidades)
   app.use('/quebras', rotasQuebras)
+  app.use('/anexos', rotasAnexos)
   app.use('/motivos', rotasMotivos)
   app.use('/origens', rotasOrigens)
 
@@ -68,6 +70,13 @@ export function criarApp() {
   // nunca viu a causa real do erro, só um 500 genérico; os detalhes vão pro
   // log do servidor, não pra resposta.
   app.use((erro: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    // Corpo maior que o limite (1 MB de JSON; 10 MB num anexo) é erro de quem
+    // chamou — o `body-parser` marca com `status` 413.
+    if (typeof erro === 'object' && erro !== null && 'status' in erro && erro.status === 413) {
+      res.status(413).json({ erro: 'O arquivo é grande demais.' })
+      return
+    }
+
     // JSON malformado no corpo é erro de quem chamou, não do servidor.
     if (erro instanceof SyntaxError && 'status' in erro && erro.status === 400) {
       res.status(400).json({ erro: 'Corpo da requisição inválido.' })

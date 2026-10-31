@@ -72,6 +72,8 @@ function LossRecordForm({
     },
     record,
     initial,
+    // Editando, a lista atrás reage ao registro alterado mesmo que um anexo falhe.
+    record ? onSaved : undefined,
   )
 
   const restantes = daysUntil(form.expiryDate)

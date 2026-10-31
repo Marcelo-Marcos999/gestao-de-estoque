@@ -1,6 +1,7 @@
 import type { ChangeEvent } from 'react'
 import { CameraIcon, CloseIcon, FileIcon, ImageIcon } from '@/shared/ui/icons'
 import { ATTACHMENT_ACCEPT, ATTACHMENT_LABELS, formatSize } from '../attachments'
+import { useAttachmentsEnabled } from '../hooks/useAttachmentsEnabled'
 import type { Attachment, AttachmentKind } from '../types'
 import styles from './AttachmentSlots.module.css'
 
@@ -34,6 +35,8 @@ export function AttachmentSlots({
   onRemove,
   onOpen,
 }: AttachmentSlotsProps) {
+  const enabled = useAttachmentsEnabled()
+
   function handleChange(kind: AttachmentKind, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (file) onAttach(kind, file)
@@ -41,6 +44,18 @@ export function AttachmentSlots({
     // Zera o input: sem isso, escolher o mesmo arquivo de novo depois de
     // remover não dispararia evento nenhum.
     event.target.value = ''
+  }
+
+  // Sem armazenamento no servidor não se oferece o anexo (ver `useAttachmentsEnabled`).
+  if (enabled === false && attachments.length === 0) {
+    return (
+      <div className={styles.field}>
+        <span className={styles.label}>Anexos</span>
+        <p className={styles.hint} role="note">
+          Os anexos ainda não estão ativos neste servidor. O registro é salvo normalmente, sem arquivos.
+        </p>
+      </div>
+    )
   }
 
   return (

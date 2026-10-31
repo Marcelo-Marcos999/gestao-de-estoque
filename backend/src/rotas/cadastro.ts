@@ -13,6 +13,7 @@ import {
 import { enviarEmail, envioDeEmailAtivo, urlDoApp } from '../email/enviar.js'
 import { emailConfirmacao, emailRedefinicaoDeSenha } from '../email/modelos.js'
 import { assincrono } from '../lib/assincrono.js'
+import { armazenamentoLigado } from '../lib/armazenamento.js'
 
 /**
  * Criar conta, confirmar e-mail e recuperar senha.
@@ -38,7 +39,7 @@ export const rotasCadastro = Router()
  * não têm como entregar o link.
  */
 rotasCadastro.get('/recursos', (_req, res) => {
-  res.json({ emailAtivo: envioDeEmailAtivo() })
+  res.json({ emailAtivo: envioDeEmailAtivo(), anexosAtivos: armazenamentoLigado() })
 })
 
 const limitePorIp = (limite: number, janelaMinutos: number) =>

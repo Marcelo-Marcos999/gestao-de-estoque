@@ -15,6 +15,7 @@ import { ensureExpiryItem } from '@/features/expiry'
 import { apiFetch } from '@/shared/lib/http'
 import { lineTotal } from '@/shared/lib/money'
 import { matchesRange } from '@/shared/lib/numberRange'
+import { paraAnexo, paraAnexoApi, type AnexoApi } from './attachments'
 import type { LossRecord, LossRecordDraft, LossRecordQuery } from './types'
 
 /** O registro como o back-end o entrega. */
@@ -38,6 +39,8 @@ interface QuebraApi {
   /** Estoque da loja do registro (a posição pode não existir). */
   saldo: number | null
   valor_custo: string | null
+  /** Os anexos do registro (o arquivo em si se baixa à parte). */
+  anexos: AnexoApi[]
 }
 
 function paraLossRecord(q: QuebraApi): LossRecord {
@@ -53,8 +56,7 @@ function paraLossRecord(q: QuebraApi): LossRecord {
     reasonId: q.motivo_id,
     originId: q.origem_id,
     note: q.observacao,
-    // Os arquivos ainda não têm onde morar no servidor: só o registro persiste.
-    attachments: [],
+    attachments: q.anexos.map(paraAnexo),
     costPrice: q.valor_custo === null ? null : Number(q.valor_custo),
     availableStock: q.saldo,
     totalCost: null,
@@ -185,7 +187,7 @@ async function createMany(
   originId: string,
   storeId?: string,
 ) {
-  await apiFetch('/quebras', {
+  const { ids } = await apiFetch<{ ids: string[] }>('/quebras', {
     method: 'POST',
     body: { motivoId: reasonId, origemId: originId, lojaId: storeId, itens: drafts.map(paraCorpo) },
   })
@@ -194,11 +196,13 @@ async function createMany(
   // acompanhamento de validade passa a conhecê-lo, em vez de o produto sumir
   // da tela onde se vai conferir o saldo dele. Na loja do registro.
   for (const draft of drafts) await ensureExpiryItem(draft.productId, draft.expiryDate, storeId)
+  return ids
 }
 
 /** Quem registrou é o login da sessão: o servidor não aceita autoria dita pelo cliente. */
-export async function createLossRecord(draft: LossRecordDraft): Promise<void> {
-  await createMany([draft], draft.reasonId, draft.originId, draft.storeId)
+export async function createLossRecord(draft: LossRecordDraft): Promise<string> {
+  const [id] = await createMany([draft], draft.reasonId, draft.originId, draft.storeId)
+  return id
 }
 
 /**
@@ -282,6 +286,8 @@ export async function restoreLossRecords(records: LossRecord[]): Promise<void> {
         criadoEm: r.createdAt,
         // O desfazer devolve o registro à loja de origem, não à do administrador.
         lojaId: r.storeId,
+        // O arquivo continua no bucket; só a linha do anexo precisa voltar.
+        anexos: r.attachments.map(paraAnexoApi),
       })),
     },
   })

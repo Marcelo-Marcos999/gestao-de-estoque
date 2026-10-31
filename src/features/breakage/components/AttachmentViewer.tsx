@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { DownloadIcon, FileIcon } from '@/shared/ui/icons'
@@ -5,8 +6,8 @@ import { downloadBlob } from '@/shared/lib/download'
 import {
   ATTACHMENT_LABELS,
   attachmentUrl,
+  fetchAttachmentBlob,
   formatSize,
-  getAttachmentFile,
   isImage,
 } from '../attachments'
 import type { Attachment } from '../types'
@@ -17,6 +18,12 @@ interface AttachmentViewerProps {
   onClose: () => void
 }
 
+/** O que já se sabe do arquivo aberto; `id` impede de mostrar o de um anexo anterior. */
+interface Source {
+  id: string
+  url?: string
+}
+
 /**
  * Vê o anexo e o baixa.
  *
@@ -24,17 +31,36 @@ interface AttachmentViewerProps {
  * conferir sem sair da lista. Documento não tenta se mostrar: um PDF embutido
  * num diálogo pequeno é pior que o leitor do próprio sistema, então aqui ele
  * se apresenta e oferece o download.
+ *
+ * O arquivo vem do servidor com o token de quem está logado, então há um
+ * instante de carregamento (e a chance de falhar, sem rede, por exemplo).
  */
 export function AttachmentViewer({ attachment, onClose }: AttachmentViewerProps) {
+  const [source, setSource] = useState<Source | null>(null)
+
+  useEffect(() => {
+    if (!attachment) return
+
+    let cancelled = false
+    attachmentUrl(attachment)
+      .then((url) => !cancelled && setSource({ id: attachment.id, url }))
+      .catch(() => !cancelled && setSource({ id: attachment.id }))
+
+    return () => {
+      cancelled = true
+    }
+  }, [attachment])
+
   if (!attachment) return null
 
-  const url = attachmentUrl(attachment.id)
+  const current = source?.id === attachment.id ? source : null
+  const url = current?.url
+  const failed = current !== null && !url
   const imagem = isImage(attachment)
 
-  function baixar() {
+  async function baixar() {
     if (!attachment) return
-    const file = getAttachmentFile(attachment.id)
-    if (file) downloadBlob(file, attachment.fileName)
+    downloadBlob(await fetchAttachmentBlob(attachment), attachment.fileName)
   }
 
   return (
@@ -48,7 +74,7 @@ export function AttachmentViewer({ attachment, onClose }: AttachmentViewerProps)
           <Button variant="secondary" onClick={onClose}>
             Fechar
           </Button>
-          <Button onClick={baixar} disabled={!url}>
+          <Button onClick={() => void baixar()} disabled={!url}>
             <DownloadIcon width={18} height={18} />
             <span>Baixar</span>
           </Button>
@@ -67,15 +93,19 @@ export function AttachmentViewer({ attachment, onClose }: AttachmentViewerProps)
         </div>
       )}
 
-      {/* PROVISÓRIO: sem servidor, os arquivos vivem na memória da aba. Depois
-          de recarregar, o registro continua e o arquivo não — dizer isso é
-          melhor que mostrar um quadro vazio sem explicação. */}
-      {!url && (
+      {!current && (
+        <div className={styles.file} role="status">
+          <FileIcon className={styles.fileIcon} width={40} height={40} />
+          <span className={styles.fileName}>Carregando…</span>
+        </div>
+      )}
+
+      {failed && (
         <div className={styles.file}>
           <FileIcon className={styles.fileIcon} width={40} height={40} />
           <span className={styles.fileName}>Arquivo indisponível</span>
           <span className={styles.fileHint}>
-            Os anexos ainda ficam só na memória do navegador e se perdem ao recarregar a página.
+            Não foi possível carregar o arquivo. Verifique a conexão e abra de novo.
           </span>
         </div>
       )}

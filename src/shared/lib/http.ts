@@ -47,16 +47,18 @@ async function chamarRefresh(refreshToken: string): Promise<string | null> {
 export interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
   body?: unknown
+  /** Um arquivo no corpo, cru e com o tipo dele (anexos): em vez de JSON. */
+  file?: Blob
 }
 
 async function fazerRequisicao(path: string, token: string | null, options: ApiRequestOptions) {
   return fetch(`${API_URL}${path}`, {
     method: options.method ?? 'GET',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': options.file?.type || 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: options.file ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
   })
 }
 
@@ -78,7 +80,7 @@ async function lerResultado<T>(resposta: Response): Promise<T> {
  * esperado) e repete a chamada original. Se o refresh também falhar, a
  * sessão é encerrada e o 401 original sobe pra tela.
  */
-export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+async function chamarComSessao(path: string, options: ApiRequestOptions): Promise<Response> {
   const sessao = readSession()
 
   let resposta = await fazerRequisicao(path, sessao?.accessToken ?? null, options)
@@ -93,7 +95,22 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
     }
   }
 
-  return lerResultado<T>(resposta)
+  return resposta
+}
+
+export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  return lerResultado<T>(await chamarComSessao(path, options))
+}
+
+/**
+ * Baixa um arquivo (anexo). Não dá para usar `<img src>` direto na URL: o
+ * navegador não manda o token nessas requisições, e o arquivo só vale para
+ * quem tem acesso ao registro — por isso o download passa por aqui.
+ */
+export async function apiFetchBlob(path: string): Promise<Blob> {
+  const resposta = await chamarComSessao(path, {})
+  if (!resposta.ok) await lerResultado<never>(resposta)
+  return resposta.blob()
 }
 
 /** Sem sessão ainda — login e o refresh em si são as únicas chamadas que passam por aqui. */
