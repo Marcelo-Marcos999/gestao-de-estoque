@@ -4,6 +4,8 @@ import { BrowserRouter, HashRouter } from 'react-router-dom'
 import { AuthProvider } from '@/features/auth'
 import { AppearanceProvider } from '@/features/settings'
 import { AppRoutes } from '@/app/routes'
+import { watchInstallPrompt } from '@/shared/pwa/install'
+import { registerServiceWorker } from '@/shared/pwa/register'
 import './styles/global.css'
 
 /**
@@ -26,6 +28,11 @@ const Router = import.meta.env.VITE_HASH_ROUTER === 'true' ? HashRouter : Browse
  */
 const base = import.meta.env.BASE_URL
 const basename = base.startsWith('/') ? base : undefined
+
+// Antes de montar o React: o aviso de "instalável" do navegador chega cedo e
+// não se repete (ver shared/pwa/install.ts).
+watchInstallPrompt()
+registerServiceWorker()
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Elemento #root não encontrado no index.html')

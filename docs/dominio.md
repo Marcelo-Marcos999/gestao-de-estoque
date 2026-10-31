@@ -678,13 +678,14 @@ saber que são conta, não campo gravado.
 
 ## Configurações e logins
 
-A tela de Configurações tem quatro abas; as duas últimas são só do administrador
+A tela de Configurações tem cinco abas; as duas últimas são só do administrador
 (a aba nem aparece para o operador, e o servidor recusa do mesmo jeito):
 
 | Aba | Quem | O que faz |
 |---|---|---|
 | Minha conta | todos | troca a própria senha (pede a atual) |
 | Aparência | todos | tema e cor de destaque, gravados no aparelho |
+| Aplicativo | todos | instalar o sistema como aplicativo (ver "Instalar como aplicativo") |
 | Lojas e logins | admin | cria login, desativa/reativa, gera nova senha |
 | Empresa | admin | renomeia a empresa; vê plano e limites (só leitura) |
 
@@ -836,6 +837,47 @@ muitos sem estoque nenhum; listá-los aqui, com zeros, enchia a tela de "registr
 que ninguém lançou e fazia "Excluir tudo" parecer não ter feito nada. Um produto
 só do cadastro entra no Estoque quando alguém lança o estoque dele (importação ou
 "Adicionar produto").
+
+## Instalar como aplicativo (PWA)
+
+O sistema pode ser instalado no celular e no computador, direto do navegador:
+ícone próprio, janela sem barra de endereço, abertura pelo ícone. É o mesmo site,
+sem loja de aplicativos. Quem instala vive no corredor com o celular na mão, e
+abrir por um ícone na tela inicial é o que mais se parece com o app que ele já usa.
+
+| Onde | Como |
+|---|---|
+| Chrome/Edge no computador, Chrome no Android | botão **Instalar aplicativo** em Configurações → Aplicativo (ou o ícone na barra de endereço) |
+| iPhone/iPad | só pelo Safari: Compartilhar → Adicionar à Tela de Início (o iOS não tem diálogo; a tela mostra os passos) |
+| Safari no Mac | Arquivo → Adicionar ao Dock |
+| Firefox no computador | não instala aplicativos; a tela explica |
+
+Peças (todas em `public/`, servidas como arquivo estático):
+
+- `manifest.webmanifest`: nome, cores, ícones e atalhos (Validades, Quebra,
+  Estoque). Caminhos relativos, para valer também numa subpasta (GitHub Pages).
+  As cores do manifesto (`background_color`, `theme_color`) são **valores fixos do
+  tema escuro**: o manifesto é JSON lido pelo sistema operacional antes de
+  qualquer CSS, e não enxerga os tokens. Mudou a identidade visual, mude ali também.
+- `icons/`: ícones PNG gerados de `icons/icone.svg` por `node scripts/gerar-icones.mjs`
+  (192, 512, maskable e o de 180 do iOS). Não edite os PNGs à mão.
+- `sw.js`, o service worker: guarda só **código público** (o HTML e os arquivos
+  com hash de `/assets/`). Não guarda resposta da API, então nenhum dado de login
+  fica no aparelho por causa dele e trocar de usuário no mesmo celular não vaza nada.
+  Páginas: rede primeiro (quem está online sempre recebe a versão nova); sem rede,
+  a última cópia.
+- `src/shared/pwa/install.ts` escuta o `beforeinstallprompt` **desde o carregamento**
+  (o navegador o dispara uma vez e cedo, antes de qualquer tela montar) e
+  `register.ts` registra o service worker, só em produção.
+
+**O que o app instalado não faz: funcionar offline.** Ele abre sem rede, mas os
+dados vêm da API, então a tela fica sem conteúdo. Funcionar offline de verdade
+(registrar quebra sem sinal e sincronizar depois) exige decidir conflito e ordem
+de gravação; isso é decisão de produto, não de cache, e não foi feito.
+
+**Publicou uma versão nova?** Nada a fazer: o service worker novo assume sozinho
+e os arquivos mudam de nome. Só mexa em `VERSAO` no `sw.js` se mudar a *estratégia*
+de cache.
 
 ## O que veio do AppSheet e não se repete aqui
 

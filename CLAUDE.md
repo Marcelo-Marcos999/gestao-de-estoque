@@ -170,6 +170,15 @@ o administrador cria os logins e as senhas provisórias em Configurações. Em q
 casos, cada feature isola o acesso a dados no próprio `api.ts` — migrar uma
 feature pro back-end real é mexer só nesse arquivo, nunca na tela.
 
+## App instalável (PWA)
+
+O sistema é instalável no celular e no computador: `public/manifest.webmanifest`,
+`public/sw.js` e os ícones em `public/icons/` (gerados por `scripts/gerar-icones.mjs`).
+O service worker guarda só código público, **nunca resposta da API**. Qualquer
+tela nova continua valendo como está; o que muda é que `theme_color` e
+`background_color` do manifesto são fixos (ver `docs/dominio.md`, "Instalar como
+aplicativo") e precisam acompanhar a identidade visual.
+
 ## Checagem automática dos padrões
 
 Parte das regras acima é verificada por máquina, não por memória. `npm run
