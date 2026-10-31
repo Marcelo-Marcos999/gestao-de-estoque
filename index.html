@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#0d1014" />
+    <!-- App instalável (PWA). %BASE_URL% faz o caminho valer também quando o
+         app mora numa subpasta, como no GitHub Pages. -->
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <!-- O iOS ignora o manifesto para o ícone da tela inicial: precisa destes. -->
+    <link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Validades" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <title>Gestão de Validades</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

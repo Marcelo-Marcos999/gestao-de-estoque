@@ -3,9 +3,10 @@ import { useAuth } from '@/features/auth'
 import { usePersistedState } from '@/shared/hooks/usePersistedState'
 import { storageKey } from '@/shared/lib/storage'
 import { AppearancePanel } from '../components/AppearancePanel'
+import { InstallPanel } from '../components/InstallPanel'
 import styles from './SettingsPage.module.css'
 
-type TabId = 'conta' | 'aparencia' | 'logins' | 'empresa'
+type TabId = 'conta' | 'aparencia' | 'aplicativo' | 'logins' | 'empresa'
 
 interface Tab {
   id: TabId
@@ -16,6 +17,7 @@ interface Tab {
 const TABS: Tab[] = [
   { id: 'conta', label: 'Minha conta', adminOnly: false },
   { id: 'aparencia', label: 'Aparência', adminOnly: false },
+  { id: 'aplicativo', label: 'Aplicativo', adminOnly: false },
   { id: 'logins', label: 'Lojas e logins', adminOnly: true },
   { id: 'empresa', label: 'Empresa', adminOnly: true },
 ]
@@ -67,6 +69,7 @@ export function SettingsPage() {
       <div className={styles.content}>
         {tab === 'conta' && <ChangePasswordForm />}
         {tab === 'aparencia' && <AppearancePanel />}
+        {tab === 'aplicativo' && <InstallPanel />}
         {tab === 'logins' && isAdmin && <LoginsPanel />}
         {tab === 'empresa' && isAdmin && <CompanyPanel />}
       </div>
