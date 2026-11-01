@@ -7,7 +7,11 @@ export interface Company {
   /** `null` = sem limite. */
   userLimit: number | null
   storageLimitMb: number | null
+  recordLimit: number | null
   activeUsers: number
+  /** Consumo da conta inteira (todas as lojas), não só do login que pergunta. */
+  recordsUsed: number
+  filesUsedBytes: number
 }
 
 /**

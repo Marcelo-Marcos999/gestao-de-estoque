@@ -3,6 +3,7 @@ import cors from 'cors'
 import express from 'express'
 import type { NextFunction, Request, Response } from 'express'
 import helmet from 'helmet'
+import { respostaDeLimite } from './lib/limites.js'
 import { registrarRequisicoes } from './lib/registro.js'
 import { rotasAuth } from './rotas/auth.js'
 import { rotasCadastro } from './rotas/cadastro.js'
@@ -85,6 +86,14 @@ export function criarApp() {
     // chamou — o `body-parser` marca com `status` 413.
     if (typeof erro === 'object' && erro !== null && 'status' in erro && erro.status === 413) {
       res.status(413).json({ erro: 'O arquivo é grande demais.' })
+      return
+    }
+
+    // Limite do plano (registros ou arquivos) recusado pelo banco: não é defeito,
+    // é uma regra de negócio, e a pessoa precisa saber o que fazer.
+    const limite = respostaDeLimite(erro)
+    if (limite) {
+      res.status(409).json(limite)
       return
     }
 

@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/Button'
 import { TextField } from '@/shared/ui/TextField'
 import { renameCompany } from '../api'
 import { useCompany } from '../hooks/useCompany'
+import { UsagePanel } from './UsagePanel'
 import styles from './panel.module.css'
 
 function limitText(value: number | null, unit: string): string {
@@ -99,8 +100,8 @@ export function CompanyPanel() {
           Plano
         </h2>
         <p className={styles.text}>
-          O plano e os limites são definidos pela plataforma. Precisa de mais logins? Fale com o
-          suporte.
+          O plano e os limites são definidos pela plataforma. Precisa de mais logins, registros ou
+          espaço para arquivos? Fale com o suporte.
         </p>
         <dl className={styles.facts}>
           <dt>Plano</dt>
@@ -112,10 +113,14 @@ export function CompanyPanel() {
           </dd>
           <dt>Limite de logins</dt>
           <dd>{limitText(company.userLimit, company.userLimit === 1 ? 'login' : 'logins')}</dd>
-          <dt>Armazenamento</dt>
+          <dt>Limite de registros</dt>
+          <dd>{limitText(company.recordLimit, 'registros')}</dd>
+          <dt>Limite de arquivos</dt>
           <dd>{limitText(company.storageLimitMb, 'MB')}</dd>
         </dl>
       </section>
+
+      <UsagePanel company={company} />
     </>
   )
 }

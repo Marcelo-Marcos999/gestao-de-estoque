@@ -91,7 +91,7 @@ Uma linha por conta (1:1). Limites e plano.
 | Coluna | Tipo | Notas |
 |---|---|---|
 | `conta_id` | uuid | PK e FK → `contas` (cascata) |
-| `limite_usuarios`, `limite_armazenamento_mb` | integer | Nulo = sem limite |
+| `limite_usuarios`, `limite_armazenamento_mb`, `limite_registros` | integer | Nulo = sem limite. `limite_armazenamento_mb` é o teto da soma dos anexos; `limite_registros`, o de produtos + linhas de estoque + lotes + quebras da conta toda. Contas **novas** nascem com 1.024 MB e 250.000 registros; as que já existiam seguem sem limite até alguém definir (ver "Limites de uso") |
 | `plano`* | text | Padrão `padrao` |
 | `atualizado_em` | timestamptz | Gatilho |
 
@@ -253,7 +253,7 @@ Três credenciais de banco, cada uma com o mínimo que precisa:
 | dona (`neondb_owner`) | só migrations e manutenção, nunca o app | Tudo. **Ignora a RLS** (dono sempre ignora) |
 | `app_runtime` | o back-end, em toda requisição de usuário logado | Ler/gravar, **sempre sob RLS** |
 | `app_auth` | login, cadastro e recuperação de senha | `SELECT` em `lojas` e `administradores_plataforma` e **executar quatro funções** (abaixo). Nenhum privilégio de escrita em tabela |
-| `app_definer` | ninguém (`NOLOGIN`) | É só a dona das quatro funções. Escreve em `contas`, `lojas`, `configuracoes_conta`, `motivos`, `origens` e `tokens_email`, nada além, e não pode criar objetos |
+| `app_definer` | ninguém (`NOLOGIN`) | É só a dona das funções (as quatro de cadastro e as de limite). Escreve em `contas`, `lojas`, `configuracoes_conta`, `motivos`, `origens` e `tokens_email`; só **lê** `produtos`, `estoque`, `validades`, `quebras` e `anexos` (para contar o uso da conta); não pode criar objetos |
 
 **Row Level Security** está ligada e forçada (`force`) em todas as tabelas. A
 cada requisição o back-end declara ao banco quem está chamando
@@ -305,6 +305,31 @@ só conseguiria o que um token válido permite.
 | `solicitar_token(e-mail, tipo, hash, validade)` | Registra o token e devolve pra quem enviar. Não devolve nada, e não diz por quê, se o e-mail não existe, a conta está desativada, já foi confirmada ou houve pedido há menos de 1 minuto |
 | `confirmar_email_com_token(hash)` | Consome o token (uma vez só, atomicamente) e confirma o e-mail |
 | `redefinir_senha_com_token(hash, senha_hash)` | Consome o token e troca a senha, encerra as outras sessões e invalida os demais links da loja. Receber o link também confirma o e-mail |
+
+### Limites de uso: registros e arquivos
+
+O teto é da **conta**, não da loja, e é aplicado por **gatilhos no banco**
+(`AFTER INSERT`, um por comando, não por linha) em `produtos`, `estoque`,
+`validades`, `quebras` e `anexos`. Estar no banco, e não nas rotas, faz valer
+para qualquer caminho que insira — cadastro, importação, "desfazer" — inclusive os
+que ainda não existem. O gatilho recusa com o erro `53400`
+(`configuration_limit_exceeded`) quando o comando **inseriu algo** e o total
+passou do limite; o servidor traduz para HTTP 409 (`limite_registros` ou
+`limite_armazenamento`).
+
+- **Só inserir é barrado.** Editar e excluir passam sempre: quem está no teto
+  precisa poder limpar. Um `on conflict do nothing` que não inseriu nada também passa.
+- **Sem sessão de usuário não há limite** (`app.conta_id` vazio): migração e
+  restauração de backup não são barradas.
+- **A contagem é da conta inteira.** O RLS mostra ao operador só a loja dele, então a
+  soma roda em `calcular_uso(conta)`, `SECURITY DEFINER` da `app_definer` (que ganhou
+  `SELECT` e uma política de leitura nessas tabelas). Ela recebe a conta como
+  argumento e por isso **não é exposta**: o que o `app_runtime` executa é
+  `uso_da_conta()`, sem argumento, que usa a conta da sessão.
+- **Uma trava por conta** (`pg_advisory_xact_lock`) segura a conferência: dois
+  comandos simultâneos não passam juntos do limite.
+- Troca de anexo do mesmo tipo (apaga o antigo, insere o novo na mesma transação) conta
+  só o novo.
 
 ## Índices (além das chaves primárias)
 
@@ -372,6 +397,7 @@ Rodar, na ordem, como a role dona:
 4. `backend/migrations/1700000000003_cadastro_e_recuperacao_de_senha.sql`: `tokens_email`, colunas novas em `lojas`, role `app_definer` e as quatro funções
 5. `backend/migrations/1700000000004_lojas_so_altera_colunas_seguras.sql`: `app_runtime` só atualiza `nome`, `ativo`, `senha_hash` e `senha_alterada_em` em `lojas`
 6. `backend/migrations/1700000000005_periodo_saidas_por_login.sql`: coluna `lojas.periodo_saidas_dias` (nula = padrão) e o `UPDATE` nela para `app_runtime`
+7. `backend/migrations/1700000000006_limites_de_registros_e_arquivos.sql`: `configuracoes_conta.limite_registros`, padrões das contas novas, `calcular_uso`/`uso_da_conta` e os gatilhos de limite
 
 Depois, definir a senha das roles `app_runtime` e `app_auth` (nunca em arquivo
 versionado) e criar a primeira conta e a primeira loja `admin`.

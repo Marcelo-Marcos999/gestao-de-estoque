@@ -48,11 +48,40 @@ const DESDE = `from quebras q
                join lojas lo on lo.id = q.loja_id
                left join estoque e on e.loja_id = q.loja_id and e.produto_id = q.produto_id`
 
+/**
+ * Filtro "o mesmo produto": quem registra uma quebra quer saber, antes de salvar,
+ * se já existe outra do mesmo item. O produto pode ser achado por id, SKU ou
+ * código de barras — um registro de produto ainda PENDENTE não tem id no
+ * cadastro, só o SKU/código que a pessoa digitou, e por isso o casamento é
+ * pelos três e basta um. Sem nenhum dos três, a lista vem inteira.
+ */
+const filtroDoProduto = z.object({
+  produto: z.string().uuid().optional(),
+  sku: z.string().trim().min(1).max(60).optional(),
+  barras: z.string().trim().min(1).max(60).optional(),
+})
+
 rotasQuebras.get('/', assincrono(async (req, res) => {
+  const filtro = filtroDoProduto.safeParse(req.query)
+  if (!filtro.success) {
+    res.status(400).json({ erro: 'Filtro de produto inválido.' })
+    return
+  }
+
+  const parametros: unknown[] = [lojaDaConsulta(req)]
+  const alternativas: string[] = []
+  const { produto, sku, barras } = filtro.data
+  if (produto) alternativas.push(`q.produto_id = $${parametros.push(produto)}`)
+  if (sku) alternativas.push(`coalesce(p.sku, q.sku) = $${parametros.push(sku)}`)
+  if (barras) alternativas.push(`coalesce(p.codigo_barras, q.codigo_barras) = $${parametros.push(barras)}`)
+
   const linhas = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows } = await client.query(
-      `select ${COLUNAS} ${DESDE} where ($1::uuid is null or q.loja_id = $1) order by q.criado_em desc`,
-      [lojaDaConsulta(req)],
+      `select ${COLUNAS} ${DESDE}
+       where ($1::uuid is null or q.loja_id = $1)
+       ${alternativas.length > 0 ? `and (${alternativas.join(' or ')})` : ''}
+       order by q.criado_em desc`,
+      parametros,
     )
     return rows
   })

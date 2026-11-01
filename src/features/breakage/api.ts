@@ -89,6 +89,26 @@ export async function loadRecords(storeParam = ''): Promise<LossRecord[]> {
 }
 
 /**
+ * Os registros que a loja já tem do MESMO produto, achado por id, SKU ou código
+ * de barras (um produto pendente não tem id no cadastro, só o que foi digitado).
+ * Alimenta o aviso do formulário, então traz o registro cru: a quantidade
+ * gravada, não a limitada ao saldo de hoje.
+ */
+export async function loadRecordsOfProduct(
+  product: { productId: string; sku: string; barcode: string },
+  /** `?loja=…` quando o registro será gravado na loja de outro; vazio é a do login. */
+  storeParam = '',
+): Promise<LossRecord[]> {
+  const filtros = { produto: product.productId, sku: product.sku.trim(), barras: product.barcode.trim() }
+  const informados = Object.entries(filtros).filter(([, valor]) => valor)
+  // Sem nada para casar, o servidor devolveria a loja inteira: não é o que se quer.
+  if (informados.length === 0) return []
+
+  const consulta = new URLSearchParams(informados)
+  return (await apiFetch<QuebraApi[]>(`/quebras${storeParam ? `${storeParam}&` : '?'}${consulta}`)).map(paraLossRecord)
+}
+
+/**
  * O registro com a quantidade limitada ao saldo atual do produto, e com o custo
  * do estoque.
  *

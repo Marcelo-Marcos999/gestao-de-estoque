@@ -48,7 +48,10 @@ export async function getCompany(): Promise<Company> {
     plano: string
     limiteUsuarios: number | null
     limiteArmazenamentoMb: number | null
+    limiteRegistros: number | null
     usuariosAtivos: number
+    usoRegistros: number
+    usoArquivosBytes: number
   }>('/conta')
 
   return {
@@ -56,7 +59,10 @@ export async function getCompany(): Promise<Company> {
     plan: c.plano,
     userLimit: c.limiteUsuarios,
     storageLimitMb: c.limiteArmazenamentoMb,
+    recordLimit: c.limiteRegistros,
     activeUsers: c.usuariosAtivos,
+    recordsUsed: c.usoRegistros,
+    filesUsedBytes: c.usoArquivosBytes,
   }
 }
 

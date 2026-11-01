@@ -1,3 +1,4 @@
+import { limitMessage } from '@/shared/lib/limits'
 import { useEffect, useRef, useState } from 'react'
 import { useProductSearch } from '@/features/products'
 import { Alert } from '@/shared/ui/Alert'
@@ -79,13 +80,19 @@ function Form({ onClose, onSaved }: Omit<NewStockDialogProps, 'open'>) {
     }
 
     setSaving(true)
-    await addStockRow({
-      sku: codigo,
-      stock: Number(stock) || 0,
-      outflow: Number(outflow) || 0,
-      costPrice: Number(costPrice) || 0,
-      salePrice: Number(salePrice) || 0,
-    })
+    try {
+      await addStockRow({
+        sku: codigo,
+        stock: Number(stock) || 0,
+        outflow: Number(outflow) || 0,
+        costPrice: Number(costPrice) || 0,
+        salePrice: Number(salePrice) || 0,
+      })
+    } catch (erro) {
+      setSaving(false)
+      setErro(limitMessage(erro) ?? 'Não foi possível salvar. Verifique a conexão e tente de novo.')
+      return
+    }
     setSaving(false)
 
     onSaved()

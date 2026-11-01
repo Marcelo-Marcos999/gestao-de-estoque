@@ -66,11 +66,16 @@ export type SaveResult =
   | { data: Product; error: null }
   | { data: null; error: SaveError }
 
+/**
+ * 409 tem mais de um significado: SKU ou código de barras repetido (que a tela
+ * sabe explicar campo a campo) e limite do plano. Só os dois primeiros viram
+ * `SaveError`; o resto sobe como erro e quem chamou decide — tratar qualquer 409
+ * como duplicidade escondia o limite atrás de uma mensagem vazia.
+ */
 function comoSaveError(erro: unknown): SaveError | null {
-  if (erro instanceof ApiError && erro.status === 409) {
-    return (erro.codigo as SaveError | undefined) ?? 'sku_duplicado'
-  }
-  return null
+  if (!(erro instanceof ApiError) || erro.status !== 409) return null
+  if (!erro.codigo) return 'sku_duplicado'
+  return erro.codigo === 'sku_duplicado' || erro.codigo === 'barras_duplicado' ? erro.codigo : null
 }
 
 export async function createProduct(draft: ProductDraft): Promise<SaveResult> {

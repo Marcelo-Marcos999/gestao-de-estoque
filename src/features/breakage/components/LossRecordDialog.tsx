@@ -6,12 +6,14 @@ import { AlertIcon } from '@/shared/ui/icons'
 import { daysUntil, parseDate } from '@/shared/lib/date'
 import { useState } from 'react'
 import { useLossRecordForm } from '../hooks/useLossRecordForm'
+import { useSameProductRecords } from '../hooks/useSameProductRecords'
 import type { Attachment, LossRecord, LossRecordInitialDraft } from '../types'
 import { AttachmentSlots } from './AttachmentSlots'
 import { AttachmentViewer } from './AttachmentViewer'
 import { DuplicateWarning } from './DuplicateWarning'
 import { ProductPicker } from '@/features/products'
 import { QuantityField } from './QuantityField'
+import { SameProductNotice } from './SameProductNotice'
 import { TagPicker } from './TagPicker'
 import styles from './LossRecordDialog.module.css'
 
@@ -77,6 +79,11 @@ function LossRecordForm({
   )
 
   const restantes = daysUntil(form.expiryDate)
+  const sameProduct = useSameProductRecords(
+    form.product,
+    record?.storeId ?? initial?.storeId,
+    record?.id,
+  )
 
   /** Anexo aberto para ver de dentro do próprio formulário. */
   const [vendo, setVendo] = useState<Attachment | null>(null)
@@ -123,6 +130,7 @@ function LossRecordForm({
               onDescriptionChange={form.setPendingDescription}
             />
             {form.errors.product && <Alert tone="danger">{form.errors.product}</Alert>}
+            <SameProductNotice existing={sameProduct} reasons={form.reasons} />
           </div>
 
           {form.errors.form && <Alert tone="danger">{form.errors.form}</Alert>}
