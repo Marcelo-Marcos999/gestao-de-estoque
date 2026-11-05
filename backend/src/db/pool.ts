@@ -17,6 +17,13 @@ export const pool = new Pool({
   // conexão depois de um tempo parado pode estourar o timeout padrão.
   connectionTimeoutMillis: 10_000,
   max: 10,
+  // Abrir uma conexão nova com o Neon (TCP + TLS + autenticação) custa várias idas de
+  // ~150 ms do Render até São Paulo. O padrão do pool fecha a conexão parada depois de
+  // 10 s, então quem usa o app aos poucos pagava isso quase toda vez. Cinco minutos
+  // cobrem o ritmo de uso da loja; o keep-alive impede que um intermediário derrube a
+  // conexão parada sem avisar.
+  idleTimeoutMillis: 5 * 60_000,
+  keepAlive: true,
 })
 
 pool.on('error', (erro) => {

@@ -22,6 +22,10 @@ export interface ExpiryItem {
   stock: number
   outflow: number
   costPrice: number
+  /** Do produto do lote: vêm junto na listagem, para a tela não baixar o catálogo todo. */
+  sku: string
+  description: string
+  barcode: string
 }
 
 /** Item com o produto resolvido e a situação já calculada, pronto para a tela. */

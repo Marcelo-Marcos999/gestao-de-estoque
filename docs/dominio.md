@@ -436,7 +436,8 @@ tudo o que estava preenchido. Agora o registro **novo, digitado à mão**, grava
 *rascunho* a cada mudança (campos no `localStorage`, **fotos no IndexedDB**, porque o
 `localStorage` guarda só texto e poucos MB):
 
-- recarregou a página no meio: o registro **reabre sozinho**, com o aviso "Retomamos o
+- recarregou a página no meio, ou o app instalado reabriu em **outra tela** (o Android
+  recomeça pela tela inicial): o registro **reabre sozinho**, levando de volta à Quebra, com o aviso "Retomamos o
   registro que você estava preenchendo" e o botão **Começar de novo**;
 - fechou pelo X, pelo Esc ou pelo gesto de voltar: o rascunho fica, mas não reabre sozinho;
   ao tocar em "Registrar quebra" ele volta, com o mesmo aviso;
@@ -445,6 +446,12 @@ tudo o que estava preenchido. Agora o registro **novo, digitado à mão**, grava
   reconhece;
 - não vale para editar um registro existente nem para gerar a quebra de um lote vencido,
   que já partem de dados do servidor.
+
+**Voltar do seletor não fecha o registro.** No celular o seletor (galeria, arquivos ou
+câmera) é outra tela por cima do app, e ao voltar dele pode chegar um toque que cai no
+fundo escuro atrás do formulário, que fecha o diálogo. Enquanto o seletor está aberto, e
+por 1,5 s depois de o app recuperar o foco, fechar pelo fundo ou pelo Esc é ignorado (o X
+e o Cancelar continuam valendo).
 
 Limite honesto: se o Android descartar a página **enquanto a câmera está aberta**, a foto
 daquela tirada pode não chegar ao navegador; o resto do registro volta, e só ela se refaz.
@@ -1030,6 +1037,32 @@ escrito com o jeito de limpar.
 
 **No celular** a barra de total e o botão **Fechar pedido** ficam colados no rodapé
 enquanto a lista rola; a conta (itens, subtotal, descontos, custo) fica no fim da lista.
+
+## Desempenho: o que cada tela baixa
+
+O sistema roda com o servidor nos EUA (Render), o banco em São Paulo (Neon) e a pessoa no
+4G do corredor: cada ida e volta custa ~150 ms, e o que é baixado pesa. Regras que valem
+daqui em diante:
+
+- **Nenhuma tela baixa o catálogo inteiro para mostrar poucas linhas.** O catálogo de uma
+  conta tem ~26 mil produtos: ~2 MB comprimidos e ~17 MB de JSON que o celular precisa
+  interpretar. Só o **Cadastro de produtos** e as **importações** precisam dele (filtram e
+  comparam tudo). Os seletores de produto (quebra, novo lote, contagem, pedido) usam
+  `GET /produtos/busca`, que devolve os primeiros 20 com saldo e preços da loja; a leitura
+  de um produto só é `GET /produtos/:id`. No front, `searchProducts` e `getProduct`; nunca
+  `listProducts`/`getAllProducts` para isso.
+- **O lote de validade já traz o produto** (SKU, descrição, código de barras): a tela de
+  Validades faz **uma** chamada, em vez de três (lotes + catálogo + estoque). Medido com
+  3 mil lotes e 26 mil produtos: de ~2,2 MB comprimidos (18 MB de JSON) para ~220 KB (1,3 MB).
+- **Cada requisição ao banco custa três idas, não quatro**: `BEGIN` e o contexto do usuário
+  (`set_config`) vão num só comando (valores pelo `escapeLiteral` do driver), depois a
+  consulta e o `COMMIT`.
+- **O pool de conexões segura as conexões paradas por 5 minutos** (o padrão fecha em 10 s):
+  abrir uma conexão nova com o Neon (TCP, TLS e autenticação) são várias idas de ~150 ms.
+
+O que **não** se resolve no código: o plano gratuito do Render **dorme** depois de ~15
+minutos sem uso, e a primeira chamada seguinte espera o servidor acordar (dezenas de
+segundos). Só um plano pago, ou uma chamada periódica de "manter acordado", evita isso.
 
 ## Limites do plano: registros e arquivos
 

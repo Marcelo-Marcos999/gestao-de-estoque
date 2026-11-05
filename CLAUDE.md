@@ -170,6 +170,11 @@ banco (ver `docs/modelo-de-dados.md`, "Limites de uso"): nenhuma rota confere o 
 por conta própria, e toda tela que cria algo precisa tratar o 409 (`limitMessage` em
 `shared/lib/limits.ts`), senão o botão fica girando.
 
+Tela que **escolhe** um produto (seletor, busca, ler código) usa `searchProducts`/`getProduct`
+(`GET /produtos/busca` e `/produtos/:id`), nunca `listProducts`/`getAllProducts`: esses baixam
+o catálogo inteiro (~2 MB comprimidos, 17 MB de JSON no celular) e são só do Cadastro e das
+importações. Ver `docs/dominio.md`, "Desempenho".
+
 O servidor comprime as respostas (gzip) e registra no log as requisições recusadas
 (4xx, menos o 401, e 5xx): método, rota sem ids, status, motivo e os ids de login e
 conta — nunca corpo, query, e-mail ou IP. Toda resposta leva `x-request-id`, o mesmo

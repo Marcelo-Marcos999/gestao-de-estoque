@@ -28,6 +28,78 @@ rotasProdutos.get('/', assincrono(async (req, res) => {
   res.json(produtos)
 }))
 
+/**
+ * Produto + os números do estoque da loja de QUEM ESTÁ LOGADO, no formato que a
+ * listagem de `/estoque` usa: produto sem lançamento de estoque vem com `saldo`
+ * nulo. Compartilhado pela busca e pela leitura de um produto só.
+ */
+const COLUNAS_COM_ESTOQUE = `p.id, p.sku, p.descricao, p.codigo_barras, p.pendente_cadastro,
+       p.criado_em, p.atualizado_em, e.produto_id as estoque_produto_id,
+       e.saldo, e.saidas, e.valor_custo, e.valor_venda`
+
+const consultaBusca = z.object({
+  q: z.string().trim().min(1).max(120),
+  limite: z.coerce.number().int().min(1).max(50).default(20),
+})
+
+/**
+ * Busca de produto para os seletores (registro de quebra, novo lote, contagem,
+ * pedido): devolve só os primeiros resultados.
+ *
+ * Existe para a tela NÃO baixar o catálogo inteiro. Sem ela, o primeiro toque na
+ * busca de um aparelho abria 26 mil produtos (cerca de 2 MB comprimidos e 17 MB de
+ * JSON para o celular interpretar) só para mostrar 20 linhas. O que casa exatamente
+ * com o SKU ou com o código de barras vem primeiro: quem leu a etiqueta quer aquele.
+ */
+rotasProdutos.get('/busca', assincrono(async (req, res) => {
+  const consulta = consultaBusca.safeParse(req.query)
+  if (!consulta.success) {
+    res.status(400).json({ erro: 'Informe o que buscar.' })
+    return
+  }
+  const { q, limite } = consulta.data
+  // `%`, `_` e `\` digitados valem como texto, não como curinga.
+  const padrao = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+
+  const linhas = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rows } = await client.query(
+      `select ${COLUNAS_COM_ESTOQUE}
+       from produtos p
+       left join estoque e on e.produto_id = p.id and e.loja_id = $2
+       where p.sku ilike $1 or p.descricao ilike $1 or p.codigo_barras like $1
+       order by (lower(p.sku) = lower($3) or p.codigo_barras = $3) desc, p.descricao
+       limit $4`,
+      [padrao, req.loginId, q, limite],
+    )
+    return rows
+  })
+  res.json(linhas)
+}))
+
+/** Um produto pelo id, para quem guardou a referência e precisa do saldo de agora. */
+rotasProdutos.get('/:id', assincrono(async (req, res) => {
+  const id = z.string().uuid().safeParse(req.params.id)
+  if (!id.success) {
+    res.status(400).json({ erro: 'Produto inválido.' })
+    return
+  }
+  const produto = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rows } = await client.query(
+      `select ${COLUNAS_COM_ESTOQUE}
+       from produtos p
+       left join estoque e on e.produto_id = p.id and e.loja_id = $2
+       where p.id = $1`,
+      [id.data, req.loginId],
+    )
+    return rows[0] ?? null
+  })
+  if (!produto) {
+    res.status(404).json({ erro: 'Produto não encontrado.' })
+    return
+  }
+  res.json(produto)
+}))
+
 const corpoNovoProduto = z.object({
   sku: z.string().trim().min(1),
   descricao: z.string().trim().min(1),

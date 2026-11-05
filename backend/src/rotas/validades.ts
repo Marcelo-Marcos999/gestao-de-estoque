@@ -47,11 +47,14 @@ rotasValidades.get('/', assincrono(async (req, res) => {
   }
 
   const linhas = await comContextoDoUsuario(req.sessao!, async (client) => {
+    // O produto vai junto (SKU, descrição, código): sem isso a tela baixava o catálogo
+    // inteiro da conta só para escrever o nome de cada lote.
     const { rows } = await client.query(
-      `select ${COLUNAS_DO_LOTE}
+      `select ${COLUNAS_DO_LOTE}, p.sku, p.descricao, p.codigo_barras
        from validades v
        join estoque e on e.id = v.estoque_id
        join lojas l on l.id = e.loja_id
+       join produtos p on p.id = e.produto_id
        where ($1::uuid is null or e.loja_id = $1)
          and ($2::uuid is null or e.produto_id = $2)
        order by v.criado_em desc`,

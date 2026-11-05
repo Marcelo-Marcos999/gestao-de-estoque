@@ -8,7 +8,15 @@
  */
 import { ApiError, apiFetch } from '@/shared/lib/http'
 import { matchesRange } from '@/shared/lib/numberRange'
-import { carregar, invalidar, paraProduct, type EstoqueApi, type ProdutoApi } from './store'
+import {
+  carregar,
+  invalidar,
+  paraProduct,
+  paraProductComEstoque,
+  type EstoqueApi,
+  type ProdutoApi,
+  type ProdutoComEstoqueApi,
+} from './store'
 import type { Product, ProductDraft, ProductQuery } from './types'
 
 /* ---- Consultas ----------------------------------------------------------- */
@@ -48,10 +56,30 @@ export async function countProducts(): Promise<number> {
   return (await carregar()).length
 }
 
+/**
+ * Busca de produto para os seletores: o servidor devolve só os primeiros resultados
+ * (SKU ou código de barras exatos primeiro), já com saldo e preços da loja.
+ *
+ * Fica de fora de `listProducts` de propósito: aquele baixa o catálogo inteiro (26 mil
+ * produtos são ~2 MB comprimidos e 17 MB de JSON para o celular interpretar), o que a
+ * tela do cadastro precisa para filtrar e ordenar, mas um seletor que mostra 20
+ * linhas não.
+ */
+export async function searchProducts(term: string, limit = 20): Promise<Product[]> {
+  const linhas = await apiFetch<ProdutoComEstoqueApi[]>(
+    `/produtos/busca?q=${encodeURIComponent(term.trim())}&limite=${limit}`,
+  )
+  return linhas.map(paraProductComEstoque)
+}
+
 /** Um produto pelo id, para quem já guardou a referência e precisa do saldo atual. */
 export async function getProduct(id: string): Promise<Product | null> {
-  const store = await carregar()
-  return store.find((p) => p.id === id) ?? null
+  try {
+    return paraProductComEstoque(await apiFetch<ProdutoComEstoqueApi>(`/produtos/${id}`))
+  } catch (erro) {
+    if (erro instanceof ApiError && erro.status === 404) return null
+    throw erro
+  }
 }
 
 export async function getAllProducts(): Promise<Product[]> {
