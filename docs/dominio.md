@@ -910,7 +910,10 @@ na loja: A registra 10, B registra 5, o produto passa a ter 15. Por isso o "Adic
 mostra, antes de salvar, *"Já contado: 10. Com este registro: 15"*: é soma, não
 substituição. Cada parcela guarda quem registrou e quando, e se consulta em "N
 registros" na linha; é também onde se desfaz **um** registro errado sem perder os
-outros. Quantidade **zero vale** ("olhei e não havia nada") e é diferente de produto
+outros. A quantidade **já vem com 1**: na maioria dos casos conta-se um item de cada vez
+(ou lê-se o código de cada unidade), então o padrão dispensa digitar, e o campo seleciona
+o valor ao entrar para quem quer 10 não acabar com 110. **Zero continua aceito** ("olhei e
+não havia nada", o que aparece como *Falta* do estoque inteiro) e é diferente de produto
 não contado.
 
 **De quem é a contagem.** Da **loja**: login = loja neste sistema. O operador conta e

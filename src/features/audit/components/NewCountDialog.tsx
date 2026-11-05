@@ -34,10 +34,15 @@ export function NewCountDialog({ open, ...rest }: NewCountDialogProps) {
   return <Form {...rest} />
 }
 
+/** A quantidade que já vem preenchida; a pessoa altera se precisar. */
+const DEFAULT_QUANTITY = '1'
+
 function Form({ onClose, onSaved, rows, storeId, storeName }: Omit<NewCountDialogProps, 'open'>) {
   const [product, setProduct] = useState<ChosenProduct | null>(null)
   // Texto: um campo numérico controlado não deixa apagar para digitar outro valor.
-  const [quantity, setQuantity] = useState('')
+  // Nasce em 1: quem audita conta um item de cada vez na maioria dos casos (ou lê o
+  // código de barras de cada unidade), então o padrão é o que dispensa digitar.
+  const [quantity, setQuantity] = useState(DEFAULT_QUANTITY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -59,7 +64,7 @@ function Form({ onClose, onSaved, rows, storeId, storeName }: Omit<NewCountDialo
       const total = await addCount(product.productId, parsed, storeId)
       setDone(`${product.description || `SKU ${product.sku}`}: contagem agora em ${total}.`)
       setProduct(null)
-      setQuantity('')
+      setQuantity(DEFAULT_QUANTITY)
       setRound((current) => current + 1)
       onSaved()
     } catch (erro) {
@@ -118,11 +123,14 @@ function Form({ onClose, onSaved, rows, storeId, storeName }: Omit<NewCountDialo
             min={0}
             step={1}
             value={quantity}
+            // Seleciona o "1" ao entrar no campo: quem quer 10 digita 10, em vez de
+            // acabar com 110 por escrever depois do valor que já estava lá.
+            onFocus={(event) => event.target.select()}
             onChange={(event) => {
               setQuantity(event.target.value)
               setError(null)
             }}
-            placeholder="0 ou mais"
+            placeholder="1"
           />
           {/* O que este registro vai fazer, antes de apertar: soma, não substitui. */}
           {product && valid && (
