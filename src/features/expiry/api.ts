@@ -11,8 +11,6 @@
  * lançou. Dados sorteados numa tela de produção fazem o usuário duvidar de
  * todo número que vê.
  */
-import { getAllProducts } from '@/features/products'
-import type { Product } from '@/features/products'
 import type { IsoDate } from '@/shared/lib/date'
 import { matchesDateRange } from '@/shared/lib/dateRange'
 import { apiFetch } from '@/shared/lib/http'
@@ -33,6 +31,9 @@ interface LoteApi {
   saldo?: number
   saidas?: number
   valor_custo?: string
+  sku?: string
+  descricao?: string
+  codigo_barras?: string | null
 }
 
 function paraExpiryItem(lote: LoteApi): ExpiryItem {
@@ -46,6 +47,10 @@ function paraExpiryItem(lote: LoteApi): ExpiryItem {
     stock: lote.saldo ?? 0,
     outflow: lote.saidas ?? 0,
     costPrice: Number(lote.valor_custo ?? 0),
+    // A resposta de excluir não traz o produto; quem a usa (desfazer) só precisa do id.
+    sku: lote.sku ?? '',
+    description: lote.descricao ?? '',
+    barcode: lote.codigo_barras ?? '',
   }
 }
 
@@ -76,7 +81,7 @@ export async function loadItemsOfProduct(productId: string): Promise<ExpiryItem[
  * do próprio login: com lotes de lojas diferentes na mesma lista, o saldo de uma
  * não vale para a outra.
  */
-function toRow(item: ExpiryItem, product: Product, periodDays: number): ExpiryRow {
+function toRow(item: ExpiryItem, periodDays: number): ExpiryRow {
   const { situation, daysToExpiry, daysToZero } = classify({
     expiryDate: item.expiryDate,
     stock: item.stock,
@@ -86,12 +91,12 @@ function toRow(item: ExpiryItem, product: Product, periodDays: number): ExpiryRo
 
   return {
     id: item.id,
-    productId: product.id,
+    productId: item.productId,
     storeId: item.storeId,
     storeName: item.storeName,
-    sku: product.sku,
-    description: product.description,
-    barcode: product.barcode,
+    sku: item.sku,
+    description: item.description,
+    barcode: item.barcode,
     expiryDate: item.expiryDate,
     stock: item.stock,
     outflow: item.outflow,
@@ -137,14 +142,9 @@ export async function listExpiryItems(
   /** `?loja=…` do escopo de loja da tela; vazio para o operador. */
   storeParam = '',
 ): Promise<ExpiryPage> {
-  const [items, products] = await Promise.all([loadItems(storeParam), getAllProducts()])
-  const byId = new Map(products.map((p) => [p.id, p]))
-
-  const rows: ExpiryRow[] = []
-  for (const item of items) {
-    const product = byId.get(item.productId)
-    if (product) rows.push(toRow(item, product, periodDays))
-  }
+  // Uma chamada só: o lote já traz o produto. Antes a tela baixava também o catálogo
+  // inteiro da conta (e o estoque dele) só para escrever o nome de cada lote.
+  const rows = (await loadItems(storeParam)).map((item) => toRow(item, periodDays))
 
   const counts: Record<Situation, number> = {
     venceu: 0,

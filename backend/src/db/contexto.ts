@@ -25,15 +25,18 @@ export async function comContextoDoUsuario<T>(
 ): Promise<T> {
   const client = await pool.connect()
   try {
-    await client.query('BEGIN')
-    // Os três valores numa só ida ao banco: o Render (EUA) fica a ~150 ms do
-    // Neon (São Paulo), então cada comando separado custava isso em toda
+    // BEGIN e os três valores do contexto vão numa ida só ao banco. O Render (EUA) fica
+    // a ~150 ms do Neon (São Paulo), então cada comando separado custava isso em toda
     // requisição, antes mesmo da consulta de verdade.
+    //
+    // São dois comandos num texto só, e nesse modo (protocolo simples) não há como
+    // passar parâmetros: os valores entram escapados por `escapeLiteral`, a função do
+    // próprio driver, e não concatenados crus. São o id da conta, o id da loja e o
+    // perfil, e mesmo assim passam pelo escape.
     await client.query(
-      `select set_config('app.conta_id', $1, true),
-              set_config('app.loja_id', $2, true),
-              set_config('app.role', $3, true)`,
-      [sessao.contaId, sessao.lojaId ?? '', sessao.role],
+      `BEGIN; select set_config('app.conta_id', ${client.escapeLiteral(sessao.contaId)}, true),
+                     set_config('app.loja_id', ${client.escapeLiteral(sessao.lojaId ?? '')}, true),
+                     set_config('app.role', ${client.escapeLiteral(sessao.role)}, true)`,
     )
 
     const resultado = await executar(client)

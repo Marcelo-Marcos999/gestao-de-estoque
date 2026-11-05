@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
-import { listProducts } from '../api'
-import { EMPTY_PRODUCT_RANGES, type Product } from '../types'
+import { searchProducts } from '../api'
+import type { Product } from '../types'
 
 /** Quantos resultados a lista mostra: o suficiente para reconhecer, não para navegar. */
 const LIMITE = 20
@@ -30,14 +30,9 @@ export function useProductSearch(term: string) {
     if (!busca) return
 
     let cancelled = false
-    listProducts({
-      search: busca,
-      onlyWithoutBarcode: false,
-      onlyPending: false,
-      numberRanges: EMPTY_PRODUCT_RANGES,
-    })
-      .then((page) => {
-        if (!cancelled) setResult({ key: busca, items: page.items.slice(0, LIMITE) })
+    searchProducts(busca, LIMITE)
+      .then((items) => {
+        if (!cancelled) setResult({ key: busca, items })
       })
       .catch(() => {
         if (!cancelled) setResult({ key: busca, items: [] })

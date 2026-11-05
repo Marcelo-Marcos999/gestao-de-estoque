@@ -6,6 +6,7 @@ export {
   getProduct,
   invalidateStore,
   listProducts,
+  searchProducts,
   updateProductStock,
   type StockValues,
 } from './api'

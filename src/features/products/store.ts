@@ -47,6 +47,34 @@ export function paraProduct(p: ProdutoApi, e?: EstoqueApi): Product {
   }
 }
 
+/**
+ * Uma linha de `/produtos/busca` ou `/produtos/:id`: o produto com os números do
+ * estoque da loja já juntos (nulos se a loja nunca lançou estoque dele).
+ */
+export interface ProdutoComEstoqueApi extends ProdutoApi {
+  estoque_produto_id: string | null
+  saldo: number | null
+  saidas: number | null
+  valor_custo: string | null
+  valor_venda: string | null
+}
+
+export function paraProductComEstoque(p: ProdutoComEstoqueApi): Product {
+  const temEstoque = p.estoque_produto_id !== null
+  return paraProduct(
+    p,
+    temEstoque
+      ? {
+          produto_id: p.id,
+          saldo: p.saldo ?? 0,
+          saidas: p.saidas ?? 0,
+          valor_custo: p.valor_custo ?? '0',
+          valor_venda: p.valor_venda ?? '0',
+        }
+      : undefined,
+  )
+}
+
 let cache: Product[] | null = null
 let carregando: Promise<Product[]> | null = null
 

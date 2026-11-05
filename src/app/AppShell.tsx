@@ -3,10 +3,13 @@ import { Outlet } from 'react-router-dom'
 import { Logo } from '@/shared/ui/Logo'
 import { MenuIcon } from '@/shared/ui/icons'
 import { useFocusMode, useSidebarCollapsed } from '@/shared/hooks/useLayoutPreferences'
+import { useResumeDraft } from '@/features/breakage'
 import { Sidebar } from './Sidebar'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
+  // Registro de quebra que ficou pela metade volta sozinho (ver `useResumeDraft`).
+  useResumeDraft()
   const [menuOpen, setMenuOpen] = useState(false)
   const sidebar = useSidebarCollapsed()
 

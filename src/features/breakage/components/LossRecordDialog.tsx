@@ -1,10 +1,9 @@
-import type { FormEvent } from 'react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { AlertIcon } from '@/shared/ui/icons'
 import { daysUntil, parseDate } from '@/shared/lib/date'
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { clearDraft } from '../draft'
 import { useDraftClose } from '../hooks/useDraftClose'
 import { useLossRecordForm } from '../hooks/useLossRecordForm'
@@ -96,7 +95,7 @@ function LossRecordForm({
     record?.id,
   )
 
-  const { closeKeepingDraft, cancel } = useDraftClose(form.usesDraft, onClose)
+  const exit = useDraftClose(form.usesDraft, onClose)
 
   /** Anexo aberto para ver de dentro do próprio formulário. */
   const [vendo, setVendo] = useState<Attachment | null>(null)
@@ -110,7 +109,8 @@ function LossRecordForm({
     <>
       <Dialog
         open
-        onClose={closeKeepingDraft}
+        onClose={exit.closeKeepingDraft}
+        dismissible={!exit.picking}
         title={form.editing ? 'Editar registro' : 'Registrar quebra'}
         subtitle={
           form.editing
@@ -125,7 +125,7 @@ function LossRecordForm({
                 Vai entrar como <span className={styles.pendingStrong}>pendente de cadastro</span>
               </span>
             )}
-            <Button variant="secondary" onClick={cancel}>
+            <Button variant="secondary" onClick={exit.cancel}>
               Cancelar
             </Button>
             <Button type="submit" form="loss-record-form" loading={form.saving}>
@@ -202,6 +202,7 @@ function LossRecordForm({
             onAttach={form.attachFile}
             onRemove={form.removeAttachment}
             onOpen={setVendo}
+            onPickerOpen={exit.startPicking}
           />
 
           <div className={styles.field}>

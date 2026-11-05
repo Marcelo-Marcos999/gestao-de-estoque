@@ -13,6 +13,8 @@ interface AttachmentSlotsProps {
   onAttach: (kind: AttachmentKind, file: File) => void
   onRemove: (kind: AttachmentKind) => void
   onOpen: (attachment: Attachment) => void
+  /** O seletor de arquivos vai abrir: o formulário se protege de fechar sem querer na volta. */
+  onPickerOpen?: () => void
 }
 
 const SLOTS: Array<{ kind: AttachmentKind; Icon: typeof CameraIcon }> = [
@@ -38,6 +40,7 @@ export function AttachmentSlots({
   onAttach,
   onRemove,
   onOpen,
+  onPickerOpen,
 }: AttachmentSlotsProps) {
   const enabled = useAttachmentsEnabled()
   // Só o toque tem câmera para escolher; o computador vai direto aos arquivos.
@@ -55,6 +58,7 @@ export function AttachmentSlots({
     if (!input) return
     // O que o seletor de arquivos aceita depende do espaço (documento aceita PDF).
     if (source === 'files') input.accept = ATTACHMENT_ACCEPT[kind]
+    onPickerOpen?.()
     // Precisa ser dentro do toque do usuário, senão o navegador bloqueia o seletor.
     input.click()
   }
