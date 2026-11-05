@@ -97,19 +97,23 @@ export function AuditTable({ rows, showStore, sortKey, sortDir, onSort, onOpenEn
                 )}
               </span>
 
-              <Cell label="Estoque">{row.stock}</Cell>
+              <Cell label="Estoque" tier="main">
+                {row.stock}
+              </Cell>
               <Cell label="Saídas">{row.outflow}</Cell>
               <Cell label="Custo">{formatMoney(row.costPrice)}</Cell>
               <Cell label="Venda">{formatMoney(row.salePrice)}</Cell>
               <Cell label="Total custo">{formatMoney(rowCostTotal(row))}</Cell>
               <Cell label="Total venda">{formatMoney(rowSaleTotal(row))}</Cell>
-              <Cell label="Contagem" strong>
+              <Cell label="Contagem" tier="main" strong>
                 {row.counted}
               </Cell>
-              <Cell label="Diferença">
+              <Cell label="Diferença" tier="main">
                 <Difference row={row} />
               </Cell>
-              <Cell label="Valor da diferença">{formatMoney(rowDifferenceValue(row))}</Cell>
+              <Cell label="Valor da diferença" tier="value">
+                {formatMoney(rowDifferenceValue(row))}
+              </Cell>
 
               <Button variant="ghost" onClick={() => onOpenEntries(row)}>
                 {row.entries.length} {row.entries.length === 1 ? 'registro' : 'registros'}
@@ -125,10 +129,24 @@ export function AuditTable({ rows, showStore, sortKey, sortDir, onSort, onOpenEn
 /**
  * Uma célula numérica. No celular não existe cabeçalho de coluna, então o rótulo
  * aparece junto do valor; na tabela larga ele fica escondido.
+ *
+ * `tier` só importa no celular, onde o cartão tem três níveis: os três números que
+ * respondem à auditoria (`main`: estoque, contagem e diferença), o valor da
+ * diferença (`value`, em destaque) e o resto dos dados do estoque (`extra`).
  */
-function Cell({ label, strong = false, children }: { label: string; strong?: boolean; children: ReactNode }) {
+function Cell({
+  label,
+  tier = 'extra',
+  strong = false,
+  children,
+}: {
+  label: string
+  tier?: 'main' | 'value' | 'extra'
+  strong?: boolean
+  children: ReactNode
+}) {
   return (
-    <span className={`${styles.cell} ${strong ? styles.strong : ''}`}>
+    <span className={`${styles.cell} ${styles[tier]} ${strong ? styles.strong : ''}`}>
       <span className={styles.cellLabel}>{label}</span>
       <span className={styles.number}>{children}</span>
     </span>

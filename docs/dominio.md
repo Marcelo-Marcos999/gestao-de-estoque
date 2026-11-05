@@ -931,6 +931,11 @@ contagens independentes, e uma não enxerga a outra.
   corrige o saldo.
 - Filtro "Só com diferença" (lembrado, e visível enquanto ativo), exportação para
   Excel e mostrar 200 linhas por vez, como as outras telas.
+- **No celular cada produto é um cartão em três níveis**, porque onze colunas não cabem:
+  o nome (até duas linhas); as três caixas que respondem à auditoria (**estoque,
+  contagem e diferença**); o **valor da diferença** em destaque; e, menores, saídas,
+  custo, venda e os dois totais. O botão "N registros" ocupa a largura toda. No
+  computador é a tabela, que cabe inteira a 1440px e rola para o lado abaixo disso.
 
 ## Limites do plano: registros e arquivos
 

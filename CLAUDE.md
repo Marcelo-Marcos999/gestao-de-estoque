@@ -45,6 +45,13 @@ repetidas a cada pedido:
    componente. Tudo sai dos tokens em `src/styles/tokens.css`, para que trocar
    a identidade visual seja trocar valores de token, nunca reescrever CSS.
 
+4. **A página rola sozinha, e nada nela encolhe.** O contêiner do app corta o que
+   passa da tela (`overflow: hidden`), então uma página com lista que não é
+   virtualizada precisa de `overflow-y: auto` no próprio `.page`, e os filhos de
+   `overflow: hidden` precisam de `flex-shrink: 0`. Sem isso a lista encolhe até
+   caber no que sobrou da tela e esconde o resto — foi o que cortou os cartões da
+   Auditoria no celular. Teste com **dezenas de linhas**, não com duas.
+
 Consequência prática: um componente novo nunca declara `#hex`, `rgb()` ou
 `hsl()`. Se falta um token para o que você precisa, crie o token.
 
