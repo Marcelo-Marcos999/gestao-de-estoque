@@ -1,0 +1,12 @@
+/* Parece link, mas é botão: age sobre o formulário, não navega. 44px de alvo de toque. */
+.discard {
+  min-height: var(--touch-target);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--brand-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

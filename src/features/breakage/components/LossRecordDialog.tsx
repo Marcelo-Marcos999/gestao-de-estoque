@@ -5,11 +5,15 @@ import { Dialog } from '@/shared/ui/Dialog'
 import { AlertIcon } from '@/shared/ui/icons'
 import { daysUntil, parseDate } from '@/shared/lib/date'
 import { useState } from 'react'
+import { clearDraft } from '../draft'
+import { useDraftClose } from '../hooks/useDraftClose'
 import { useLossRecordForm } from '../hooks/useLossRecordForm'
 import { useSameProductRecords } from '../hooks/useSameProductRecords'
 import type { Attachment, LossRecord, LossRecordInitialDraft } from '../types'
 import { AttachmentSlots } from './AttachmentSlots'
 import { AttachmentViewer } from './AttachmentViewer'
+import { DraftNotice } from './DraftNotice'
+import { ExpiryRemaining } from './ExpiryRemaining'
 import { DuplicateWarning } from './DuplicateWarning'
 import { ProductPicker } from '@/features/products'
 import { QuantityField } from './QuantityField'
@@ -49,14 +53,20 @@ export function LossRecordDialog({
   // que abrir outro registro (editar um diferente, ou gerar quebra de outro
   // lote) não reaproveite o estado do anterior — o que um efeito
   // sincronizando prop com estado faria pior.
+  // "Começar de novo" descarta o rascunho e remonta o formulário, já sem ele.
+  const [fresh, setFresh] = useState(0)
   if (!open) return null
   return (
     <LossRecordForm
-      key={record?.id ?? (initial ? `${initial.product.productId}-${initial.expiryDate}` : 'novo')}
+      key={`${record?.id ?? (initial ? `${initial.product.productId}-${initial.expiryDate}` : 'novo')}-${fresh}`}
       record={record}
       initial={initial}
       onClose={onClose}
       onSaved={onSaved}
+      onDiscardDraft={() => {
+        clearDraft()
+        setFresh((current) => current + 1)
+      }}
     />
   )
 }
@@ -66,7 +76,8 @@ function LossRecordForm({
   initial,
   onClose,
   onSaved,
-}: Omit<LossRecordDialogProps, 'open'>) {
+  onDiscardDraft,
+}: Omit<LossRecordDialogProps, 'open'> & { onDiscardDraft: () => void }) {
   const form = useLossRecordForm(
     () => {
       onSaved()
@@ -85,6 +96,8 @@ function LossRecordForm({
     record?.id,
   )
 
+  const { closeKeepingDraft, cancel } = useDraftClose(form.usesDraft, onClose)
+
   /** Anexo aberto para ver de dentro do próprio formulário. */
   const [vendo, setVendo] = useState<Attachment | null>(null)
 
@@ -97,7 +110,7 @@ function LossRecordForm({
     <>
       <Dialog
         open
-        onClose={onClose}
+        onClose={closeKeepingDraft}
         title={form.editing ? 'Editar registro' : 'Registrar quebra'}
         subtitle={
           form.editing
@@ -112,7 +125,7 @@ function LossRecordForm({
                 Vai entrar como <span className={styles.pendingStrong}>pendente de cadastro</span>
               </span>
             )}
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={cancel}>
               Cancelar
             </Button>
             <Button type="submit" form="loss-record-form" loading={form.saving}>
@@ -122,6 +135,8 @@ function LossRecordForm({
         }
       >
         <form className={styles.form} id="loss-record-form" onSubmit={handleSubmit} noValidate>
+          {form.restoredDraft && <DraftNotice onDiscard={onDiscardDraft} />}
+
           <div className={styles.field}>
             <span className={styles.label}>Produto</span>
             <ProductPicker
@@ -147,15 +162,7 @@ function LossRecordForm({
                 value={form.expiryDate ?? ''}
                 onChange={(event) => form.setExpiryDate(parseDate(event.target.value))}
               />
-              {restantes !== null && (
-                <span className={`${styles.remaining} ${restantes < 0 ? styles.overdue : ''}`}>
-                  {restantes < 0
-                    ? `venceu há ${Math.abs(restantes)} dias`
-                    : restantes === 0
-                      ? 'vence hoje'
-                      : `vence em ${restantes} dias`}
-                </span>
-              )}
+              <ExpiryRemaining days={restantes} />
             </div>
 
             <QuantityField
