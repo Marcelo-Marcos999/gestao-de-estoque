@@ -1,0 +1,75 @@
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-height: 72px;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.card:hover {
+  background: var(--surface-hover);
+}
+
+.card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.number {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.customer {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.side {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.total {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chevron {
+  color: var(--text-subtle);
+}

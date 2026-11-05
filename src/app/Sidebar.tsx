@@ -9,6 +9,7 @@ import {
   ClipboardCheckIcon,
   LayersIcon,
   MoonIcon,
+  ReceiptIcon,
   SettingsIcon,
   SidebarIcon,
   SunIcon,
@@ -34,6 +35,8 @@ const NAV = [
   { to: '/estoque', label: 'Estoque', icon: LayersIcon, ready: true, adminOnly: false },
   // Contagem física comparada com o estoque: os dois perfis contam, cada um na sua loja.
   { to: '/auditoria', label: 'Auditoria', icon: ClipboardCheckIcon, ready: true, adminOnly: false },
+  // Pedidos (PD) de clientes: cada login monta os da própria loja.
+  { to: '/pedidos', label: 'Pedidos', icon: ReceiptIcon, ready: true, adminOnly: false },
   {
     to: '/produtos',
     label: 'Cadastro de produtos',

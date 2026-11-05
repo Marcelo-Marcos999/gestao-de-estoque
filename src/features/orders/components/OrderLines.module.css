@@ -1,0 +1,123 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Celular: produto e total na primeira linha, os botões embaixo, à direita — assim o
+ * nome do produto tem a largura toda do cartão em vez de ficar espremido ao lado dos
+ * botões. No computador cabe tudo numa linha só (ver o @media no fim).
+ */
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.description {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.codes,
+.cost {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.math {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A etiqueta diz "desconto" por escrito: nunca só uma cor ou um sinal. */
+.discount {
+  padding: 1px var(--sp-2);
+  background: var(--brand-soft);
+  border-radius: var(--radius-full);
+  color: var(--brand-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.total {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gross {
+  font-size: var(--fs-xs);
+  color: var(--text-subtle);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-1);
+}
+
+@media (min-width: 720px) {
+  .line {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+  }
+
+  .actions {
+    grid-column: auto;
+  }
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.iconButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}

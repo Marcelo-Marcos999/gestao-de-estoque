@@ -9,6 +9,7 @@ import {
 import { AuditPage } from '@/features/audit'
 import { BreakagePage } from '@/features/breakage'
 import { ExpiryPage } from '@/features/expiry'
+import { OrderPage, OrdersPage } from '@/features/orders'
 import { ProductsPage } from '@/features/products'
 import { SettingsPage } from '@/features/settings'
 import { StockPage } from '@/features/stock'
@@ -46,6 +47,8 @@ export function AppRoutes() {
           <Route path="/quebra" element={<BreakagePage />} />
           <Route path="/estoque" element={<StockPage />} />
           <Route path="/auditoria" element={<AuditPage />} />
+          <Route path="/pedidos" element={<OrdersPage />} />
+          <Route path="/pedidos/:id" element={<OrderPage />} />
           <Route path="/produtos" element={<ProductsPage />} />
           <Route path="/configuracoes" element={<SettingsPage />} />
         </Route>

@@ -945,10 +945,70 @@ contagens independentes, e uma não enxerga a outra.
   custo, venda e os dois totais. O botão "N registros" ocupa a largura toda. No
   computador é a tabela, que cabe inteira a 1440px e rola para o lado abaixo disso.
 
+## Pedidos (PD): o pedido de um cliente
+
+Tela para o vendedor montar o pedido de um cliente: **Novo pedido** (cliente, telefone
+opcional e uma observação), depois os produtos, um a um, e por fim **Fechar pedido**, que fecha com o
+total que o cliente vai pagar. Um pedido fechado pode ser **reaberto** para corrigir os
+itens (e fechado de novo).
+
+**De onde vem cada número.** Ao escolher o produto (busca por código de barras, SKU ou
+descrição, ou a câmera), o servidor lê do **estoque da loja do pedido**: o **preço de
+venda**, o **saldo** e o **custo**. A tela nunca manda o preço: ninguém monta um pedido
+com um preço que o estoque não tem. Produto **sem preço de venda** no estoque da loja não
+entra (um item de R$ 0,00 passaria despercebido); o aviso manda lançar o preço no Estoque.
+
+**Preço congelado.** O preço e o custo são **copiados** para o item no momento em que ele
+entra. Uma importação nova do ERP muda o estoque, mas não o total de um pedido já
+combinado com o cliente. Editar o item muda quantidade e desconto, nunca o preço; para
+repreçar, exclui-se o item e adiciona-se de novo. O mesmo vale para `sku` e descrição:
+são copiados, então apagar o produto do cadastro não apaga a história do pedido.
+
+**Desconto por item**, em **%** ou em **R$** (reais abatidos do item inteiro, não de cada
+unidade). Não pode passar de 100% nem do valor do item; o servidor recusa. A tela mostra
+o total do item enquanto se digita, e o que vale é o que o servidor devolve.
+
+**Ver o custo.** O botão **Mostrar custo** (no item e na página do pedido) acrescenta o
+custo, o lucro e a margem. Nasce **escondido** e a escolha é lembrada: o vendedor
+quer o custo para negociar desconto, não com o cliente olhando por cima do ombro. Se o
+desconto deixa o item abaixo do custo, a tela avisa, sem impedir.
+
+**Avisos que não impedem** (a mesma ideia da quebra e da validade): quantidade acima do
+saldo da loja, e produto que já está no pedido (grava outra linha).
+
+**Estados.** *Aberto* aceita mudar itens, cliente e observação, e pode ser excluído.
+*Fechado* é só leitura; antes de **excluir** um pedido fechado é preciso reabri-lo, de
+propósito. Um pedido **sem itens não fecha**. Quem recusa é o servidor (dois aparelhos
+podem estar com o mesmo pedido aberto), e a tela só não oferece o que seria recusado.
+
+**Não baixa o estoque.** O saldo vem do ERP; abatê-lo aqui criaria um segundo saldo que
+ninguém reconcilia (mesma razão da quebra).
+
+**Telefone do cliente** (opcional, com DDD). A tela formata ("(11) 98765-4321") e o banco
+guarda **só os dígitos**; telefone incompleto é recusado. Na tela do pedido ele vira dois
+botões de 44px, **Ligar** e **WhatsApp**, e a busca da lista acha o pedido por um pedaço do
+número (a partir de 4 dígitos, para não casar tudo).
+
+**Numeração.** "PD 12" é sequencial **por loja**, atribuída pelo banco (maior número da
+loja + 1). Apagar um pedido do meio deixa um buraco; apagar o último libera o número dele.
+Só pedido **aberto** se exclui, e por isso o caso é raro.
+
+**De quem é o pedido.** Da **loja** (login = loja). O operador monta e vê os da própria
+loja; o administrador vê as lojas todas (filtro "Loja") e escolhe a loja ao criar. Conta
+no limite de registros do plano (o pedido e cada item).
+
+**Lista.** Do mais novo ao mais antigo, 50 por vez ("Mostrar mais"). A busca (cliente
+ou número: "12", "#12" ou "PD 12") e o filtro Todos/Abertos/Fechados rodam **no
+servidor**, porque pedidos só se acumulam; o filtro é lembrado e, enquanto ativo, aparece
+escrito com o jeito de limpar.
+
+**No celular** a barra de total e o botão **Fechar pedido** ficam colados no rodapé
+enquanto a lista rola; a conta (itens, subtotal, descontos, custo) fica no fim da lista.
+
 ## Limites do plano: registros e arquivos
 
 Cada conta tem um teto de **registros** (produtos, linhas de estoque, lotes de
-validade, registros de quebra e contagens de auditoria, somados) e de **arquivos** (a soma dos anexos, em
+validade, registros de quebra, contagens de auditoria e pedidos com seus itens, somados) e de **arquivos** (a soma dos anexos, em
 MB). É da **conta**, não da loja: um operador com a loja vazia esbarra no limite se
 as outras lojas já o encheram.
 

@@ -67,7 +67,7 @@ Table configuracoes_conta {
   conta_id uuid [pk]
   limite_usuarios integer
   limite_armazenamento_mb integer [default: 1024, note: 'Só vale para contas novas; nulo = sem limite']
-  limite_registros integer [default: 250000, note: 'Produtos + estoque + lotes + quebras + contagens da conta; nulo = sem limite']
+  limite_registros integer [default: 250000, note: 'Produtos + estoque + lotes + quebras + contagens + pedidos e itens da conta; nulo = sem limite']
   plano text [not null, default: 'padrao']
   atualizado_em timestamptz
 }
@@ -192,6 +192,43 @@ Table contagens {
   }
 }
 
+Table pedidos {
+  id uuid [pk]
+  loja_id uuid [not null, note: 'A loja que vende; isola uma loja da outra (RLS)']
+  numero integer [not null, note: '"PD 12": sequencial por loja (gatilho); unique com loja_id']
+  cliente text [not null]
+  telefone text [not null, default: '', note: 'Só dígitos com DDD (10 ou 11), ou vazio']
+  observacao text [not null, default: '']
+  status text [not null, default: 'aberto', note: 'aberto ou fechado']
+  criado_por_id uuid [not null]
+  criado_em timestamptz [not null]
+  fechado_em timestamptz [note: 'Só existe com status fechado']
+
+  indexes {
+    (loja_id, numero) [unique]
+    (loja_id, criado_em)
+  }
+}
+
+Table pedido_itens {
+  id uuid [pk]
+  pedido_id uuid [not null]
+  produto_id uuid [note: 'Nulo se o produto foi apagado do cadastro: o histórico fica']
+  sku text [not null, note: 'Copiado do produto']
+  descricao text [not null, note: 'Copiado do produto']
+  codigo_barras text [not null, default: '']
+  quantidade integer [not null]
+  preco_unitario numeric(12,2) [not null, note: 'Copiado do estoque da loja ao entrar o item']
+  custo_unitario numeric(12,2) [not null, note: 'Copiado do estoque da loja ao entrar o item']
+  desconto_tipo text [not null, default: 'valor', note: 'percentual ou valor (R$ na linha inteira)']
+  desconto numeric(12,2) [not null, default: 0]
+  criado_em timestamptz [not null]
+
+  indexes {
+    (pedido_id, criado_em)
+  }
+}
+
 Ref: lojas.conta_id > contas.id [delete: cascade]
 Ref: configuracoes_conta.conta_id - contas.id [delete: cascade]
 Ref: tokens_email.loja_id > lojas.id [delete: cascade]
@@ -212,3 +249,7 @@ Ref: anexos.quebra_id > quebras.id [delete: cascade]
 Ref: contagens.loja_id > lojas.id [delete: cascade]
 Ref: contagens.produto_id > produtos.id [delete: cascade]
 Ref: contagens.criado_por_id > lojas.id [delete: restrict]
+Ref: pedidos.loja_id > lojas.id [delete: cascade]
+Ref: pedidos.criado_por_id > lojas.id [delete: restrict]
+Ref: pedido_itens.pedido_id > pedidos.id [delete: cascade]
+Ref: pedido_itens.produto_id > produtos.id [delete: set null]

@@ -1,0 +1,183 @@
+/*
+ * O contêiner do app (`.content`) corta o que passa da tela, então a página
+ * precisa rolar sozinha, e nenhum bloco pode encolher (ver CLAUDE.md, regra 4).
+ *
+ * Sem respiro embaixo de propósito: a barra de total, colada no rodapé, é o último
+ * bloco e já leva o próprio espaçamento. Com respiro aqui ela subiria no fim da
+ * rolagem, deixando uma faixa vazia sob ela.
+ */
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-5) 0;
+  overflow-y: auto;
+}
+
+.page > * {
+  flex-shrink: 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  align-self: flex-start;
+  min-height: var(--touch-target);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--text);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.customer {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.contact {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.phone {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Alvo de toque de 44px: é o que o vendedor aperta com o cliente esperando. */
+.contactLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--sp-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--brand-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.contactLink:hover {
+  background: var(--surface-hover);
+}
+
+.contactLink:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.meta,
+.note {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.itemsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.itemsTitle {
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+
+.itemsActions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.empty,
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-10) var(--sp-5);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.noticeTitle {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.noticeText {
+  max-width: 440px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* No celular as ações ocupam a largura toda. */
+@media (max-width: 599px) {
+  .actions,
+  .itemsActions {
+    width: 100%;
+  }
+
+  .actions > *,
+  .itemsActions > * {
+    flex: 1 1 auto;
+  }
+}

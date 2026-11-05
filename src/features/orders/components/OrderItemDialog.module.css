@@ -1,0 +1,69 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.row {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+}
+
+/* Em tela estreita quantidade e desconto empilham: lado a lado o campo do desconto ficaria apertado. */
+@media (max-width: 479px) {
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.input {
+  min-height: var(--touch-target);
+  padding: 0 var(--sp-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.fixed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fixedName {
+  font-weight: 600;
+}
+
+.codes {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}

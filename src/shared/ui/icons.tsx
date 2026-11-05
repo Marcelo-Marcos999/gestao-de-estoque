@@ -304,3 +304,11 @@ export const ClipboardCheckIcon = (p: IconProps) => (
     <path d="m9 13 2 2 4-4.5" />
   </Icon>
 )
+
+/** Nota/recibo: o pedido de um cliente. */
+export const ReceiptIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+    <path d="M9.5 8h5M9.5 12h5" />
+  </Icon>
+)
