@@ -1,0 +1,77 @@
+/*
+ * O contêiner do app (`.content`) corta o que passa da tela, então a página
+ * precisa rolar sozinha. Sem isto, e com os blocos podendo encolher, a lista
+ * ficava do tamanho do que sobrava da tela e escondia o resto: no celular, cada
+ * cartão aparecia só com o nome do produto.
+ */
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+/* Um bloco com `overflow: hidden` pode encolher abaixo do conteúdo; aqui nenhum deve. */
+.page > * {
+  flex-shrink: 0;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.count {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* No celular as ações ocupam a largura toda, embaixo do título. */
+@media (max-width: 599px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions > * {
+    flex: 1 1 auto;
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

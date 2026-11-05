@@ -1,0 +1,80 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.row dd {
+  margin: 0;
+  color: var(--text);
+  text-align: right;
+}
+
+/*
+ * Colada no fundo do que rola (a página): quando a lista é curta ela aparece logo
+ * abaixo; quando é longa, acompanha a tela. As margens laterais negativas anulam o
+ * respiro da página para a barra encostar nas bordas do celular.
+ */
+.bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin: 0 calc(-1 * var(--sp-5));
+  padding: var(--sp-3) var(--sp-5) calc(var(--sp-3) + env(safe-area-inset-bottom));
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-2);
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.value {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.closedAt {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* No computador a barra é um cartão solto, sem encostar nas bordas da janela. */
+@media (min-width: 720px) {
+  .bar {
+    margin: 0 0 var(--sp-5);
+    padding: var(--sp-3) var(--sp-4);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+  }
+}

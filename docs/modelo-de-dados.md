@@ -227,6 +227,46 @@ da **mesma loja**; nada do estoque é copiado para cá.
 Índice `contagens_loja_produto (loja_id, produto_id)`. RLS igual à do estoque (operador:
 a própria loja; administrador: a conta). Conta no limite de registros do plano.
 
+### `pedidos` e `pedido_itens` (pedidos de clientes)
+O pedido (PD) e as linhas dele. Não baixa o estoque.
+
+`pedidos`:
+
+| Coluna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `loja_id` | uuid | FK → `lojas` (cascata). A loja que vende; isola uma loja da outra (RLS) |
+| `numero` | integer | "PD 12": sequencial **por loja**, preenchido pelo gatilho `pedidos_numerar` (com trava por loja); `unique (loja_id, numero)`. Pedido apagado deixa buraco |
+| `cliente` | text | 1 a 120 caracteres |
+| `observacao` | text | até 500; vazio por padrão |
+| `status` | text | `aberto` ou `fechado` |
+| `criado_por_id` | uuid | FK → `lojas`. Quem montou (o administrador pode vender por outra loja) |
+| `criado_em`, `fechado_em` | timestamptz | `fechado_em` só existe com `status = 'fechado'` (check) |
+
+`pedido_itens`:
+
+| Coluna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `pedido_id` | uuid | FK → `pedidos` (cascata) |
+| `produto_id` | uuid | FK → `produtos`, **`on delete set null`**: apagar o produto do cadastro não apaga o histórico do pedido |
+| `sku`, `descricao`, `codigo_barras` | text | **Copiados** do produto na hora |
+| `quantidade` | integer | 1 a 1.000.000 |
+| `preco_unitario`, `custo_unitario` | numeric(12,2) | **Copiados** do estoque da loja do pedido no momento em que o item entra: reimportar o estoque não muda um pedido combinado |
+| `desconto_tipo` | text | `percentual` (% sobre a linha) ou `valor` (R$ abatidos da linha inteira) |
+| `desconto` | numeric(12,2) | `>= 0`; no máximo 100 se percentual, e no máximo `quantidade × preco_unitario` se valor (checks) |
+| `criado_em` | timestamptz | |
+
+O **total da linha** e o total do pedido **não são guardados**: calculam-se na leitura
+(`lib/pedidos.ts`, em SQL, para a lista e a tela somarem igual). Guardá-los os deixaria
+desatualizados ao editar um item. Preço e custo são guardados porque são o *combinado*, não
+um derivado.
+
+Índices `pedidos_loja_criado (loja_id, criado_em desc)` e `pedido_itens_pedido (pedido_id,
+criado_em)`. RLS: `pedidos` igual à do estoque (operador: a própria loja; administrador: a
+conta); `pedido_itens` herda o acesso do pedido. As duas tabelas contam no limite de
+registros do plano.
+
 ### `changelog`
 Novidades do sistema, iguais pra todo cliente (sem `conta_id`).
 
@@ -425,6 +465,7 @@ Rodar, na ordem, como a role dona:
 6. `backend/migrations/1700000000005_periodo_saidas_por_login.sql`: coluna `lojas.periodo_saidas_dias` (nula = padrão) e o `UPDATE` nela para `app_runtime`
 7. `backend/migrations/1700000000006_limites_de_registros_e_arquivos.sql`: `configuracoes_conta.limite_registros`, padrões das contas novas, `calcular_uso`/`uso_da_conta` e os gatilhos de limite
 8. `backend/migrations/1700000000007_auditoria_de_contagem.sql`: tabela `contagens` (RLS), a leitura do `app_definer` nela e a entrada no limite de registros
+9. `backend/migrations/1700000000008_pedidos.sql`: tabelas `pedidos` e `pedido_itens` (RLS), numeração por loja, a leitura do `app_definer` nelas e a entrada no limite de registros
 
 Depois, definir a senha das roles `app_runtime` e `app_auth` (nunca em arquivo
 versionado) e criar a primeira conta e a primeira loja `admin`.

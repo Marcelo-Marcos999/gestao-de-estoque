@@ -11,6 +11,7 @@ import { rotasCadastro } from './rotas/cadastro.js'
 import { rotasConta } from './rotas/conta.js'
 import { rotasEstoque } from './rotas/estoque.js'
 import { rotasLojas } from './rotas/lojas.js'
+import { rotasPedidos } from './rotas/pedidos.js'
 import { rotasMotivos, rotasOrigens } from './rotas/etiquetas.js'
 import { rotasProdutos } from './rotas/produtos.js'
 import { rotasAnexos } from './rotas/anexos.js'
@@ -74,6 +75,7 @@ export function criarApp() {
   app.use('/quebras', rotasQuebras)
   app.use('/anexos', rotasAnexos)
   app.use('/auditoria', rotasAuditoria)
+  app.use('/pedidos', rotasPedidos)
   app.use('/motivos', rotasMotivos)
   app.use('/origens', rotasOrigens)
 
