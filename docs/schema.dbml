@@ -67,7 +67,7 @@ Table configuracoes_conta {
   conta_id uuid [pk]
   limite_usuarios integer
   limite_armazenamento_mb integer [default: 1024, note: 'Só vale para contas novas; nulo = sem limite']
-  limite_registros integer [default: 250000, note: 'Produtos + estoque + lotes + quebras da conta; nulo = sem limite']
+  limite_registros integer [default: 250000, note: 'Produtos + estoque + lotes + quebras + contagens da conta; nulo = sem limite']
   plano text [not null, default: 'padrao']
   atualizado_em timestamptz
 }
@@ -179,6 +179,19 @@ Table anexos {
   criado_em timestamptz [not null]
 }
 
+Table contagens {
+  id uuid [pk]
+  loja_id uuid [not null, note: 'A loja contada; isola uma loja da outra (RLS)']
+  produto_id uuid [not null]
+  quantidade integer [not null, note: '0 a 1.000.000; zero vale. A contagem do produto é a SOMA das linhas']
+  criado_por_id uuid [not null]
+  criado_em timestamptz [not null]
+
+  indexes {
+    (loja_id, produto_id)
+  }
+}
+
 Ref: lojas.conta_id > contas.id [delete: cascade]
 Ref: configuracoes_conta.conta_id - contas.id [delete: cascade]
 Ref: tokens_email.loja_id > lojas.id [delete: cascade]
@@ -196,3 +209,6 @@ Ref: quebras.origem_id > origens.id [delete: restrict]
 Ref: quebras.origem_lote_id > validades.id [delete: set null]
 Ref: quebras.criado_por_id > lojas.id [delete: restrict]
 Ref: anexos.quebra_id > quebras.id [delete: cascade]
+Ref: contagens.loja_id > lojas.id [delete: cascade]
+Ref: contagens.produto_id > produtos.id [delete: cascade]
+Ref: contagens.criado_por_id > lojas.id [delete: restrict]

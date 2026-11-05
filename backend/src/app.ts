@@ -5,6 +5,7 @@ import type { NextFunction, Request, Response } from 'express'
 import helmet from 'helmet'
 import { respostaDeLimite } from './lib/limites.js'
 import { registrarRequisicoes } from './lib/registro.js'
+import { rotasAuditoria } from './rotas/auditoria.js'
 import { rotasAuth } from './rotas/auth.js'
 import { rotasCadastro } from './rotas/cadastro.js'
 import { rotasConta } from './rotas/conta.js'
@@ -72,6 +73,7 @@ export function criarApp() {
   app.use('/validades', rotasValidades)
   app.use('/quebras', rotasQuebras)
   app.use('/anexos', rotasAnexos)
+  app.use('/auditoria', rotasAuditoria)
   app.use('/motivos', rotasMotivos)
   app.use('/origens', rotasOrigens)
 

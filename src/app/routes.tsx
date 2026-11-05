@@ -6,6 +6,7 @@ import {
   ResetPasswordPage,
   SignUpPage,
 } from '@/features/auth'
+import { AuditPage } from '@/features/audit'
 import { BreakagePage } from '@/features/breakage'
 import { ExpiryPage } from '@/features/expiry'
 import { ProductsPage } from '@/features/products'
@@ -44,6 +45,7 @@ export function AppRoutes() {
           <Route path="/validades" element={<ExpiryPage />} />
           <Route path="/quebra" element={<BreakagePage />} />
           <Route path="/estoque" element={<StockPage />} />
+          <Route path="/auditoria" element={<AuditPage />} />
           <Route path="/produtos" element={<ProductsPage />} />
           <Route path="/configuracoes" element={<SettingsPage />} />
         </Route>

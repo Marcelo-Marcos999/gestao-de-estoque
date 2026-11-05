@@ -91,7 +91,7 @@ Uma linha por conta (1:1). Limites e plano.
 | Coluna | Tipo | Notas |
 |---|---|---|
 | `conta_id` | uuid | PK e FK → `contas` (cascata) |
-| `limite_usuarios`, `limite_armazenamento_mb`, `limite_registros` | integer | Nulo = sem limite. `limite_armazenamento_mb` é o teto da soma dos anexos; `limite_registros`, o de produtos + linhas de estoque + lotes + quebras da conta toda. Contas **novas** nascem com 1.024 MB e 250.000 registros; as que já existiam seguem sem limite até alguém definir (ver "Limites de uso") |
+| `limite_usuarios`, `limite_armazenamento_mb`, `limite_registros` | integer | Nulo = sem limite. `limite_armazenamento_mb` é o teto da soma dos anexos; `limite_registros`, o de produtos + linhas de estoque + lotes + quebras + contagens da conta toda. Contas **novas** nascem com 1.024 MB e 250.000 registros; as que já existiam seguem sem limite até alguém definir (ver "Limites de uso") |
 | `plano`* | text | Padrão `padrao` |
 | `atualizado_em` | timestamptz | Gatilho |
 
@@ -204,6 +204,29 @@ arquivo de outra loja). Um espaço por tipo em cada registro.
 | `tamanho_bytes`* | bigint | `>= 0` |
 | `criado_em`* | timestamptz | |
 
+### `contagens` (auditoria de estoque)
+A contagem física, **uma linha por registro**, nunca somada por cima. A contagem de
+um produto numa loja é a **soma** das linhas dele (`sum(quantidade)` por
+`loja_id` + `produto_id`).
+
+| Coluna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `loja_id` | uuid | FK → `lojas`. A loja cujo estoque se conta; é o que isola uma loja da outra (RLS) |
+| `produto_id` | uuid | FK → `produtos` (cascata: sem o produto não há com o que comparar) |
+| `quantidade` | integer | 0 a 1.000.000. **Zero vale**: "olhei e não havia nada" |
+| `criado_por_id` | uuid | FK → `lojas`. Quem registrou (o administrador pode contar por outra loja) |
+| `criado_em` | timestamptz | |
+
+Por que linhas e não um total: gravar `contagem = contagem + 5` perderia um dos
+registros se dois acontecessem ao mesmo tempo, e não diria quem contou o quê.
+Acrescentar linhas não perde nada e guarda a prova da conferência. A comparação com o
+estoque (saldo, saídas, custo, venda) é feita na leitura, com `left join` em `estoque`
+da **mesma loja**; nada do estoque é copiado para cá.
+
+Índice `contagens_loja_produto (loja_id, produto_id)`. RLS igual à do estoque (operador:
+a própria loja; administrador: a conta). Conta no limite de registros do plano.
+
 ### `changelog`
 Novidades do sistema, iguais pra todo cliente (sem `conta_id`).
 
@@ -237,6 +260,9 @@ clientes, sem relação por chave com nenhuma conta.
 | `lojas` → `estoque`, `tokens_email` | Cascata |
 | `estoque` → `validades` | Cascata |
 | `quebras` → `anexos` | Cascata |
+| `lojas` → `contagens` (a loja contada) | Cascata |
+| `produtos` → `contagens` | Cascata: excluir o produto leva a contagem dele |
+| `lojas` → `contagens.criado_por_id` | **Restrito**, como em `quebras` |
 | `produtos` → `estoque` | **Restrito**: produto com estoque em alguma loja não sai do catálogo |
 | `lojas` → `quebras` (dona e `criado_por`) | **Restrito**: o histórico de perdas não some junto com a loja |
 | `motivos`, `origens` → `quebras` | **Restrito**: não se apaga um motivo em uso |
@@ -253,7 +279,7 @@ Três credenciais de banco, cada uma com o mínimo que precisa:
 | dona (`neondb_owner`) | só migrations e manutenção, nunca o app | Tudo. **Ignora a RLS** (dono sempre ignora) |
 | `app_runtime` | o back-end, em toda requisição de usuário logado | Ler/gravar, **sempre sob RLS** |
 | `app_auth` | login, cadastro e recuperação de senha | `SELECT` em `lojas` e `administradores_plataforma` e **executar quatro funções** (abaixo). Nenhum privilégio de escrita em tabela |
-| `app_definer` | ninguém (`NOLOGIN`) | É só a dona das funções (as quatro de cadastro e as de limite). Escreve em `contas`, `lojas`, `configuracoes_conta`, `motivos`, `origens` e `tokens_email`; só **lê** `produtos`, `estoque`, `validades`, `quebras` e `anexos` (para contar o uso da conta); não pode criar objetos |
+| `app_definer` | ninguém (`NOLOGIN`) | É só a dona das funções (as quatro de cadastro e as de limite). Escreve em `contas`, `lojas`, `configuracoes_conta`, `motivos`, `origens` e `tokens_email`; só **lê** `produtos`, `estoque`, `validades`, `quebras`, `contagens` e `anexos` (para contar o uso da conta); não pode criar objetos |
 
 **Row Level Security** está ligada e forçada (`force`) em todas as tabelas. A
 cada requisição o back-end declara ao banco quem está chamando
@@ -310,7 +336,7 @@ só conseguiria o que um token válido permite.
 
 O teto é da **conta**, não da loja, e é aplicado por **gatilhos no banco**
 (`AFTER INSERT`, um por comando, não por linha) em `produtos`, `estoque`,
-`validades`, `quebras` e `anexos`. Estar no banco, e não nas rotas, faz valer
+`validades`, `quebras`, `contagens` e `anexos`. Estar no banco, e não nas rotas, faz valer
 para qualquer caminho que insira — cadastro, importação, "desfazer" — inclusive os
 que ainda não existem. O gatilho recusa com o erro `53400`
 (`configuration_limit_exceeded`) quando o comando **inseriu algo** e o total
@@ -398,6 +424,7 @@ Rodar, na ordem, como a role dona:
 5. `backend/migrations/1700000000004_lojas_so_altera_colunas_seguras.sql`: `app_runtime` só atualiza `nome`, `ativo`, `senha_hash` e `senha_alterada_em` em `lojas`
 6. `backend/migrations/1700000000005_periodo_saidas_por_login.sql`: coluna `lojas.periodo_saidas_dias` (nula = padrão) e o `UPDATE` nela para `app_runtime`
 7. `backend/migrations/1700000000006_limites_de_registros_e_arquivos.sql`: `configuracoes_conta.limite_registros`, padrões das contas novas, `calcular_uso`/`uso_da_conta` e os gatilhos de limite
+8. `backend/migrations/1700000000007_auditoria_de_contagem.sql`: tabela `contagens` (RLS), a leitura do `app_definer` nela e a entrada no limite de registros
 
 Depois, definir a senha das roles `app_runtime` e `app_auth` (nunca em arquivo
 versionado) e criar a primeira conta e a primeira loja `admin`.

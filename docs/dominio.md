@@ -891,10 +891,48 @@ de gravação; isso é decisão de produto, não de cache, e não foi feito.
 e os arquivos mudam de nome. Só mexa em `VERSAO` no `sw.js` se mudar a *estratégia*
 de cache.
 
+## Auditoria: a contagem física contra o estoque
+
+Tela para conferir o estoque de verdade: alguém conta o produto na prateleira e
+registra, e a tela mostra a contagem ao lado de **todas as colunas do estoque**
+(estoque, saídas, custo, venda, total de custo e de venda) e da conta que importa:
+
+- **Diferença** = estoque − contagem, em unidades e **escrita em palavras**: *Falta*
+  (o sistema tem mais do que se achou), *Sobra* (achou-se mais do que o sistema
+  sabe) ou *Confere*. O sinal sozinho se lê ao contrário, e a cor não é usada: as
+  cores de falta/sobra seriam as de validade, que têm outro significado.
+- **Valor da diferença** = diferença × **custo do estoque** (da mesma loja). Os totais
+  do topo separam **falta** e **sobra** em vez de somá-las: R$ 500 que faltam num
+  produto e R$ 500 que sobram em outro dariam zero, e a loja teria dois problemas.
+
+**Cada registro soma.** A contagem de um produto é a soma de todos os registros dele
+na loja: A registra 10, B registra 5, o produto passa a ter 15. Por isso o "Adicionar"
+mostra, antes de salvar, *"Já contado: 10. Com este registro: 15"*: é soma, não
+substituição. Cada parcela guarda quem registrou e quando, e se consulta em "N
+registros" na linha; é também onde se desfaz **um** registro errado sem perder os
+outros. Quantidade **zero vale** ("olhei e não havia nada") e é diferente de produto
+não contado.
+
+**De quem é a contagem.** Da **loja**: login = loja neste sistema. O operador conta e
+vê só a própria loja; o administrador vê as lojas todas (com o filtro "Loja") e pode
+contar por uma delas. Duas pessoas somam quando contam **a mesma loja**, seja por um
+login compartilhado ou pelo administrador contando por ela; lojas diferentes têm
+contagens independentes, e uma não enxerga a outra.
+
+- **Só produto do cadastro.** A contagem se compara com o estoque do produto, então um
+  código desconhecido não entra (diferente da quebra, onde a perda aconteceu de
+  qualquer jeito). Produto contado que a loja nunca lançou no estoque aparece com saldo
+  e valores **zero**, avisado na linha.
+- **Zerar auditoria** apaga a contagem de UMA loja (nunca "todas"), com confirmação, e é
+  como se começa uma nova. O estoque não é alterado: a auditoria só **compara**, não
+  corrige o saldo.
+- Filtro "Só com diferença" (lembrado, e visível enquanto ativo), exportação para
+  Excel e mostrar 200 linhas por vez, como as outras telas.
+
 ## Limites do plano: registros e arquivos
 
 Cada conta tem um teto de **registros** (produtos, linhas de estoque, lotes de
-validade e registros de quebra, somados) e de **arquivos** (a soma dos anexos, em
+validade, registros de quebra e contagens de auditoria, somados) e de **arquivos** (a soma dos anexos, em
 MB). É da **conta**, não da loja: um operador com a loja vazia esbarra no limite se
 as outras lojas já o encheram.
 
