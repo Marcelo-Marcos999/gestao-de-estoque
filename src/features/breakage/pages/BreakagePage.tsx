@@ -18,6 +18,7 @@ import { BreakageTotals } from '../components/BreakageTotals'
 import { AttachmentViewer } from '../components/AttachmentViewer'
 import { LossRecordCard } from '../components/LossRecordCard'
 import { LossRecordDialog } from '../components/LossRecordDialog'
+import { hasOpenDraft } from '../draft'
 import { LossRecordTable, type LossRecordSortKey } from '../components/LossRecordTable'
 
 import { recordLabel } from '../label'
@@ -42,7 +43,11 @@ export function BreakagePage() {
   // O administrador vê as lojas todas da conta (e filtra por uma); o operador, só a própria.
   const scope = useStoreScope('quebra', user?.role === 'admin')
   const list = useLossRecordList(scope.param)
-  const [dialog, setDialog] = useState<DialogState>({ open: false })
+  // Se a página foi recarregada com um registro novo em andamento (o Android descarta a página
+  // quando a câmera abre), o formulário volta aberto, com o que já estava preenchido.
+  const [dialog, setDialog] = useState<DialogState>(() =>
+    hasOpenDraft() ? { open: true } : { open: false },
+  )
 
   // Mesmo corte da tela de validades: abaixo disso nenhuma tabela cabe, e a
   // lista vira cartão. Um só listener para a lista inteira.

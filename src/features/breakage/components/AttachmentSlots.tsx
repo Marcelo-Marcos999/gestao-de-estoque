@@ -1,8 +1,11 @@
+import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { CameraIcon, CloseIcon, FileIcon, ImageIcon } from '@/shared/ui/icons'
 import { ATTACHMENT_ACCEPT, ATTACHMENT_LABELS, formatSize } from '../attachments'
 import { useAttachmentsEnabled } from '../hooks/useAttachmentsEnabled'
 import type { Attachment, AttachmentKind } from '../types'
+import { AttachmentSourceDialog } from './AttachmentSourceDialog'
 import styles from './AttachmentSlots.module.css'
 
 interface AttachmentSlotsProps {
@@ -25,9 +28,10 @@ const SLOTS: Array<{ kind: AttachmentKind; Icon: typeof CameraIcon }> = [
  * melhor que registro que não acontece porque o celular ficou sem bateria no
  * corredor — e o que falta pode ser anexado depois (ver docs/dominio.md).
  *
- * Cada espaço é um <label> com um input de arquivo escondido: no celular isso
- * abre direto a câmera ou a galeria, sem que a gente precise decidir por quem
- * está usando.
+ * No celular, tocar num espaço vazio pergunta de onde vem o arquivo: **câmera** ou
+ * **galeria/arquivos**. Um único `<input accept="image/*">` não serve: o Android novo
+ * abre só o seletor de fotos, sem a câmera. A câmera é um input próprio, com
+ * `capture`. No computador não há câmera a escolher e o toque abre os arquivos.
  */
 export function AttachmentSlots({
   attachments,
@@ -36,10 +40,28 @@ export function AttachmentSlots({
   onOpen,
 }: AttachmentSlotsProps) {
   const enabled = useAttachmentsEnabled()
+  // Só o toque tem câmera para escolher; o computador vai direto aos arquivos.
+  const touch = useMediaQuery('(pointer: coarse)')
+  const [choosing, setChoosing] = useState<AttachmentKind | null>(null)
+  // Os inputs ficam sempre montados: se morassem dentro do diálogo de escolha, ele
+  // fecharia (e os desmontaria) antes de o seletor devolver o arquivo.
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const filesRef = useRef<HTMLInputElement>(null)
+  const targetKind = useRef<AttachmentKind>('foto-produto')
 
-  function handleChange(kind: AttachmentKind, event: ChangeEvent<HTMLInputElement>) {
+  function pick(kind: AttachmentKind, source: 'camera' | 'files') {
+    targetKind.current = kind
+    const input = source === 'camera' ? cameraRef.current : filesRef.current
+    if (!input) return
+    // O que o seletor de arquivos aceita depende do espaço (documento aceita PDF).
+    if (source === 'files') input.accept = ATTACHMENT_ACCEPT[kind]
+    // Precisa ser dentro do toque do usuário, senão o navegador bloqueia o seletor.
+    input.click()
+  }
+
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
-    if (file) onAttach(kind, file)
+    if (file) onAttach(targetKind.current, file)
 
     // Zera o input: sem isso, escolher o mesmo arquivo de novo depois de
     // remover não dispararia evento nenhum.
@@ -97,19 +119,51 @@ export function AttachmentSlots({
           }
 
           return (
-            <label className={styles.slot} key={kind}>
-              <input
-                type="file"
-                className={styles.input}
-                accept={ATTACHMENT_ACCEPT[kind]}
-                onChange={(event) => handleChange(kind, event)}
-              />
+            <button
+              type="button"
+              className={styles.slot}
+              key={kind}
+              onClick={() => (touch ? setChoosing(kind) : pick(kind, 'files'))}
+            >
               <Icon width={22} height={22} />
               <span className={styles.fileName}>{rotulo}</span>
-            </label>
+            </button>
           )
         })}
       </div>
+
+      <input
+        ref={cameraRef}
+        type="file"
+        className={styles.hiddenInput}
+        accept="image/*"
+        capture="environment"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={handleChange}
+      />
+      <input
+        ref={filesRef}
+        type="file"
+        className={styles.hiddenInput}
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={handleChange}
+      />
+
+      <AttachmentSourceDialog
+        label={choosing ? ATTACHMENT_LABELS[choosing] : ''}
+        open={choosing !== null}
+        onClose={() => setChoosing(null)}
+        onCamera={() => {
+          if (choosing) pick(choosing, 'camera')
+          setChoosing(null)
+        }}
+        onFiles={() => {
+          if (choosing) pick(choosing, 'files')
+          setChoosing(null)
+        }}
+      />
     </div>
   )
 }

@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getProduct } from '@/features/products'
 import type { IsoDate } from '@/shared/lib/date'
 import { addToRecord, findSameRecord } from '../api'
-import { putAttachmentFile } from '../attachments'
+import { clearDraft, readDraft } from '../draft'
 import { AttachmentsFailedError, saveLossRecord } from '../saveRecord'
 import type {
-  AttachmentKind,
   LossRecord,
   LossRecordDraft,
   LossRecordInitialDraft,
 } from '../types'
 import type { ChosenProduct } from '@/features/products'
+import { useDraftSync, useFormFiles } from './useDraftSync'
 import { useTagLists } from './useTagLists'
 
 export interface FormErrors {
@@ -64,13 +64,20 @@ export function useLossRecordForm(
   /** A lista atrás do formulário precisa reler (sem fechá-lo): o registro mudou, mas um anexo falhou. */
   onChanged?: () => void,
 ) {
+  // Rascunho: só para registro novo digitado à mão (ver `draft.ts`). Lido uma vez, na
+  // abertura; depois o que manda é o estado dos campos, que o efeito abaixo grava.
+  const usesDraft = editing === undefined && initial === undefined
+  const [stored] = useState(() => (usesDraft ? readDraft() : null))
+
   const [product, setProduct] = useState<ChosenProduct | null>(
-    () => initialProduct(editing) ?? initial?.product ?? null,
+    () => initialProduct(editing) ?? initial?.product ?? stored?.product ?? null,
   )
   const [expiryDate, setExpiryDate] = useState<IsoDate | null>(
-    editing?.expiryDate ?? initial?.expiryDate ?? null,
+    editing?.expiryDate ?? initial?.expiryDate ?? stored?.expiryDate ?? null,
   )
-  const [quantity, setQuantity] = useState(editing?.quantity ?? initial?.quantity ?? 1)
+  const [quantity, setQuantity] = useState(
+    editing?.quantity ?? initial?.quantity ?? stored?.quantity ?? 1,
+  )
 
   const { reasons, origins, usage, addReason, addOrigin, renameTag, deleteTag } = useTagLists()
 
@@ -80,20 +87,25 @@ export function useLossRecordForm(
   // A lista chega do servidor depois de o formulário abrir; por isso a
   // sugestão é calculada a cada render, e a escolha da pessoa, quando houver,
   // vale mais que ela (`null` = ainda não escolheu).
-  const [chosenReasonId, setReasonId] = useState<string | null>(editing?.reasonId ?? null)
+  const [chosenReasonId, setReasonId] = useState<string | null>(
+    editing?.reasonId ?? stored?.reasonId ?? null,
+  )
   const suggestedLabel = editing ? undefined : initial?.reasonLabel?.toLowerCase()
   const suggestedReasonId = suggestedLabel
     ? (reasons.find((r) => r.label.toLowerCase() === suggestedLabel)?.id ?? '')
     : ''
   const reasonId = chosenReasonId ?? suggestedReasonId
 
-  const [originId, setOriginId] = useState(editing?.originId ?? '')
-  const [note, setNote] = useState(editing?.note ?? '')
+  const [originId, setOriginId] = useState(editing?.originId ?? stored?.originId ?? '')
+  const [note, setNote] = useState(editing?.note ?? stored?.note ?? '')
   const [attachments, setAttachments] = useState<LossRecordDraft['attachments']>(
     editing?.attachments ?? [],
   )
   // O que o servidor já tem deste registro: base para saber o que enviar e o que apagar.
   const [savedAttachments, setSavedAttachments] = useState(editing?.attachments ?? [])
+
+  const reasonForDraft = chosenReasonId ?? ''
+  useDraftSync(usesDraft, stored, setAttachments, { product, expiryDate, quantity, reasonId: reasonForDraft, originId, note, attachments })
 
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
@@ -140,25 +152,7 @@ export function useLossRecordForm(
     [product, expiryDate, quantity, reasonId, originId, note, attachments, editing, initial],
   )
 
-  /**
-   * Guarda o arquivo e descreve o anexo.
-   *
-   * Um espaço por tipo: escolher de novo troca o que estava lá, em vez de
-   * empilhar duas fotos do produto que ninguém saberia distinguir depois.
-   */
-  const attachFile = useCallback((kind: AttachmentKind, file: File) => {
-    const id = `${kind}-${Date.now()}`
-    putAttachmentFile(id, file)
-
-    setAttachments((current) => [
-      ...current.filter((a) => a.kind !== kind),
-      { id, kind, fileName: file.name, mimeType: file.type, size: file.size },
-    ])
-  }, [])
-
-  const removeAttachment = useCallback((kind: AttachmentKind) => {
-    setAttachments((current) => current.filter((a) => a.kind !== kind))
-  }, [])
+  const { attachFile, removeAttachment } = useFormFiles(usesDraft, attachments, setAttachments)
 
   // Falha de rede ou recusa do servidor: sem isto o botão ficaria girando para
   // sempre, e quem tocou em "Salvar" não saberia se o registro existe.
@@ -184,6 +178,8 @@ export function useLossRecordForm(
     }
     setSaving(false)
     setDuplicate(null)
+    // Salvou: o rascunho cumpriu o papel, e voltar a ele recriaria o registro.
+    clearDraft()
     onSaved()
   }, [draft, editing, savedAttachments, onSaved, onChanged, reportFailure])
 
@@ -235,11 +231,15 @@ export function useLossRecordForm(
     }
     setSaving(false)
     setDuplicate(null)
+    clearDraft()
     onSaved()
   }, [duplicate, quantity, onSaved, reportFailure])
 
   return {
-    /** True quando o formulário altera um registro que já existe. */
+    /** O formulário abriu com um rascunho de antes (a página foi recarregada ou o diálogo fechou). */
+    restoredDraft: stored !== null,
+    /** Este formulário guarda rascunho (registro novo, digitado à mão). */
+    usesDraft,
     editing: editing !== undefined,
     product,
     setProduct,

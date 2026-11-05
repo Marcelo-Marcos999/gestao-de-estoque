@@ -63,17 +63,21 @@
   max-width: 100%;
 }
 
-/* O input existe e recebe o foco do teclado; o que ele desenha por conta
-   própria é que sai da frente — daí a opacidade, e não display:none, que o
-   tiraria da ordem de tabulação junto. */
-.input {
+/* Só aparece pelo botão do espaço. Fora da tela e sem tamanho, mas NÃO `display: none`:
+   alguns navegadores móveis ignoram o clique programático num input escondido assim. */
+.hiddenInput {
   position: absolute;
-  inset: 0;
+  width: 1px;
+  height: 1px;
   opacity: 0;
-  cursor: pointer;
+  pointer-events: none;
 }
 
-.slot:focus-within {
+.slot {
+  font: inherit;
+}
+
+.slot:focus-visible {
   border-color: var(--brand);
   box-shadow: 0 0 0 3px var(--brand-ring);
 }

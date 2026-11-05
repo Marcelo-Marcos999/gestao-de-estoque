@@ -423,6 +423,32 @@ um PDF embutido num diálogo pequeno é pior que o leitor do próprio aparelho.
 
 Nenhum é obrigatório, nem no motivo mais grave (ver acima).
 
+**Câmera ou galeria: a pessoa escolhe.** No celular, tocar num espaço vazio abre um
+menu com **Tirar foto agora** e **Galeria ou arquivos**. Um só `<input accept="image/*">`
+não basta: o Android novo abre só o seletor de fotos, sem câmera. A câmera é um input
+próprio com `capture="environment"`; a galeria é outro, sem `capture`, e o documento
+aceita PDF também. No computador não há câmera a escolher (o menu só aparece com
+ponteiro de toque, `pointer: coarse`) e o toque vai direto aos arquivos.
+
+**O registro novo não se perde.** Abrir a câmera pode fazer o Android descartar a
+página e recarregá-la, e o gesto de "voltar" fecha o diálogo: antes, os dois jogavam fora
+tudo o que estava preenchido. Agora o registro **novo, digitado à mão**, grava um
+*rascunho* a cada mudança (campos no `localStorage`, **fotos no IndexedDB**, porque o
+`localStorage` guarda só texto e poucos MB):
+
+- recarregou a página no meio: o registro **reabre sozinho**, com o aviso "Retomamos o
+  registro que você estava preenchendo" e o botão **Começar de novo**;
+- fechou pelo X, pelo Esc ou pelo gesto de voltar: o rascunho fica, mas não reabre sozinho;
+  ao tocar em "Registrar quebra" ele volta, com o mesmo aviso;
+- **Cancelar** e **Salvar** apagam o rascunho (e as fotos guardadas);
+- vale **24 horas**: um rascunho esquecido por dias voltaria como um registro que ninguém
+  reconhece;
+- não vale para editar um registro existente nem para gerar a quebra de um lote vencido,
+  que já partem de dados do servidor.
+
+Limite honesto: se o Android descartar a página **enquanto a câmera está aberta**, a foto
+daquela tirada pode não chegar ao navegador; o resto do registro volta, e só ela se refaz.
+
 ### Ver mais registros de uma vez
 
 No **celular quem rola é a página inteira**: o cabeçalho sai da tela junto com o
