@@ -296,3 +296,11 @@ export const LayersIcon = (p: IconProps) => (
     <path d="m3.5 16.5 8.5 4.5 8.5-4.5" />
   </Icon>
 )
+
+export const ClipboardCheckIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="5" y="4" width="14" height="17" rx="2" />
+    <path d="M9 4h6v2.5H9V4Z" />
+    <path d="m9 13 2 2 4-4.5" />
+  </Icon>
+)

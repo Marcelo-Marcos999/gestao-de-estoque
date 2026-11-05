@@ -1,0 +1,150 @@
+.wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* Onze colunas não cabem espremidas: em tela larga a tabela rola para o lado. */
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  min-width: 1180px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 64px 64px 88px 88px 100px 100px 84px 92px 112px 108px;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+}
+
+.head {
+  height: 40px;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.item {
+  min-height: 60px;
+  padding-top: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.item:hover {
+  background: var(--surface-hover);
+}
+
+.product {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.description {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codes {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noStock {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.cellLabel {
+  display: none;
+}
+
+.number {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.strong .number {
+  font-weight: 700;
+}
+
+.difference {
+  display: flex;
+  flex-direction: column;
+}
+
+.kind {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ---- Celular: cada linha vira um cartão, com os números rotulados ------- */
+@media (max-width: 719px) {
+  .scroll {
+    overflow-x: visible;
+  }
+
+  .table {
+    min-width: 0;
+  }
+
+  .head {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    align-items: start;
+  }
+
+  .item {
+    min-height: 0;
+  }
+
+  .product,
+  .item > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .cellLabel {
+    display: block;
+    font-size: var(--fs-xs);
+    color: var(--text-subtle);
+  }
+}
