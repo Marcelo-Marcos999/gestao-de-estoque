@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/features/auth'
 import { ProductsSkeleton } from '@/features/products'
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery'
+import { useSelection } from '@/shared/hooks/useSelection'
 import { useSort } from '@/shared/hooks/useSort'
 import { useStoreScope } from '@/shared/hooks/useStoreScope'
 import { formatMoney } from '@/shared/lib/money'
 import { Button } from '@/shared/ui/Button'
 import { ExportButton } from '@/shared/ui/ExportButton'
 import { PlusIcon, TrashIcon } from '@/shared/ui/icons'
+import { SelectionBar } from '@/shared/ui/SelectionBar'
 import { StoreFilter } from '@/shared/ui/StoreFilter'
 import { TotalTiles } from '@/shared/ui/TotalTiles'
 import { sumAuditTotals } from '../compute'
@@ -19,6 +21,7 @@ import { AuditEntriesDialog } from '../components/AuditEntriesDialog'
 import { AuditTable, auditValueOf, type AuditSortKey } from '../components/AuditTable'
 import { AuditToolbar } from '../components/AuditToolbar'
 import { ClearAuditDialog } from '../components/ClearAuditDialog'
+import { DeleteAuditItemsDialog } from '../components/DeleteAuditItemsDialog'
 import { NewCountDialog } from '../components/NewCountDialog'
 import styles from './AuditPage.module.css'
 
@@ -51,6 +54,18 @@ export function AuditPage() {
   const [newOpen, setNewOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
   const [viewing, setViewing] = useState<AuditRow | null>(null)
+
+  // Excluir itens específicos: marca na lista, a barra aparece, e um diálogo confirma.
+  const visibleKeys = sort.sortedRows.map(rowKey)
+  const selectionState = useSelection(visibleKeys)
+  const [deleting, setDeleting] = useState<AuditRow[]>([])
+
+  // Trocar de filtro ou de loja limpa a seleção: um item marcado e depois escondido
+  // não pode ser excluído sem a pessoa vê-lo mais (mesma regra do Estoque).
+  useEffect(() => {
+    selectionState.clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.filters, scope.param])
 
   // O diálogo de registros precisa da versão MAIS NOVA da linha depois de excluir uma parcela.
   const viewingFresh = viewing
@@ -115,6 +130,16 @@ export function AuditPage() {
 
       <StoreFilter scope={scope} />
 
+      <SelectionBar
+        selected={selectionState.selection.size}
+        total={visibleKeys.length}
+        onSelectAll={selectionState.selectAll}
+        onClear={selectionState.clear}
+        onDelete={() =>
+          setDeleting(sort.sortedRows.filter((row) => selectionState.selection.has(rowKey(row))))
+        }
+      />
+
       {list.status === 'loading' && <ProductsSkeleton rowHeight={narrow ? 108 : 60} />}
       {list.status === 'error' && <AuditErrorState onRetry={list.reload} />}
 
@@ -135,6 +160,8 @@ export function AuditPage() {
             sortDir={sort.sortDir}
             onSort={sort.cycleSort}
             onOpenEntries={setViewing}
+            selection={selectionState.selection}
+            onToggleSelect={selectionState.toggle}
           />
           {sort.sortedRows.length > limit && (
             <Button variant="secondary" onClick={() => setPage({ key: searchKey, limit: limit + PAGE_SIZE })}>
@@ -154,6 +181,15 @@ export function AuditPage() {
       />
 
       <AuditEntriesDialog row={viewingFresh} onClose={() => setViewing(null)} onChanged={list.reload} />
+
+      <DeleteAuditItemsDialog
+        rows={deleting}
+        onClose={() => setDeleting([])}
+        onDeleted={() => {
+          selectionState.clear()
+          list.reload()
+        }}
+      />
 
       <ClearAuditDialog
         open={clearOpen}

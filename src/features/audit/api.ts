@@ -104,3 +104,29 @@ export async function clearAudit(storeId?: string): Promise<number> {
   )
   return removidas
 }
+
+/** O item da auditoria: um produto contado numa loja. */
+export interface AuditItemRef {
+  storeId: string
+  productId: string
+}
+
+/** Quantos itens vão por chamada: o corpo da requisição precisa caber no limite do servidor. */
+const DELETE_BATCH = 500
+
+/**
+ * Exclui da auditoria os itens escolhidos: a contagem inteira de cada um, com todas
+ * as parcelas. Devolve quantos registros de contagem saíram.
+ */
+export async function removeItems(items: AuditItemRef[]): Promise<number> {
+  let removed = 0
+  for (let start = 0; start < items.length; start += DELETE_BATCH) {
+    const batch = items.slice(start, start + DELETE_BATCH)
+    const { removidas } = await apiFetch<{ removidas: number }>('/auditoria/itens', {
+      method: 'DELETE',
+      body: { itens: batch.map((item) => ({ lojaId: item.storeId, produtoId: item.productId })) },
+    })
+    removed += removidas
+  }
+  return removed
+}

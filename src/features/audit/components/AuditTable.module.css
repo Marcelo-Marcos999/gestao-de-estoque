@@ -5,20 +5,21 @@
   overflow: hidden;
 }
 
-/* Onze colunas não cabem espremidas: em tela larga a tabela rola para o lado. */
+/* Onze colunas não cabem espremidas: em tela estreita a tabela rola para o lado. */
 .scroll {
   overflow-x: auto;
 }
 
+/* Cabe inteira em 1440px (com o menu aberto); abaixo disso, rola para o lado. */
 .table {
-  min-width: 1180px;
+  min-width: 1132px;
 }
 
 .row {
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) 64px 64px 88px 88px 100px 100px 84px 92px 112px 108px;
+  grid-template-columns: 28px minmax(160px, 1fr) 60px 60px 80px 80px 92px 92px 76px 80px 100px 104px;
   align-items: center;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
   padding: 0 var(--sp-4);
 }
 
@@ -43,6 +44,27 @@
 
 .item:hover {
   background: var(--surface-hover);
+}
+
+/* Marcado para excluir: o fundo marca, e o checkbox e o texto da barra de seleção dizem o mesmo. */
+.item.selected {
+  background: var(--brand-soft);
+}
+
+.select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+  cursor: pointer;
 }
 
 .product {
@@ -112,7 +134,7 @@
   white-space: nowrap;
 }
 
-/* ---- Celular: cada linha vira um cartão, com os números rotulados ------- */
+/* ---- Celular: cada linha vira um cartão em três níveis ------------------ */
 @media (max-width: 719px) {
   .scroll {
     overflow-x: visible;
@@ -127,24 +149,107 @@
   }
 
   .row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--sp-3);
     padding: var(--sp-4);
-    align-items: start;
+    align-items: stretch;
   }
 
   .item {
     min-height: 0;
   }
 
-  .product,
-  .item > :last-child {
+  .item {
+    position: relative;
+  }
+
+  /* A caixa de seleção fica no canto do cartão, com a área de toque de 44px. */
+  .select {
+    position: absolute;
+    top: var(--sp-2);
+    right: var(--sp-2);
+    z-index: 1;
+    width: 44px;
+    height: 44px;
+  }
+
+  .checkbox {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* 1. Quem é o produto: o nome pode ocupar duas linhas, em vez de acabar em reticências. */
+  .product {
     grid-column: 1 / -1;
+    order: 0;
+    /* Deixa o canto livre para a caixa de seleção. */
+    padding-right: var(--sp-10);
+  }
+
+  .description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+  }
+
+  .codes {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* 2. Os três números da auditoria, em caixas: estoque, contagem e diferença. */
+  .main {
+    order: 1;
+    padding: var(--sp-3);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+  }
+
+  .main .number {
+    font-size: var(--fs-lg);
+    font-weight: 600;
+  }
+
+  .main .kind {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* 3. O valor da diferença, em destaque, de ponta a ponta. */
+  .value {
+    order: 2;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: var(--sp-3);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+  }
+
+  .value .number {
+    font-size: var(--fs-md);
+    font-weight: 700;
+  }
+
+  /* 4. O resto dos dados do estoque, menores. */
+  .extra {
+    order: 3;
   }
 
   .cellLabel {
     display: block;
     font-size: var(--fs-xs);
     color: var(--text-subtle);
+  }
+
+  /* 5. A ação ocupa a largura e tem o alvo de toque de 44px. */
+  .item > :last-child {
+    order: 4;
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: var(--touch-target);
   }
 }

@@ -926,11 +926,24 @@ contagens independentes, e uma não enxerga a outra.
   código desconhecido não entra (diferente da quebra, onde a perda aconteceu de
   qualquer jeito). Produto contado que a loja nunca lançou no estoque aparece com saldo
   e valores **zero**, avisado na linha.
-- **Zerar auditoria** apaga a contagem de UMA loja (nunca "todas"), com confirmação, e é
-  como se começa uma nova. O estoque não é alterado: a auditoria só **compara**, não
-  corrige o saldo.
+- **Três tamanhos de exclusão**, do menor ao maior; nenhum altera o estoque (a auditoria
+  só **compara**, não corrige o saldo), e nenhum tem desfazer, então todos confirmam:
+  1. **Um registro** (uma parcela digitada errada): em "N registros" na linha.
+  2. **Itens específicos**: marca a caixa de um ou mais produtos (ou "Selecionar
+     todos") e usa "Excluir" na barra. Apaga a contagem **inteira** de cada produto
+     marcado, com todas as parcelas, e só deles. O item é produto **mais loja**: o
+     administrador, com as lojas à vista, pode marcar o mesmo produto contado em lojas
+     diferentes. A seleção se limpa ao mudar a busca ou a loja, para ninguém excluir o
+     que não está vendo. O operador só exclui da própria loja (o servidor recusa outra).
+  3. **Zerar auditoria**: apaga a contagem de UMA loja (nunca "todas"), e é como se
+     começa uma nova.
 - Filtro "Só com diferença" (lembrado, e visível enquanto ativo), exportação para
   Excel e mostrar 200 linhas por vez, como as outras telas.
+- **No celular cada produto é um cartão em três níveis**, porque onze colunas não cabem:
+  o nome (até duas linhas); as três caixas que respondem à auditoria (**estoque,
+  contagem e diferença**); o **valor da diferença** em destaque; e, menores, saídas,
+  custo, venda e os dois totais. O botão "N registros" ocupa a largura toda. No
+  computador é a tabela, que cabe inteira a 1440px e rola para o lado abaixo disso.
 
 ## Limites do plano: registros e arquivos
 

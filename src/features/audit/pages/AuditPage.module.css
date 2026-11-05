@@ -1,3 +1,9 @@
+/*
+ * O contêiner do app (`.content`) corta o que passa da tela, então a página
+ * precisa rolar sozinha. Sem isto, e com os blocos podendo encolher, a lista
+ * ficava do tamanho do que sobrava da tela e escondia o resto: no celular, cada
+ * cartão aparecia só com o nome do produto.
+ */
 .page {
   display: flex;
   flex-direction: column;
@@ -6,6 +12,12 @@
   gap: var(--sp-4);
   padding: var(--sp-5);
   padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+/* Um bloco com `overflow: hidden` pode encolher abaixo do conteúdo; aqui nenhum deve. */
+.page > * {
+  flex-shrink: 0;
 }
 
 .header {
