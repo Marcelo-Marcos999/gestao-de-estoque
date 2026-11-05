@@ -125,6 +125,49 @@ rotasAuditoria.delete('/parcelas/:id', assincrono(async (req, res) => {
   res.status(204).end()
 }))
 
+const corpoExcluirItens = z.object({
+  // 1000 por chamada: a tela envia em lotes, e o corpo precisa caber no limite de 1 MB.
+  itens: z
+    .array(z.object({ lojaId: z.string().uuid(), produtoId: z.string().uuid() }))
+    .min(1)
+    .max(1000),
+})
+
+/**
+ * Exclui da auditoria os produtos ESCOLHIDOS: apaga a contagem inteira de cada
+ * um (todas as parcelas), e só deles. É o meio-termo entre apagar uma parcela e
+ * zerar a loja inteira. O item é produto + loja, porque o administrador, com as
+ * lojas à vista, pode marcar o mesmo produto contado em lojas diferentes.
+ *
+ * O operador só mexe na própria loja: pedir outra é 403, como no estoque. A RLS
+ * barraria do mesmo jeito, mas em silêncio (zero linhas apagadas), e a tela
+ * ficaria sem saber por quê.
+ */
+rotasAuditoria.delete('/itens', assincrono(async (req, res) => {
+  const corpo = corpoExcluirItens.safeParse(req.body)
+  if (!corpo.success) {
+    res.status(400).json({ erro: 'Itens da auditoria inválidos.' })
+    return
+  }
+
+  const { itens } = corpo.data
+  if (req.sessao!.role !== 'admin' && itens.some((item) => item.lojaId !== req.loginId)) {
+    res.status(403).json({ erro: 'Só o administrador pode mexer na auditoria de outra loja.' })
+    return
+  }
+
+  const removidas = await comContextoDoUsuario(req.sessao!, async (client) => {
+    const { rowCount } = await client.query(
+      `delete from contagens c
+       using unnest($1::uuid[], $2::uuid[]) as t(loja_id, produto_id)
+       where c.loja_id = t.loja_id and c.produto_id = t.produto_id`,
+      [itens.map((item) => item.lojaId), itens.map((item) => item.produtoId)],
+    )
+    return rowCount ?? 0
+  })
+  res.json({ removidas })
+}))
+
 /**
  * Zera a auditoria de UMA loja (a do login, ou, com `?loja=`, a que o
  * administrador escolheu): é como se começa uma nova contagem. Nunca age sobre a

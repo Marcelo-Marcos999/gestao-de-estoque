@@ -34,6 +34,9 @@ interface AuditTableProps {
   sortDir: SortDir | null
   onSort: (key: AuditSortKey) => void
   onOpenEntries: (row: AuditRow) => void
+  /** Chaves (`rowKey`) dos itens marcados para excluir. */
+  selection: ReadonlySet<string>
+  onToggleSelect: (key: string) => void
 }
 
 /** A situação sempre em palavras: o sinal do número sozinho se lê ao contrário. */
@@ -60,7 +63,16 @@ function Difference({ row }: { row: AuditRow }) {
  * São onze colunas: em tela larga a tabela rola para o lado em vez de espremer os
  * números; no celular cada linha vira um cartão com os mesmos dados rotulados.
  */
-export function AuditTable({ rows, showStore, sortKey, sortDir, onSort, onOpenEntries }: AuditTableProps) {
+export function AuditTable({
+  rows,
+  showStore,
+  sortKey,
+  sortDir,
+  onSort,
+  onOpenEntries,
+  selection,
+  onToggleSelect,
+}: AuditTableProps) {
   const sortProps = { activeKey: sortKey, activeDir: sortDir, onSort }
 
   return (
@@ -68,6 +80,7 @@ export function AuditTable({ rows, showStore, sortKey, sortDir, onSort, onOpenEn
       <div className={styles.scroll}>
         <div className={styles.table}>
           <div className={`${styles.row} ${styles.head}`}>
+            <span aria-hidden="true" />
             <SortButton label="Produto" sortKey="description" {...sortProps} />
             <SortButton label="Estoque" sortKey="stock" {...sortProps} />
             <SortButton label="Saídas" sortKey="outflow" {...sortProps} />
@@ -81,45 +94,61 @@ export function AuditTable({ rows, showStore, sortKey, sortDir, onSort, onOpenEn
             <span className={styles.srOnly}>Registros</span>
           </div>
 
-          {rows.map((row) => (
-            <div className={`${styles.row} ${styles.item}`} key={rowKey(row)}>
-              <span className={styles.product}>
-                <span className={styles.description} title={row.description}>
-                  {row.description}
-                </span>
-                <span className={styles.codes}>
-                  SKU {row.sku}
-                  {row.barcode && ` · ${row.barcode}`}
-                  {showStore && ` · ${row.storeName}`}
-                </span>
-                {!row.hasStock && (
-                  <span className={styles.noStock}>Sem estoque lançado nesta loja: saldo 0</span>
-                )}
-              </span>
+          {rows.map((row) => {
+            const key = rowKey(row)
+            const selected = selection.has(key)
+            const name = row.description || `SKU ${row.sku}`
 
-              <Cell label="Estoque" tier="main">
-                {row.stock}
-              </Cell>
-              <Cell label="Saídas">{row.outflow}</Cell>
-              <Cell label="Custo">{formatMoney(row.costPrice)}</Cell>
-              <Cell label="Venda">{formatMoney(row.salePrice)}</Cell>
-              <Cell label="Total custo">{formatMoney(rowCostTotal(row))}</Cell>
-              <Cell label="Total venda">{formatMoney(rowSaleTotal(row))}</Cell>
-              <Cell label="Contagem" tier="main" strong>
-                {row.counted}
-              </Cell>
-              <Cell label="Diferença" tier="main">
-                <Difference row={row} />
-              </Cell>
-              <Cell label="Valor da diferença" tier="value">
-                {formatMoney(rowDifferenceValue(row))}
-              </Cell>
+            return (
+              <div className={`${styles.row} ${styles.item} ${selected ? styles.selected : ''}`} key={key}>
+                <label className={styles.select}>
+                  <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={selected}
+                    onChange={() => onToggleSelect(key)}
+                  />
+                  <span className={styles.srOnly}>Selecionar {name}</span>
+                </label>
 
-              <Button variant="ghost" onClick={() => onOpenEntries(row)}>
-                {row.entries.length} {row.entries.length === 1 ? 'registro' : 'registros'}
-              </Button>
-            </div>
-          ))}
+                <span className={styles.product}>
+                  <span className={styles.description} title={row.description}>
+                    {row.description}
+                  </span>
+                  <span className={styles.codes}>
+                    SKU {row.sku}
+                    {row.barcode && ` · ${row.barcode}`}
+                    {showStore && ` · ${row.storeName}`}
+                  </span>
+                  {!row.hasStock && (
+                    <span className={styles.noStock}>Sem estoque lançado nesta loja: saldo 0</span>
+                  )}
+                </span>
+
+                <Cell label="Estoque" tier="main">
+                  {row.stock}
+                </Cell>
+                <Cell label="Saídas">{row.outflow}</Cell>
+                <Cell label="Custo">{formatMoney(row.costPrice)}</Cell>
+                <Cell label="Venda">{formatMoney(row.salePrice)}</Cell>
+                <Cell label="Total custo">{formatMoney(rowCostTotal(row))}</Cell>
+                <Cell label="Total venda">{formatMoney(rowSaleTotal(row))}</Cell>
+                <Cell label="Contagem" tier="main" strong>
+                  {row.counted}
+                </Cell>
+                <Cell label="Diferença" tier="main">
+                  <Difference row={row} />
+                </Cell>
+                <Cell label="Valor da diferença" tier="value">
+                  {formatMoney(rowDifferenceValue(row))}
+                </Cell>
+
+                <Button variant="ghost" onClick={() => onOpenEntries(row)}>
+                  {row.entries.length} {row.entries.length === 1 ? 'registro' : 'registros'}
+                </Button>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

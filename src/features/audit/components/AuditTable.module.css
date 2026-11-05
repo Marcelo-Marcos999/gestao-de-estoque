@@ -12,12 +12,12 @@
 
 /* Cabe inteira em 1440px (com o menu aberto); abaixo disso, rola para o lado. */
 .table {
-  min-width: 1116px;
+  min-width: 1132px;
 }
 
 .row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 60px 60px 80px 80px 92px 92px 76px 80px 100px 104px;
+  grid-template-columns: 28px minmax(160px, 1fr) 60px 60px 80px 80px 92px 92px 76px 80px 100px 104px;
   align-items: center;
   gap: var(--sp-2);
   padding: 0 var(--sp-4);
@@ -44,6 +44,27 @@
 
 .item:hover {
   background: var(--surface-hover);
+}
+
+/* Marcado para excluir: o fundo marca, e o checkbox e o texto da barra de seleção dizem o mesmo. */
+.item.selected {
+  background: var(--brand-soft);
+}
+
+.select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+  cursor: pointer;
 }
 
 .product {
@@ -138,10 +159,31 @@
     min-height: 0;
   }
 
+  .item {
+    position: relative;
+  }
+
+  /* A caixa de seleção fica no canto do cartão, com a área de toque de 44px. */
+  .select {
+    position: absolute;
+    top: var(--sp-2);
+    right: var(--sp-2);
+    z-index: 1;
+    width: 44px;
+    height: 44px;
+  }
+
+  .checkbox {
+    width: 22px;
+    height: 22px;
+  }
+
   /* 1. Quem é o produto: o nome pode ocupar duas linhas, em vez de acabar em reticências. */
   .product {
     grid-column: 1 / -1;
     order: 0;
+    /* Deixa o canto livre para a caixa de seleção. */
+    padding-right: var(--sp-10);
   }
 
   .description {
