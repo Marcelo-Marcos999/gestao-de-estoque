@@ -21,6 +21,7 @@ export interface PedidoResumo {
   loja_nome: string
   numero: number
   cliente: string
+  telefone: string
   observacao: string
   status: 'aberto' | 'fechado'
   por: string
@@ -38,7 +39,7 @@ export interface PedidoResumo {
  * manda entra só pelos parâmetros.
  */
 export function selecionarPedidos(where: string, limite = ''): string {
-  return `select p.id, p.loja_id, lo.nome as loja_nome, p.numero, p.cliente, p.observacao, p.status,
+  return `select p.id, p.loja_id, lo.nome as loja_nome, p.numero, p.cliente, p.telefone, p.observacao, p.status,
                  quem.nome as por, p.criado_em, p.fechado_em,
                  coalesce(t.itens, 0) as itens, coalesce(t.unidades, 0) as unidades,
                  coalesce(t.total, 0) as total, coalesce(t.custo, 0) as custo

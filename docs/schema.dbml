@@ -197,6 +197,7 @@ Table pedidos {
   loja_id uuid [not null, note: 'A loja que vende; isola uma loja da outra (RLS)']
   numero integer [not null, note: '"PD 12": sequencial por loja (gatilho); unique com loja_id']
   cliente text [not null]
+  telefone text [not null, default: '', note: 'Só dígitos com DDD (10 ou 11), ou vazio']
   observacao text [not null, default: '']
   status text [not null, default: 'aberto', note: 'aberto ou fechado']
   criado_por_id uuid [not null]

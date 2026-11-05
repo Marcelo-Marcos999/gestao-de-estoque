@@ -236,8 +236,9 @@ O pedido (PD) e as linhas dele. Não baixa o estoque.
 |---|---|---|
 | `id` | uuid | PK |
 | `loja_id` | uuid | FK → `lojas` (cascata). A loja que vende; isola uma loja da outra (RLS) |
-| `numero` | integer | "PD 12": sequencial **por loja**, preenchido pelo gatilho `pedidos_numerar` (com trava por loja); `unique (loja_id, numero)`. Pedido apagado deixa buraco |
+| `numero` | integer | "PD 12": sequencial **por loja**, preenchido pelo gatilho `pedidos_numerar` (com trava por loja); `unique (loja_id, numero)`. Apagar um pedido do meio deixa buraco; apagar o último libera o número |
 | `cliente` | text | 1 a 120 caracteres |
+| `telefone` | text | Só dígitos com DDD (10 ou 11), ou vazio; a tela formata. Check `^([0-9]{10,11})?$` |
 | `observacao` | text | até 500; vazio por padrão |
 | `status` | text | `aberto` ou `fechado` |
 | `criado_por_id` | uuid | FK → `lojas`. Quem montou (o administrador pode vender por outra loja) |

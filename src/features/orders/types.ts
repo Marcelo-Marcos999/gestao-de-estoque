@@ -37,6 +37,8 @@ export interface OrderSummary {
   storeName: string
   number: number
   customer: string
+  /** Só dígitos (DDD + número); vazio é "não informado". */
+  phone: string
   note: string
   status: OrderStatus
   /** Nome do login que montou o pedido. */

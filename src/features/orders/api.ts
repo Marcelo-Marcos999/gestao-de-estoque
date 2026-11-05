@@ -36,6 +36,7 @@ interface PedidoApi {
   loja_nome: string
   numero: number
   cliente: string
+  telefone: string
   observacao: string
   status: 'aberto' | 'fechado'
   por: string
@@ -72,6 +73,7 @@ function toSummary(p: PedidoApi): OrderSummary {
     storeName: p.loja_nome,
     number: p.numero,
     customer: p.cliente,
+    phone: p.telefone,
     note: p.observacao,
     status: p.status === 'aberto' ? 'open' : 'closed',
     by: p.por,
@@ -112,20 +114,20 @@ export async function getOrder(id: string): Promise<Order> {
 }
 
 /** `storeId` só para o administrador abrindo o pedido em nome de outra loja. */
-export async function createOrder(customer: string, note: string, storeId?: string): Promise<Order> {
+export async function createOrder(customer: string, phone: string, note: string, storeId?: string): Promise<Order> {
   return toOrder(
     await apiFetch<PedidoCompletoApi>(`/pedidos${storeId ? `?loja=${storeId}` : ''}`, {
       method: 'POST',
-      body: { cliente: customer, observacao: note },
+      body: { cliente: customer, telefone: phone, observacao: note },
     }),
   )
 }
 
-export async function updateOrder(id: string, customer: string, note: string): Promise<Order> {
+export async function updateOrder(id: string, customer: string, phone: string, note: string): Promise<Order> {
   return toOrder(
     await apiFetch<PedidoCompletoApi>(`/pedidos/${id}`, {
       method: 'PATCH',
-      body: { cliente: customer, observacao: note },
+      body: { cliente: customer, telefone: phone, observacao: note },
     }),
   )
 }

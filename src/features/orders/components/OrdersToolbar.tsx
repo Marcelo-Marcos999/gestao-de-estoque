@@ -36,8 +36,8 @@ export function OrdersToolbar({ filters, isFiltered, found, onSearch, onStatus, 
             type="search"
             value={filters.search}
             onChange={(event) => onSearch(event.target.value)}
-            placeholder="Buscar por cliente ou número"
-            aria-label="Buscar pedidos por cliente ou número"
+            placeholder="Buscar por cliente, número ou telefone"
+            aria-label="Buscar pedidos por cliente, número ou telefone"
             autoComplete="off"
           />
         </div>

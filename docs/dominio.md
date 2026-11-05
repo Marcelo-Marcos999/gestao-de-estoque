@@ -947,8 +947,8 @@ contagens independentes, e uma não enxerga a outra.
 
 ## Pedidos (PD): o pedido de um cliente
 
-Tela para o vendedor montar o pedido de um cliente: **Novo pedido** (cliente e uma
-observação), depois os produtos, um a um, e por fim **Fechar pedido**, que fecha com o
+Tela para o vendedor montar o pedido de um cliente: **Novo pedido** (cliente, telefone
+opcional e uma observação), depois os produtos, um a um, e por fim **Fechar pedido**, que fecha com o
 total que o cliente vai pagar. Um pedido fechado pode ser **reaberto** para corrigir os
 itens (e fechado de novo).
 
@@ -984,8 +984,14 @@ podem estar com o mesmo pedido aberto), e a tela só não oferece o que seria re
 **Não baixa o estoque.** O saldo vem do ERP; abatê-lo aqui criaria um segundo saldo que
 ninguém reconcilia (mesma razão da quebra).
 
-**Numeração.** "PD 12" é sequencial **por loja**, atribuída pelo banco; um pedido apagado
-deixa um buraco, porque reusar o número faria um "PD 12" apontar para dois pedidos.
+**Telefone do cliente** (opcional, com DDD). A tela formata ("(11) 98765-4321") e o banco
+guarda **só os dígitos**; telefone incompleto é recusado. Na tela do pedido ele vira dois
+botões de 44px, **Ligar** e **WhatsApp**, e a busca da lista acha o pedido por um pedaço do
+número (a partir de 4 dígitos, para não casar tudo).
+
+**Numeração.** "PD 12" é sequencial **por loja**, atribuída pelo banco (maior número da
+loja + 1). Apagar um pedido do meio deixa um buraco; apagar o último libera o número dele.
+Só pedido **aberto** se exclui, e por isso o caso é raro.
 
 **De quem é o pedido.** Da **loja** (login = loja). O operador monta e vê os da própria
 loja; o administrador vê as lojas todas (filtro "Loja") e escolhe a loja ao criar. Conta

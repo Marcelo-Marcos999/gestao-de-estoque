@@ -46,15 +46,20 @@ rotasPedidos.get('/', assincrono(async (req, res) => {
   const { status, busca, limite } = consulta.data
   // "12", "#12" e "PD 12" acham o pedido número 12; qualquer outro texto busca no cliente.
   const numero = busca?.match(/^(?:pd|#)?\s*(\d{1,9})$/i)?.[1] ?? null
+  // Telefone se acha por pedaço dos dígitos ("98765" acha (11) 98765-4321); com menos de 4
+  // dígitos casaria quase tudo, então a busca por telefone só começa daí.
+  const digitos = busca?.replace(/\D/g, '') ?? ''
   const filtros = [
     busca ? comoTexto(busca) : null,
     numero,
     status ?? null,
     lojaDaConsulta(req),
+    digitos.length >= 4 ? digitos : null,
   ]
   const onde = `($4::uuid is null or p.loja_id = $4)
                 and ($3::text is null or p.status = $3)
-                and ($1::text is null or p.cliente ilike '%' || $1 || '%' or p.numero = $2::int)`
+                and ($1::text is null or p.cliente ilike '%' || $1 || '%' or p.numero = $2::int
+                       or ($5::text is not null and p.telefone like '%' || $5 || '%'))`
 
   const resultado = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows } = await client.query(selecionarPedidos(onde, `limit ${limite}`), filtros)
@@ -69,13 +74,19 @@ rotasPedidos.get('/', assincrono(async (req, res) => {
 
 const corpoPedido = z.object({
   cliente: z.string().trim().min(1).max(120),
+  // A tela manda como a pessoa digitou ("(11) 98765-4321"); o servidor guarda só dígitos.
+  telefone: z
+    .string()
+    .default('')
+    .transform((texto) => texto.replace(/\D/g, ''))
+    .refine((digitos) => /^([0-9]{10,11})?$/.test(digitos)),
   observacao: z.string().trim().max(500).default(''),
 })
 
 rotasPedidos.post('/', assincrono(async (req, res) => {
   const corpo = corpoPedido.safeParse(req.body)
   if (!corpo.success) {
-    res.status(400).json({ erro: 'Informe o nome do cliente (até 120 letras).' })
+    res.status(400).json({ erro: 'Informe o nome do cliente (até 120 letras) e, se quiser, o telefone com DDD.' })
     return
   }
   const loja = lojaDaEscrita(req, res)
@@ -84,9 +95,9 @@ rotasPedidos.post('/', assincrono(async (req, res) => {
   const pedido = await comContextoDoUsuario(req.sessao!, async (client) => {
     const { rows } = await client.query(
       // O número vem do gatilho `pedidos_numerar`.
-      `insert into pedidos (loja_id, cliente, observacao, criado_por_id) values ($1, $2, $3, $4)
+      `insert into pedidos (loja_id, cliente, telefone, observacao, criado_por_id) values ($1, $2, $3, $4, $5)
        returning id`,
-      [loja, corpo.data.cliente, corpo.data.observacao, req.loginId],
+      [loja, corpo.data.cliente, corpo.data.telefone, corpo.data.observacao, req.loginId],
     )
     return carregarPedido(client, rows[0].id)
   })
@@ -150,7 +161,7 @@ rotasPedidos.patch('/:id', assincrono(async (req, res) => {
   const ids = parametroId.safeParse(req.params)
   const corpo = corpoPedido.safeParse(req.body)
   if (!ids.success || !corpo.success) {
-    res.status(400).json({ erro: 'Informe o nome do cliente (até 120 letras).' })
+    res.status(400).json({ erro: 'Informe o nome do cliente (até 120 letras) e, se quiser, o telefone com DDD.' })
     return
   }
 
@@ -158,9 +169,10 @@ rotasPedidos.patch('/:id', assincrono(async (req, res) => {
     const status = await pedidoAberto(client, ids.data.id)
     if (!status) return { falha: 404 as const }
     if (status === 'fechado') return { falha: 409 as const }
-    await client.query('update pedidos set cliente = $2, observacao = $3 where id = $1', [
+    await client.query('update pedidos set cliente = $2, telefone = $3, observacao = $4 where id = $1', [
       ids.data.id,
       corpo.data.cliente,
+      corpo.data.telefone,
       corpo.data.observacao,
     ])
     return { pedido: await carregarPedido(client, ids.data.id) }

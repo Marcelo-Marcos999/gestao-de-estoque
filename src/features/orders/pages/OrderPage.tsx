@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/features/auth'
 import { ApiError } from '@/shared/lib/http'
+import { formatPhone, phoneHref, whatsappHref } from '@/shared/lib/phone'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { ArrowLeftIcon, EditIcon, PlusIcon, TrashIcon } from '@/shared/ui/icons'
@@ -99,6 +100,17 @@ export function OrderPage() {
             <OrderStatusBadge status={order.status} />
           </div>
           <span className={styles.customer}>{order.customer}</span>
+          {order.phone && (
+            <div className={styles.contact}>
+              <span className={styles.phone}>{formatPhone(order.phone)}</span>
+              <a className={styles.contactLink} href={phoneHref(order.phone)}>
+                Ligar
+              </a>
+              <a className={styles.contactLink} href={whatsappHref(order.phone)} target="_blank" rel="noopener noreferrer">
+                WhatsApp
+              </a>
+            </div>
+          )}
           <span className={styles.meta}>
             Aberto em {formatWhen(order.createdAt)} por {order.by}
             {/* O nome da loja só ajuda ao administrador, e só quando difere de quem montou. */}

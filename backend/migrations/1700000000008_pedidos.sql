@@ -18,6 +18,10 @@ create table pedidos (
   -- outras empresas fizeram.
   numero integer not null check (numero > 0),
   cliente text not null check (length(btrim(cliente)) between 1 and 120),
+  -- Só dígitos, com DDD (10 ou 11); vazio é "não informado". A tela formata, o banco
+  -- guarda um formato só: assim a busca por telefone e o link do WhatsApp não precisam
+  -- adivinhar parênteses e traços.
+  telefone text not null default '' check (telefone ~ '^([0-9]{10,11})?$'),
   observacao text not null default '' check (length(observacao) <= 500),
   status text not null default 'aberto' check (status in ('aberto', 'fechado')),
   -- Quem montou pode ser diferente de loja_id (o administrador pela loja de
@@ -63,8 +67,9 @@ create index pedido_itens_pedido on pedido_itens (pedido_id, criado_em);
 
 -- Numeração por loja. A trava serializa dois pedidos nascendo juntos na mesma
 -- loja: sem ela os dois leriam o mesmo maior número e um deles bateria na
--- chave única. Pedidos apagados deixam buracos na sequência, de propósito: reusar
--- um número faria "PD 12" apontar para dois pedidos diferentes ao longo do tempo.
+-- chave única. Apagar um pedido do MEIO deixa um buraco na sequência; apagar o
+-- ÚLTIMO libera o número dele (o maior + 1). Aceitável: só pedido aberto se exclui, e
+-- um contador próprio por loja pediria mexer nas permissões de `lojas` por pouco ganho.
 create function pedidos_numerar() returns trigger
 language plpgsql
 as $$

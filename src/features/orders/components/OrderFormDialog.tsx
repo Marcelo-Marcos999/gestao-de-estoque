@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useAuth } from '@/features/auth'
 import { limitMessage } from '@/shared/lib/limits'
 import type { StoreOption } from '@/shared/lib/stores'
+import { formatPhone, isValidPhone, phoneDigits } from '@/shared/lib/phone'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
@@ -32,6 +33,8 @@ export function OrderFormDialog({ open, ...rest }: OrderFormDialogProps) {
 function Form({ onClose, order, stores, defaultStoreId, onSaved }: Omit<OrderFormDialogProps, 'open'>) {
   const { user } = useAuth()
   const [customer, setCustomer] = useState(order?.customer ?? '')
+  // Guardado já com a máscara, para o campo mostrar "(11) 98765-4321" enquanto se digita.
+  const [phone, setPhone] = useState(formatPhone(order?.phone ?? ''))
   const [note, setNote] = useState(order?.note ?? '')
   // Sem loja escolhida no filtro, a do próprio login: é onde o administrador vende por padrão.
   const [storeId, setStoreId] = useState(defaultStoreId ?? user?.id ?? stores?.[0]?.id ?? '')
@@ -43,13 +46,14 @@ function Form({ onClose, order, stores, defaultStoreId, onSaved }: Omit<OrderFor
   async function save(event: FormEvent) {
     event.preventDefault()
     if (customer.trim() === '') return setError('Informe o nome do cliente.')
+    if (!isValidPhone(phone)) return setError('Telefone incompleto: informe o DDD e o número, ou deixe em branco.')
 
     setSaving(true)
     setError(null)
     try {
       const saved = order
-        ? await updateOrder(order.id, customer.trim(), note.trim())
-        : await createOrder(customer.trim(), note.trim(), chooseStore ? storeId : undefined)
+        ? await updateOrder(order.id, customer.trim(), phoneDigits(phone), note.trim())
+        : await createOrder(customer.trim(), phoneDigits(phone), note.trim(), chooseStore ? storeId : undefined)
       onSaved(saved)
       onClose()
     } catch (erro) {
@@ -91,6 +95,17 @@ function Form({ onClose, order, stores, defaultStoreId, onSaved }: Omit<OrderFor
           maxLength={120}
           autoComplete="off"
           autoFocus
+        />
+        <TextField
+          label="Telefone"
+          hint="Com DDD. Na tela do pedido vira um toque para ligar ou chamar no WhatsApp."
+          type="tel"
+          inputMode="tel"
+          value={phone}
+          onChange={(event) => setPhone(formatPhone(event.target.value))}
+          placeholder="(11) 98765-4321"
+          autoComplete="off"
+          optional
         />
         <TextField
           label="Observação"

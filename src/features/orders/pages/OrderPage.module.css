@@ -68,6 +68,42 @@
   overflow-wrap: anywhere;
 }
 
+.contact {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.phone {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Alvo de toque de 44px: é o que o vendedor aperta com o cliente esperando. */
+.contactLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--sp-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--brand-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.contactLink:hover {
+  background: var(--surface-hover);
+}
+
+.contactLink:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
 .meta,
 .note {
   font-size: var(--fs-sm);
