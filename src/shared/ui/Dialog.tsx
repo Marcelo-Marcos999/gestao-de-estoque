@@ -17,6 +17,13 @@ interface DialogProps {
    * uma única vez.
    */
   dismissible?: boolean
+  /**
+   * Onde a folha se ancora no celular. `bottom` (padrão) deixa as ações ao alcance do
+   * polegar. `top` serve ao leitor de código de barras: a câmera traseira fica no alto do
+   * aparelho, e a imagem precisa aparecer perto dela, na mesma direção. No computador
+   * não muda nada: o diálogo é centralizado.
+   */
+  anchor?: 'bottom' | 'top'
   children: ReactNode
 }
 
@@ -32,6 +39,7 @@ export function Dialog({
   footer,
   wide,
   dismissible = true,
+  anchor = 'bottom',
   children,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -65,7 +73,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className={`${styles.dialog} ${wide ? styles.wide : ''}`}
+      className={`${styles.dialog} ${wide ? styles.wide : ''} ${anchor === 'top' ? styles.top : ''}`}
       aria-labelledby={titleId}
       onClick={(event) => {
         // Clique no backdrop: o alvo é o próprio <dialog>, não seu conteúdo.

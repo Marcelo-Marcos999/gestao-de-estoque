@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert } from './Alert'
 import { Button } from './Button'
 import { Dialog } from './Dialog'
-import { cameraErrorMessage, createBarcodeDetector, openCamera } from '../lib/barcode'
+import { BoltIcon } from './icons'
+import {
+  cameraErrorMessage,
+  createBarcodeDetector,
+  openCamera,
+  setTorch,
+  supportsTorch,
+} from '../lib/barcode'
 import styles from './BarcodeScanner.module.css'
 
 interface BarcodeScannerProps {
@@ -33,6 +40,24 @@ function Scanner({ formats, onClose, onDetect }: Omit<BarcodeScannerProps, 'open
   const videoRef = useRef<HTMLVideoElement>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [lendo, setLendo] = useState(false)
+
+  // A lanterna é da trilha de vídeo da câmera aberta. `torchTrack` só existe quando o
+  // aparelho a oferece: sem ela, o botão nem aparece (ver CLAUDE.md: não oferecer o que
+  // falharia no clique).
+  const [torchTrack, setTorchTrack] = useState<MediaStreamTrack | null>(null)
+  const [torchOn, setTorchOn] = useState(false)
+  const [torchError, setTorchError] = useState(false)
+
+  async function toggleTorch() {
+    if (!torchTrack) return
+    setTorchError(false)
+    try {
+      await setTorch(torchTrack, !torchOn)
+      setTorchOn(!torchOn)
+    } catch {
+      setTorchError(true)
+    }
+  }
 
   // A função mais recente, para o laço de leitura não precisar reiniciar a
   // câmera toda vez que a tela redesenha e passa uma função nova. A escrita
@@ -69,6 +94,9 @@ function Scanner({ formats, onClose, onDetect }: Omit<BarcodeScannerProps, 'open
         if (cancelled) return
         setLendo(true)
 
+        const track = aberto.getVideoTracks()[0]
+        if (track && supportsTorch(track)) setTorchTrack(track)
+
         const procurar = async () => {
           if (cancelled || !videoRef.current || !detector) return
 
@@ -102,6 +130,7 @@ function Scanner({ formats, onClose, onDetect }: Omit<BarcodeScannerProps, 'open
       open
       onClose={onClose}
       title="Ler código de barras"
+      anchor="top"
       subtitle="Aponte a câmera para o código da etiqueta."
       footer={
         <Button variant="secondary" onClick={onClose}>
@@ -112,17 +141,39 @@ function Scanner({ formats, onClose, onDetect }: Omit<BarcodeScannerProps, 'open
       {erro ? (
         <Alert tone="danger">{erro}</Alert>
       ) : (
-        <div className={styles.frame}>
-          <video ref={videoRef} className={styles.video} playsInline muted />
+        <>
+          <div className={styles.frame}>
+            <video ref={videoRef} className={styles.video} playsInline muted />
 
-          {/* A mira mostra onde o código precisa estar; sem ela a pessoa
-              aproxima o celular no escuro até acertar por tentativa. */}
-          <span className={styles.aim} aria-hidden="true" />
+            {/* A faixa fica NO ALTO da imagem, e a folha no alto da tela: a câmera traseira
+                fica no topo do aparelho, então o código é apontado na mesma direção dela,
+                em vez de lá embaixo, no meio da tela. A leitura olha a imagem toda; a faixa
+                só orienta onde pôr o código. */}
+            <span className={styles.aim} aria-hidden="true" />
 
-          <span className={styles.hint} role="status">
-            {lendo ? 'Procurando o código…' : 'Abrindo a câmera…'}
-          </span>
-        </div>
+            {/* Estado e lanterna na mesma linha: lado a lado nunca se sobrepõem, mesmo a 360px. */}
+            <div className={styles.bar}>
+              <span className={styles.hint} role="status">
+                {lendo ? 'Procurando…' : 'Abrindo…'}
+              </span>
+
+              {torchTrack && (
+                <button
+                  type="button"
+                  className={styles.torch}
+                  aria-pressed={torchOn}
+                  onClick={() => void toggleTorch()}
+                >
+                  <BoltIcon width={18} height={18} />
+                  <span>{torchOn ? 'Lanterna ligada' : 'Lanterna'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+          {torchError && (
+            <Alert tone="danger">Não foi possível acender a lanterna neste aparelho.</Alert>
+          )}
+        </>
       )}
     </Dialog>
   )

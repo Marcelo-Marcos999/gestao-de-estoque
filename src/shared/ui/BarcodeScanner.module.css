@@ -14,23 +14,33 @@
   object-fit: cover;
 }
 
+/* No alto da imagem, não no meio: perto da câmera, que fica no topo do aparelho. */
 .aim {
   position: absolute;
-  top: 50%;
+  top: var(--sp-3);
   left: 10%;
   width: 80%;
   height: 34%;
-  transform: translateY(-50%);
   border: 2px solid var(--brand);
   border-radius: var(--radius);
   box-shadow: 0 0 0 9999px var(--overlay);
 }
 
-.hint {
+.bar {
   position: absolute;
-  left: 50%;
+  left: var(--sp-3);
+  right: var(--sp-3);
   bottom: var(--sp-3);
-  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: var(--sp-1) var(--sp-3);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -38,4 +48,33 @@
   color: var(--text-muted);
   font-size: var(--fs-xs);
   white-space: nowrap;
+}
+
+/* O botão da lanterna precisa ser achado no escuro, que é quando se usa: fundo sólido, alvo de 44px. */
+.torch {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--sp-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.torch[aria-pressed='true'] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-contrast);
+}
+
+.torch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-ring);
 }

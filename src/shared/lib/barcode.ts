@@ -104,3 +104,21 @@ export function cameraErrorMessage(error: unknown): string {
   }
   return 'Não foi possível abrir a câmera. Digite o código na busca.'
 }
+
+/**
+ * A lanterna (o flash) é uma capacidade da trilha de vídeo, e só aparece depois que a
+ * câmera abriu. O Chrome do Android a expõe; o desktop e boa parte dos outros navegadores
+ * não. `torch` não está nos tipos do TypeScript, por isso o molde próprio.
+ */
+type TorchCapabilities = MediaTrackCapabilities & { torch?: boolean }
+
+/** Este aparelho acende a lanterna pela câmera aberta? Sem isso a tela não oferece o botão. */
+export function supportsTorch(track: MediaStreamTrack): boolean {
+  if (typeof track.getCapabilities !== 'function') return false
+  return (track.getCapabilities() as TorchCapabilities).torch === true
+}
+
+/** Liga ou desliga a lanterna. Rejeita se o aparelho recusar: quem chama avisa a pessoa. */
+export async function setTorch(track: MediaStreamTrack, on: boolean): Promise<void> {
+  await track.applyConstraints({ advanced: [{ torch: on } as MediaTrackConstraintSet] })
+}

@@ -50,6 +50,30 @@
       transform: translateY(24px);
     }
   }
+
+  /* Folha presa ao topo (leitor de código de barras): a imagem fica perto da câmera.
+     No aparelho com entalhe ou barra de status, o cabeçalho desce o necessário. */
+  .top {
+    margin: 0 auto auto;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    border-top: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .top[open] {
+    animation-name: enterTop;
+  }
+
+  .top .header {
+    padding-top: calc(var(--sp-4) + env(safe-area-inset-top));
+  }
+
+  @keyframes enterTop {
+    from {
+      opacity: 0;
+      transform: translateY(-24px);
+    }
+  }
 }
 
 .inner {
