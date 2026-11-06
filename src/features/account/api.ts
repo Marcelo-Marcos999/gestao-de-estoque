@@ -94,3 +94,11 @@ export async function resetLoginPassword(id: string): Promise<string> {
   )
   return senhaTemporaria
 }
+
+/**
+ * Exclui a empresa inteira: registros, logins e arquivos. Sem volta. O servidor
+ * exige o nome da empresa e a senha de novo (ver `DELETE /conta`).
+ */
+export async function deleteCompany(confirmation: string, password: string): Promise<void> {
+  await apiFetch('/conta', { method: 'DELETE', body: { confirmacao: confirmation, senha: password } })
+}

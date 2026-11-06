@@ -281,8 +281,11 @@ Novidades do sistema, iguais pra todo cliente (sem `conta_id`).
 | `publicado_em`* | timestamptz | |
 
 ### `administradores_plataforma`
-O time interno (compras, normalização do catálogo). Login separado dos
-clientes, sem relação por chave com nenhuma conta.
+O dono do sistema (e, no futuro, o time interno). Login separado dos
+clientes, sem relação por chave com nenhuma conta. Entra em `/plataforma` (ver
+"Painel da plataforma" abaixo). Não há tela para criar esse acesso: quem tem a
+conexão de dono do banco roda `npm run plataforma:criar-admin` (em `backend/`), que pede
+a senha no terminal, sem eco.
 
 | Coluna | Tipo | Notas |
 |---|---|---|
@@ -297,7 +300,7 @@ clientes, sem relação por chave com nenhuma conta.
 
 | Relação | Ao apagar o pai |
 |---|---|
-| `contas` → `lojas`, `configuracoes_conta`, `produtos`, `motivos`, `origens` | **Cascata**: a conta leva tudo junto |
+| `contas` → `lojas`, `configuracoes_conta`, `produtos`, `motivos`, `origens` | **Cascata**: a conta leva tudo junto. Na prática a exclusão passa por `excluir_conta`, que esvazia antes o que é `restrict` |
 | `lojas` → `estoque`, `tokens_email` | Cascata |
 | `estoque` → `validades` | Cascata |
 | `quebras` → `anexos` | Cascata |
@@ -319,8 +322,8 @@ Três credenciais de banco, cada uma com o mínimo que precisa:
 |---|---|---|
 | dona (`neondb_owner`) | só migrations e manutenção, nunca o app | Tudo. **Ignora a RLS** (dono sempre ignora) |
 | `app_runtime` | o back-end, em toda requisição de usuário logado | Ler/gravar, **sempre sob RLS** |
-| `app_auth` | login, cadastro e recuperação de senha | `SELECT` em `lojas` e `administradores_plataforma` e **executar quatro funções** (abaixo). Nenhum privilégio de escrita em tabela |
-| `app_definer` | ninguém (`NOLOGIN`) | É só a dona das funções (as quatro de cadastro e as de limite). Escreve em `contas`, `lojas`, `configuracoes_conta`, `motivos`, `origens` e `tokens_email`; só **lê** `produtos`, `estoque`, `validades`, `quebras`, `contagens` e `anexos` (para contar o uso da conta); não pode criar objetos |
+| `app_auth` | login, cadastro, recuperação de senha e o painel da plataforma | `SELECT` em `lojas` e `administradores_plataforma` e **executar sete funções** (as quatro de cadastro e as três da plataforma, abaixo). Nenhum privilégio de escrita em tabela |
+| `app_definer` | ninguém (`NOLOGIN`) | É só a dona das funções (cadastro, limite e plataforma). Escreve em `contas`, `lojas`, `configuracoes_conta`, `motivos`, `origens` e `tokens_email`; **lê** `produtos`, `estoque`, `validades`, `quebras`, `contagens`, `pedidos` e `anexos` (para contar o uso da conta) e **apaga** `contas`, `configuracoes_conta`, `produtos`, `estoque`, `quebras`, `contagens` e `pedidos` (só dentro de `excluir_conta`); não pode criar objetos |
 
 **Row Level Security** está ligada e forçada (`force`) em todas as tabelas. A
 cada requisição o back-end declara ao banco quem está chamando
@@ -373,6 +376,31 @@ só conseguiria o que um token válido permite.
 | `confirmar_email_com_token(hash)` | Consome o token (uma vez só, atomicamente) e confirma o e-mail |
 | `redefinir_senha_com_token(hash, senha_hash)` | Consome o token e troca a senha, encerra as outras sessões e invalida os demais links da loja. Receber o link também confirma o e-mail |
 
+### Painel da plataforma e exclusão de conta
+
+Três operações precisam enxergar ou apagar **além de uma conta**, o que nenhuma política
+de RLS permite (elas existem para isolar). Entram como funções `SECURITY DEFINER` da
+`app_definer`, executáveis **só pela `app_auth`**: a `app_runtime`, que atende as telas
+dos clientes, não tem `EXECUTE`, então um defeito numa rota de cliente nunca chega a listar
+ou apagar outra empresa. Quem confere se o chamador pode é a rota, antes de chamar.
+
+| Função | O que faz | Quem a rota exige |
+|---|---|---|
+| `plataforma_listar_contas()` | Todas as empresas com administrador, plano, limites, logins ativos/total e uso (`calcular_uso`) | token da plataforma |
+| `plataforma_alterar_limites(conta, usuários, MB, registros)` | Grava os três limites (nulo = sem limite); cria a linha de configuração se a conta antiga não tinha | token da plataforma |
+| `excluir_conta(conta)` | Apaga a empresa inteira e **devolve os caminhos dos arquivos** dos anexos | token da plataforma, **ou** o administrador da própria conta com nome da empresa e senha |
+
+`excluir_conta` apaga `quebras`, `contagens`, `pedidos`, `estoque` e `produtos` **antes** de
+`contas`: as chaves `on delete restrict` (quebras → lojas/motivos/origens, estoque →
+produtos) não deixam a cascata resolver sozinha, e a ordem de uma cascata não é garantida.
+Lojas, motivos, origens, configurações, tokens, lotes e anexos saem em cascata.
+
+Os **arquivos** moram no R2, fora da transação. A rota (`lib/exclusaoDeConta.ts`) abre a
+transação, chama a função, apaga os arquivos no bucket e só então confirma: se um arquivo
+falhar, a transação é desfeita e a empresa continua inteira (tentar de novo é seguro,
+apagar o que já foi apagado não é erro). Com a transação aberta as linhas ficam travadas,
+então um anexo enviado nesse intervalo não consegue entrar e nenhum arquivo fica órfão.
+
 ### Limites de uso: registros e arquivos
 
 O teto é da **conta**, não da loja, e é aplicado por **gatilhos no banco**
@@ -422,7 +450,7 @@ expõe todas as tabelas:
 
 | Já tem rotas | Ainda só no banco |
 |---|---|
-| `contas`/`lojas` (login, criar conta, confirmar e-mail, recuperar e trocar senha), `produtos`, `estoque`, `validades`, `quebras`, `motivos`, `origens` | `anexos`, `changelog`, `administradores_plataforma` |
+| `contas`/`lojas` (login, criar conta, confirmar e-mail, recuperar e trocar senha), `produtos`, `estoque`, `validades`, `quebras`, `motivos`, `origens`, `anexos`, `administradores_plataforma` (login e painel) | `changelog` |
 
 Validades (`/validades`), Quebra (`/quebras`) e as listas de motivo e origem
 (`/motivos`, `/origens`) já gravam no banco. Não há base de exemplo: as listas
@@ -436,7 +464,9 @@ os lotes junto, por `on delete cascade`).
 
 `/conta` (empresa e plano, troca de senha) e `/lojas` (logins da conta, só admin)
 leem e escrevem `contas`, `configuracoes_conta` e `lojas`. Plano e limites
-(`configuracoes_conta`) **só se lê** pela API: são da plataforma, não do cliente.
+(`configuracoes_conta`) **só se lê** pela API de cliente: quem os altera é o painel da plataforma
+(`/plataforma/*`, login próprio, token com `tipo: "plataforma"` que as rotas de cliente recusam).
+`DELETE /conta` (só admin, com nome da empresa e senha) apaga a própria empresa.
 
 Três escolhas de desenho que vale conhecer:
 
@@ -467,6 +497,7 @@ Rodar, na ordem, como a role dona:
 7. `backend/migrations/1700000000006_limites_de_registros_e_arquivos.sql`: `configuracoes_conta.limite_registros`, padrões das contas novas, `calcular_uso`/`uso_da_conta` e os gatilhos de limite
 8. `backend/migrations/1700000000007_auditoria_de_contagem.sql`: tabela `contagens` (RLS), a leitura do `app_definer` nela e a entrada no limite de registros
 9. `backend/migrations/1700000000008_pedidos.sql`: tabelas `pedidos` e `pedido_itens` (RLS), numeração por loja, a leitura do `app_definer` nelas e a entrada no limite de registros
+10. `backend/migrations/1700000000009_plataforma_e_exclusao_de_conta.sql`: as funções `plataforma_listar_contas`, `plataforma_alterar_limites` e `excluir_conta` e os privilégios de exclusão do `app_definer`
 
 Depois, definir a senha das roles `app_runtime` e `app_auth` (nunca em arquivo
 versionado) e criar a primeira conta e a primeira loja `admin`.

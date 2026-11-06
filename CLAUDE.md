@@ -165,6 +165,13 @@ chamam o back-end de verdade. Os **arquivos** dos anexos de quebra vão para um
 bucket compatível com S3 (R2 da Cloudflare, `R2_*` em `backend/.env.example`): sem
 essas variáveis o armazenamento fica desligado e a tela esconde os anexos.
 
+O dono do sistema entra em **`/plataforma`** (login próprio, token à parte, nada no menu do
+app): lista as empresas, ajusta os limites de cada uma e exclui uma empresa por completo
+(banco e arquivos do R2). O administrador da empresa também pode excluir a própria, em
+Configurações → Empresa, com nome e senha. Ver `docs/dominio.md`, "Plataforma: limites e
+exclusão de empresas". O primeiro acesso da plataforma sai de `npm run plataforma:criar-admin`
+(em `backend/`), nunca de tela.
+
 Cada conta tem **limites de registros e de arquivos**, aplicados por gatilhos no
 banco (ver `docs/modelo-de-dados.md`, "Limites de uso"): nenhuma rota confere o limite
 por conta própria, e toda tela que cria algo precisa tratar o 409 (`limitMessage` em

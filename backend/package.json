@@ -9,7 +9,8 @@
     "start": "node dist/servidor.js",
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down"
+    "migrate:down": "node-pg-migrate down",
+    "plataforma:criar-admin": "tsx scripts/criar-admin-plataforma.ts"
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",

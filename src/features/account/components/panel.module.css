@@ -56,3 +56,8 @@
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
+
+/* Seção irreversível: a borda diz que esta é diferente das outras antes de ler o título. */
+.danger {
+  border-color: var(--expired);
+}

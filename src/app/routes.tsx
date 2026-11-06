@@ -10,6 +10,7 @@ import { AuditPage } from '@/features/audit'
 import { BreakagePage } from '@/features/breakage'
 import { ExpiryPage } from '@/features/expiry'
 import { OrderPage, OrdersPage } from '@/features/orders'
+import { PlatformPage } from '@/features/platform'
 import { ProductsPage } from '@/features/products'
 import { SettingsPage } from '@/features/settings'
 import { StockPage } from '@/features/stock'
@@ -39,6 +40,9 @@ export function AppRoutes() {
       <Route path="/confirmar-email" element={<ConfirmEmailPage />} />
       <Route path="/esqueci-a-senha" element={<ForgotPasswordPage />} />
       <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
+
+      {/* Painel do dono do sistema: login próprio, fora do RequireAuth e do AppShell. */}
+      <Route path="/plataforma" element={<PlatformPage />} />
 
       {/* Tudo aqui dentro exige sessão e aparece dentro do layout do app. */}
       <Route element={<RequireAuth />}>
