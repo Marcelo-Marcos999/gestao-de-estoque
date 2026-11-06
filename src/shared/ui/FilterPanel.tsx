@@ -7,6 +7,8 @@ import styles from './FilterPanel.module.css'
 export interface NumberRangeField {
   key: string
   label: string
+  /** Uma frase sob o campo, para o que não é óbvio (ex.: quem fica de fora do filtro). */
+  hint?: string
 }
 
 interface FilterPanelProps {
@@ -144,6 +146,7 @@ export function FilterPanel({
                     }
                   />
                 </div>
+                {field.hint && <p className={styles.hint}>{field.hint}</p>}
               </fieldset>
             )
           })}

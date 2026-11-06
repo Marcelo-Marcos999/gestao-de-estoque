@@ -114,6 +114,8 @@ function matches(row: ExpiryRow, query: ExpiryQuery): boolean {
   if (!matchesRange(row.outflow, query.numberRanges.outflow)) return false
   if (!matchesRange(row.costPrice, query.numberRanges.costPrice)) return false
   if (!matchesRange(row.totalCost, query.numberRanges.totalCost)) return false
+  // `daysToZero` nulo (sem saídas) fica de fora quando há filtro: ver `matchesRange`.
+  if (!matchesRange(row.daysToZero, query.numberRanges.daysToZero)) return false
   if (!matchesDateRange(row.expiryDate, query.expiryRange)) return false
 
   const term = query.search.trim().toLowerCase()

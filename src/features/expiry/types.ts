@@ -49,13 +49,19 @@ export interface ExpiryRow {
   daysToZero: number | null
 }
 
-export type ExpiryRangeKey = 'stock' | 'outflow' | 'costPrice' | 'totalCost'
+export type ExpiryRangeKey = 'stock' | 'outflow' | 'costPrice' | 'totalCost' | 'daysToZero'
 
-export const EXPIRY_RANGE_FIELDS: { key: ExpiryRangeKey; label: string }[] = [
+export const EXPIRY_RANGE_FIELDS: { key: ExpiryRangeKey; label: string; hint?: string }[] = [
   { key: 'stock', label: 'Saldo' },
   { key: 'outflow', label: 'Saídas' },
   { key: 'costPrice', label: 'Custo' },
   { key: 'totalCost', label: 'Total custo' },
+  {
+    key: 'daysToZero',
+    label: 'Sai em (dias)',
+    // Sem saídas no período não há estimativa: dizer que "sai em 20 dias" seria inventar o número.
+    hint: 'Produto sem saídas no período não tem estimativa e fica de fora enquanto este filtro estiver ativo.',
+  },
 ]
 
 export const EMPTY_EXPIRY_RANGES: Record<ExpiryRangeKey, NumberRange> = Object.fromEntries(

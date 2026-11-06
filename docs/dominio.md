@@ -733,7 +733,7 @@ outro mal.
 | Tela | Período (data) | Faixa numérica |
 |---|---|---|
 | Cadastro de produtos | — | Saldo, Saídas, Custo, Venda |
-| **Validades** | **Validade** | Saldo, Saídas |
+| **Validades** | **Validade** | Saldo, Saídas, Custo, Total custo, **Sai em (dias)** |
 | Quebra | — | Quantidade |
 | Estoque | — | Saldo, Saídas, Custo, Venda, Total custo, Total venda |
 
@@ -742,6 +742,11 @@ situação: os cartões respondem "quão urgente" (vencido, alerta, ok, sem data
 o período responde "vence entre estas duas datas específicas" — perguntas
 diferentes que cruzam livremente (dá para marcar "vence antes de vender" **e**
 restringir a um mês do calendário ao mesmo tempo).
+
+**"Sai em" (Validades)** filtra pelos dias até o produto zerar: "até 30" mostra o que acaba
+no próximo mês. O produto **sem saídas no período não tem estimativa** e fica de fora
+enquanto o filtro está ativo (o painel avisa): dizer que ele "sai em 20 dias" seria
+inventar o número. Para ver justamente esses, o cartão "Sem estimativa" já os separa.
 
 Cada campo aceita mínimo, máximo, os dois ou nenhum — um filtro "a partir de
 500" é tão válido quanto um intervalo fechado. Sem data cadastrada nunca casa

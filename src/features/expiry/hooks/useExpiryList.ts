@@ -19,7 +19,12 @@ export type ListStatus = 'loading' | 'error' | 'ready'
 
 const FILTERS_KEY = storageKey('filtros', 'validades')
 
-const RANGE_KEYS = EXPIRY_RANGE_FIELDS.map((field) => field.key)
+/**
+ * Os intervalos que um filtro salvo PRECISA ter para ser aceito. Sem `daysToZero`, que
+ * entrou depois: quem tinha um filtro lembrado de antes não pode perdê-lo por falta de
+ * um campo que ainda não existia. A tela e o filtro tratam o campo ausente como vazio.
+ */
+const RANGE_KEYS = EXPIRY_RANGE_FIELDS.map((field) => field.key).filter((key) => key !== 'daysToZero')
 
 const NO_FILTERS: ExpiryQuery = {
   search: '',
