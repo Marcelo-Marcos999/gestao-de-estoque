@@ -404,6 +404,19 @@ aparelho, mas custaria centenas de kilobytes de WebAssembly que a maioria
 nunca usaria. Se o iPhone precisar ler, é o módulo `shared/lib/barcode.ts` que
 muda — as telas conversam com ele, não com a API do navegador.
 
+**A imagem fica no alto da tela, e a faixa de leitura no alto da imagem.** A câmera
+traseira do celular fica no topo do aparelho; com a imagem no meio ou embaixo da tela, a
+pessoa apontava o celular numa direção e olhava para outra. No celular o leitor é uma
+folha presa ao topo (`Dialog` com `anchor="top"`, que respeita o entalhe) e a faixa fica
+perto da borda de cima da imagem. A leitura analisa a imagem **toda**; a faixa só orienta
+onde pôr o código. No computador o leitor segue centralizado.
+
+**Lanterna.** Em loja ou depósito com pouca luz a câmera não enxerga a etiqueta. Quando
+o aparelho oferece a lanterna (`track.getCapabilities().torch`, no Chrome do Android) o
+leitor mostra um botão **Lanterna**, que vira **Lanterna ligada** (o estado vai escrito e
+em `aria-pressed`, não só na cor). Onde o aparelho não tem lanterna o botão não aparece. A
+lanterna apaga junto com a câmera, ao fechar o leitor.
+
 Dentro do registro de quebra, o código lido **escolhe o produto sozinho**
 quando casa com um só: quem apontou a câmera para a etiqueta já disse qual
 produto é, e confirmar o único resultado seria pedir a mesma resposta duas
