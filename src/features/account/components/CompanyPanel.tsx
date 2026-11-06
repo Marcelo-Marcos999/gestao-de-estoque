@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/Button'
 import { TextField } from '@/shared/ui/TextField'
 import { renameCompany } from '../api'
 import { useCompany } from '../hooks/useCompany'
+import { DeleteCompanyPanel } from './DeleteCompanyPanel'
 import { UsagePanel } from './UsagePanel'
 import styles from './panel.module.css'
 
@@ -121,6 +122,7 @@ export function CompanyPanel() {
       </section>
 
       <UsagePanel company={company} />
+      <DeleteCompanyPanel companyName={company.name} />
     </>
   )
 }

@@ -31,7 +31,7 @@ Table administradores_plataforma {
   ativo boolean [not null]
   criado_em timestamptz [not null]
 
-  Note: 'Time interno (compras/normalização). Sem relação com o resto — acesso é por regra, não por FK.'
+  Note: 'Dono do sistema: entra em /plataforma, lista empresas, ajusta limites e exclui empresas. Sem relação com o resto — acesso é por regra, não por FK. Criado por backend/scripts/criar-admin-plataforma.ts.'
 }
 
 Table lojas {

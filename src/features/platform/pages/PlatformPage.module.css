@@ -1,0 +1,86 @@
+/* Rola sozinha: o contêiner do app corta o que passa da tela (ver CLAUDE.md, regra 4). */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  height: 100dvh;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--sp-5);
+  padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.search {
+  flex: 1 1 240px;
+  min-height: var(--touch-target);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: var(--fs-md);
+}
+
+.search:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.text {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* Uma coluna no celular, duas quando cabem: o cartão é largo por causa dos números. */
+.list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+@media (min-width: 900px) {
+  .list {
+    grid-template-columns: 1fr 1fr;
+  }
+}

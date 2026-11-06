@@ -7,6 +7,7 @@ import { exigirAdmin, exigirAutenticacao } from '../auth/middleware.js'
 import { gerarTokenAcesso, gerarTokenRefresh } from '../auth/jwt.js'
 import { conferirSenha, gerarHash, validarSenhaNova } from '../auth/senha.js'
 import { assincrono } from '../lib/assincrono.js'
+import { ArmazenamentoIndisponivel, confirmacaoConfere, excluirContaCompleta } from '../lib/exclusaoDeConta.js'
 
 /** Tudo que quem está logado faz sobre a própria conta. */
 export const rotasConta = Router()
@@ -201,4 +202,63 @@ rotasConta.patch('/', exigirAdmin, assincrono(async (req, res) => {
     return
   }
   res.json({ nome: corpo.data.nome })
+}))
+
+const corpoExcluirConta = z.object({
+  confirmacao: z.string().max(200),
+  senha: z.string().min(1).max(200),
+})
+
+/**
+ * O administrador exclui a empresa por completo: registros, logins e arquivos.
+ * Sem volta, e imediato.
+ *
+ * Três travas, porque o estrago é total: só o administrador (`exigirAdmin`), o nome
+ * da empresa digitado e a senha de novo — a sessão aberta num celular esquecido, ou
+ * um token roubado, não bastam. A senha reusa o limite da troca de senha: é a mesma
+ * forma de testar senha estando logado.
+ *
+ * Os backups do banco guardam cópia até vencer a retenção deles; a tela avisa.
+ */
+rotasConta.delete('/', exigirAdmin, limiteTrocaDeSenha, assincrono(async (req, res) => {
+  const corpo = corpoExcluirConta.safeParse(req.body)
+  if (!corpo.success) {
+    res.status(400).json({ erro: 'Digite o nome da empresa e a sua senha para confirmar.' })
+    return
+  }
+
+  const [nome, hash] = await Promise.all([
+    comContextoDoUsuario(req.sessao!, async (client) => {
+      const { rows } = await client.query('select nome from contas where id = $1', [req.sessao!.contaId])
+      return rows[0]?.nome as string | undefined
+    }),
+    poolAuth
+      .query<{ senha_hash: string }>('select senha_hash from lojas where id = $1', [req.loginId])
+      .then(({ rows }) => rows[0]?.senha_hash),
+  ])
+
+  if (nome === undefined || !hash) {
+    res.status(404).json({ erro: 'Conta não encontrada.' })
+    return
+  }
+  if (!(await conferirSenha(corpo.data.senha, hash))) {
+    res.status(403).json({ erro: 'A senha está incorreta.' })
+    return
+  }
+  if (!confirmacaoConfere(corpo.data.confirmacao, nome)) {
+    res.status(400).json({ erro: 'O nome digitado não confere com o da empresa.' })
+    return
+  }
+
+  try {
+    const { arquivosApagados } = await excluirContaCompleta(req.sessao!.contaId)
+    console.log(`Conta ${req.sessao!.contaId} excluída pelo próprio administrador; ${arquivosApagados} arquivo(s).`)
+    res.json({ arquivosApagados })
+  } catch (erro) {
+    if (erro instanceof ArmazenamentoIndisponivel) {
+      res.status(503).json({ erro: 'O armazenamento de arquivos está indisponível. Nada foi apagado; tente de novo mais tarde.' })
+      return
+    }
+    throw erro
+  }
 }))

@@ -1113,11 +1113,53 @@ as outras lojas já o encheram.
 - **Padrões:** contas **novas** nascem com 250.000 registros e 1.024 MB. As que já
   existiam ficam **sem limite** até alguém definir: impor teto a quem já usa o
   sistema é decisão comercial, não efeito de uma migração. Os números são da
-  plataforma, não do cliente (não há rota para mudá-los; hoje é por SQL em
-  `configuracoes_conta`).
+  plataforma, não do cliente: quem os muda é o dono do sistema, no painel
+  `/plataforma` (ver "Plataforma: limites e exclusão de empresas").
 - **É um teto de plano, não uma cota exata:** a regra mora no banco (ver
   `docs/modelo-de-dados.md`, "Limites de uso"), então vale para qualquer caminho de
   gravação, e a contagem dos registros inclui linhas que a tela não mostra.
+
+## Plataforma: limites e exclusão de empresas
+
+O dono do sistema administra as empresas em **`/plataforma`**, uma tela à parte: login
+próprio (tabela `administradores_plataforma`, token que as telas de cliente recusam e
+vice-versa), fora do menu do app e sem "criar conta" nem "esqueci a senha". O acesso é
+criado por quem tem o banco, com `npm run plataforma:criar-admin` em `backend/` (a senha é
+digitada no terminal, sem eco, nunca em argumento ou arquivo).
+
+| Ação | O que faz |
+|---|---|
+| Lista | cada empresa com o administrador, a data de criação, logins ativos (e quantos desativados), registros e arquivos, cada um **de** o limite; busca por nome ou e-mail, lembrada e com "Limpar busca" |
+| Ajustar limites | logins ativos, registros e arquivos (MB). Vazio = sem limite. Reduzir abaixo do uso não apaga nada, só impede de crescer; o administrador da empresa é recusado ao criar/reativar login além do limite |
+| Excluir empresa | apaga tudo (ver abaixo) |
+
+- **Bloquear.** Não há bloqueio da empresa inteira: o administrador dela **desativa logins**
+  individuais em Configurações → Lojas e logins, e isso já cobre a necessidade.
+- **Sessão da plataforma.** O token dura 1 hora, fica só na memória da página (recarregar
+  pede a senha de novo) e é conferido a cada chamada contra `ativo`: desativar um
+  administrador vale na hora. O login tem limite de 5 tentativas a cada 15 minutos.
+
+### Excluir uma empresa por completo
+
+Dois caminhos, mesma rotina (`excluir_conta`, ver `docs/modelo-de-dados.md`):
+
+| Quem | Onde | Confirmação |
+|---|---|---|
+| O dono do sistema | `/plataforma` → "Excluir empresa" | digitar o nome da empresa |
+| O administrador da empresa | Configurações → Empresa → "Excluir empresa" (por último, com borda de alerta) | digitar o nome da empresa **e a senha** |
+
+- **É imediata e não tem desfazer.** Apaga logins, produtos, estoque, validades, quebras,
+  auditorias, pedidos e **todas as fotos e PDFs** do bucket. O operador não vê a opção e o
+  servidor também recusa (403).
+- **Tudo ou nada.** Se o bucket falhar ou estiver fora do ar, nada é apagado (nem o banco) e
+  a pessoa tenta de novo. Sem as variáveis `R2_*` mas com anexos no banco, a exclusão é
+  recusada (503): apagar as linhas deixaria os arquivos órfãos.
+- **O nome conta com maiúsculas e acentos**; só espaços sobrando nas pontas ou repetidos são
+  ignorados (quem copia da tela leva um espaço junto).
+- **Backups.** Os backups diários do banco guardam cópia até a retenção deles vencer. A tela
+  diz isso: "excluir" aqui não reescreve backup antigo.
+- O servidor registra uma linha com os ids (conta, e o administrador da plataforma quando é o
+  caso) e quantos arquivos saíram; nome e e-mail não vão para o log.
 
 ## O que veio do AppSheet e não se repete aqui
 
