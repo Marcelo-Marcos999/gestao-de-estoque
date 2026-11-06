@@ -91,31 +91,49 @@ export function ExpiryTableRow({
       )}
 
       {/* No celular os mesmos dados voltam com rótulo, porque ali não existe
-          cabeçalho de coluna para dizer o que é o quê. */}
+          cabeçalho de coluna para dizer o que é o quê. Em três níveis, como o cartão da
+          Auditoria: a validade escrita por extenso, os três números do estoque em
+          caixas (o que o olho compara) e, menor, quando o produto acaba. */}
       <span className={styles.mobileData}>
-        <span>
-          <span className={styles.mobileLabel}>{remaining?.overdue ? 'Venceu ' : 'Vence '}</span>
-          <span className={styles.mobileValue}>
-            {row.expiryDate ? formatDate(row.expiryDate) : '—'}
+        <span className={styles.mobileDate}>
+          <span className={styles.mobileLabel}>Validade</span>
+          {row.expiryDate ? (
+            <>
+              <span className={styles.mobileValue}>{formatDate(row.expiryDate)}</span>
+              {remaining && (
+                <span className={`${styles.mobileRemaining} ${remaining.overdue ? styles.overdue : ''}`}>
+                  {remaining.text}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className={styles.mobileRemaining}>sem data</span>
+          )}
+        </span>
+
+        <span className={styles.boxes}>
+          <span className={styles.box}>
+            <span className={styles.boxLabel}>Estoque</span>
+            <span className={styles.boxValue}>{row.stock}</span>
+          </span>
+          <span className={styles.box}>
+            <span className={styles.boxLabel}>Custo</span>
+            <span className={styles.boxValue}>{formatMoney(row.costPrice)}</span>
+          </span>
+          <span className={styles.box}>
+            <span className={styles.boxLabel}>Total custo</span>
+            <span className={styles.boxValue}>{formatMoney(row.totalCost)}</span>
           </span>
         </span>
-        <span>
-          <span className={styles.mobileLabel}>Estoque </span>
-          <span className={styles.mobileValue}>{row.stock}</span>
-        </span>
-        <span>
-          <span className={styles.mobileLabel}>Custo </span>
-          <span className={styles.mobileValue}>{formatMoney(row.costPrice)}</span>
-        </span>
-        <span>
-          <span className={styles.mobileLabel}>Total custo </span>
-          <span className={styles.mobileValue}>{formatMoney(row.totalCost)}</span>
-        </span>
-        <span>
-          <span className={styles.mobileLabel}>Sai em </span>
-          <span className={styles.mobileValue}>
-            {row.daysToZero === null ? '—' : `${row.daysToZero} dias`}
-          </span>
+
+        <span className={styles.mobileOut}>
+          {row.daysToZero === null ? (
+            'Sem saídas no período: não dá para estimar quando acaba'
+          ) : (
+            <>
+              Sai do estoque em <span className={styles.mobileValue}>{row.daysToZero} dias</span>
+            </>
+          )}
         </span>
       </span>
 
@@ -123,21 +141,22 @@ export function ExpiryTableRow({
         <SituationBadge situation={row.situation} />
       </span>
 
-      {/* No celular a linha vira cartão e estes botões ficam na área da
-          situação, ao lado da faixa — o mesmo lugar em que o cadastro de
-          produtos põe o seu. */}
+      {/* No celular a linha vira cartão e estes botões ocupam a última linha dele, com o
+          alvo de toque de 44px; a lixeira vai para a ponta, longe do toque sem querer. */}
       <span className={styles.actions}>
         {/* Só em lotes vencidos: gerar quebra de uma situação que já vai bem,
             ou sem estimativa, não faz sentido — nada venceu ainda. */}
         {row.situation === 'venceu' && (
           <button
             type="button"
-            className={styles.action}
+            className={`${styles.action} ${styles.generate}`}
             onClick={() => onGenerateBreakage(row)}
             aria-label={`Gerar quebra de ${row.description}`}
             title="Gerar quebra"
           >
             <BoltIcon width={16} height={16} />
+            {/* O texto só aparece no celular: ali é a ação principal do lote vencido e merece nome. */}
+            <span className={styles.actionText}>Gerar quebra</span>
           </button>
         )}
 
