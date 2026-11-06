@@ -47,7 +47,7 @@ export function ExpiryPage() {
   const editor = useExpiryEditor(list.reload)
   const breakage = useGenerateBreakage(editor.removeItems)
   const sort = useSort<ExpiryRow, ExpirySortKey>(list.rows, expiryValueOf)
-  const rowHeight = isNarrow ? 128 : 62
+  const rowHeight = isNarrow ? 252 : 62
 
   const visibleIds = sort.sortedRows.map((row) => row.id)
   const selectionState = useSelection(visibleIds)

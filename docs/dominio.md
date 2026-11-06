@@ -280,6 +280,23 @@ Situação é **calculada, nunca digitada**. Guardar o resultado deixaria a tela
 mentindo no dia seguinte, quando o produto já teria mudado de faixa sem
 ninguém mexer nele.
 
+**O cartão de lote no celular** (abaixo de 720px) tem quatro níveis, no mesmo espírito do
+cartão da Auditoria. Antes o nome dividia a linha com a caixa de seleção e três botões,
+sobrava uma coluna de ~160px e ele quebrava em seis linhas, seguido de cinco dados
+empilhados com folga: mais de 500px por lote.
+
+1. **Situação** (selo com ícone e texto) e a **caixa de seleção** na mesma linha;
+2. o **nome do produto com a largura toda**, e o SKU e o código embaixo;
+3. a **validade por extenso** ("Validade 01/04/2026, venceu há 219 dias", o prazo em
+   vermelho quando já passou, sempre escrito) e três **caixas lado a lado**: estoque, custo
+   e total de custo, que são os números que se comparam; abaixo, menor, quando o produto
+   acaba (ou que não há saídas para estimar);
+4. as **ações numa linha**, com alvo de 44px: **Gerar quebra** com o nome escrito (só em lote
+   vencido, é a ação principal dele), editar, e a lixeira na ponta, longe do polegar que
+   toca em editar.
+
+Na tela de mesa nada muda: continua a tabela.
+
 ## Um saldo só, para as duas telas
 
 Não existe "estoque de quebra" separado do estoque da loja. Saldo e saídas são
