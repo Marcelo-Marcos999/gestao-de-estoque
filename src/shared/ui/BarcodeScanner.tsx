@@ -10,6 +10,7 @@ import {
   setTorch,
   supportsTorch,
 } from '../lib/barcode'
+import { playBeep } from '../lib/beep'
 import styles from './BarcodeScanner.module.css'
 
 interface BarcodeScannerProps {
@@ -105,6 +106,9 @@ function Scanner({ formats, onClose, onDetect }: Omit<BarcodeScannerProps, 'open
             const codigo = encontrados[0]?.rawValue?.trim()
             if (codigo) {
               parar()
+              // O bip sai antes de entregar o código: quem lê quer o aviso na hora,
+              // e o que a tela faz com o código (buscar, abrir diálogo) pode demorar.
+              playBeep()
               onDetectRef.current(codigo)
               return
             }
