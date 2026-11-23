@@ -434,6 +434,14 @@ leitor mostra um botão **Lanterna**, que vira **Lanterna ligada** (o estado vai
 em `aria-pressed`, não só na cor). Onde o aparelho não tem lanterna o botão não aparece. A
 lanterna apaga junto com a câmera, ao fechar o leitor.
 
+**Bip na leitura.** Quando o código é lido, o aparelho toca um bip curto e agudo, como o
+leitor de supermercado: no corredor a tela nem sempre está à vista, e o som confirma que
+"pegou". Cancelar o leitor não faz barulho. O bip é gerado na hora pela Web Audio API
+(`shared/lib/beep.ts`), sem arquivo de som. O navegador só libera áudio depois de um toque,
+e o bip sai segundos depois (quando a câmera acha o código), então o som é preparado no
+toque do botão de ler (`prepareBeep`). Onde o aparelho não tem áudio, a leitura funciona
+igual, só sem som. O volume é o do aparelho; não há opção para silenciar dentro do app.
+
 Dentro do registro de quebra, o código lido **escolhe o produto sozinho**
 quando casa com um só: quem apontou a câmera para a etiqueta já disse qual
 produto é, e confirmar o único resultado seria pedir a mesma resposta duas

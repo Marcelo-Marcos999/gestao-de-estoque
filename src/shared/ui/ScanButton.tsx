@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BarcodeScanner } from './BarcodeScanner'
 import { BarcodeIcon } from './icons'
 import { useBarcodeSupport } from '../hooks/useBarcodeSupport'
+import { prepareBeep } from '../lib/beep'
 import styles from './ScanButton.module.css'
 
 interface ScanButtonProps {
@@ -29,7 +30,11 @@ export function ScanButton({ onDetect, label = 'Ler código de barras' }: ScanBu
       <button
         type="button"
         className={styles.button}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          // Dentro do toque, para o navegador liberar o som que vai tocar na leitura.
+          prepareBeep()
+          setOpen(true)
+        }}
         aria-label={label}
         title={label}
       >
